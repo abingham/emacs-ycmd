@@ -103,8 +103,14 @@ values. This produces output for empty alists that ycmd expects."
 	    (when (< 3000 cont) ; timeout after 3 seconds
 	      (error "Server timeout.")))))))))
 
-(defun ycmd-get-completions (pos)
+(defun ycmd-display-completions (pos)
   (interactive "d")
+  (let ((completions (ycmd-get-completions pos)))
+    (pop-to-buffer "*ycmd-completions*")
+    (erase-buffer)
+    (insert (pp-to-string completions))))
+
+(defun ycmd-get-completions (pos)
   (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
          (line-num (line-number-at-pos (point)))
          (full-path (buffer-file-name))
@@ -116,10 +122,7 @@ values. This produces output for empty alists that ycmd expects."
                                      ("filetypes" . ,file-types)))))
                     ("filepath" . ,full-path)
                     ("line_num" . ,line-num))))
-    ; TODO: Right now we just log the result, but we want to do something more constructive with it...e.g. auto-complete.
-    (message
-     (format "%s"
-             (ycmd-request "/completions" content :parser 'json-read)))))
+         (ycmd-request "/completions" content :parser 'json-read)))
 
 (defun ycmd-load-conf-file (filename)
   (interactive
