@@ -121,11 +121,14 @@ values. This produces output for empty alists that ycmd expects."
      (format "%s"
              (ycmd-request "/completions" content :parser 'json-read)))))
 
-(defun ycmd-load-conf-file ()
-  (ycmd-request
-   "/load_extra_conf_file"
-   ; TODO: Obviously figure out the correct way to specify the right file.
-   '(("filepath" . "/Users/sixtynorth/projects/boost_python_exception/.ycm_extra_conf.py"))))
+(defun ycmd-load-conf-file (filename)
+  (interactive
+   (list
+    (read-file-name "Filename: ")))
+  (let ((filename (expand-file-name filename)))
+    (ycmd-request
+     "/load_extra_conf_file"
+     `(("filepath" . ,filename)))))
 
 (defun* ycmd-request (location content &key (parser 'buffer-string))
   (let* ((content (json-encode content))
