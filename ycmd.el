@@ -19,13 +19,24 @@ string or a list."
   "The actual port being used by the ycmd server. This is set
   based on the output from the server itself.")
 
-(defconst ycmd-hmac-secret "1234123412341234") ; TODO: Create real secret code.
+(defconst ycmd-hmac-secret nil
+  "This is populated with the hmac secret of the current
+  connection. Users should never need to modify this, hence the
+  defconst. It is not, however, treated as a constant by this
+  code. This value gets set in ycmd-open.")
+
+(defun ycmd-generate-hmac-secret ()
+  (let ((result '()))
+    (dotimes (x 16 result)
+      (setq result (cons (byte-to-string (random 256)) result)))
+    (apply 'concat result)))
 
 (defconst ycmd-server-process "ycmd-server")
 
 (defun ycmd-json-encode (obj)
   "A version of json-encode that uses {} instead of null for nil
 values. This produces output for empty alists that ycmd expects."
+  ;; TODO: replace flat with cl-flet or cl-letf
   (flet ((json-encode-keyword (k) (cond ((eq k t)          "true")
                                         ((eq k json-false) "false")
                                         ((eq k json-null)  "{}"))))
@@ -74,6 +85,9 @@ values. This produces output for empty alists that ycmd expects."
 
 (defun ycmd-open ()
   (interactive)
+
+  (setq ycmd-hmac-secret (ycmd-generate-hmac-secret))
+  
   (let ((proc-buff (get-buffer-create "*ycmd-server*")))
     (set-buffer proc-buff)
     (erase-buffer)
@@ -101,6 +115,8 @@ values. This produces output for empty alists that ycmd expects."
 	    (incf cont)
 	    (when (< 3000 cont) ; timeout after 3 seconds
 	      (error "Server timeout.")))))))))
+
+;; TODO: ycmd-close
 
 (defun ycmd-display-completions (pos)
   (interactive "d")
