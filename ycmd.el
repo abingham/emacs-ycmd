@@ -26,10 +26,9 @@ string or a list."
 (defun ycmd-json-encode (obj)
   "A version of json-encode that uses {} instead of null for nil
 values. This produces output for empty alists that ycmd expects."
-  (let ((json-encode-keyword (lambda (k)
-			       (cond ((eq k t)          "true")
-				     ((eq k json-false) "false")
-				     ((eq k json-null)  "{}")))))
+  (flet ((json-encode-keyword (k) (cond ((eq k t)          "true")
+                                        ((eq k json-false) "false")
+                                        ((eq k json-null)  "{}"))))
     (json-encode obj)))
 
 (define-hmac-function ycmd-hmac-function
