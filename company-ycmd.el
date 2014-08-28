@@ -96,7 +96,7 @@
                  buffer-file-name
                  (ycmd-running?)
                  (not (company-in-string-or-comment))
-                 ""
+                 (company-grab-symbol)
                  ;;(buffer-substring-no-properties (line-beginning-position) (point))
                  ))
     (candidates
