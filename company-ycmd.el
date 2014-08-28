@@ -1,13 +1,3 @@
-;; (defun company-ycmd-candidates ()
-;;   "Get the list of completions at point."
-;;   (if (ycmd-running?)
-;;       (let ((completions (assoc-default
-;; 			  'completions
-;; 			  (ycmd-get-completions (point)))))
-;;         (mapcar (lambda (c) (cdr (assoc 'insertion_text c)))
-;; 		completions))
-;;     nil))
-
 (defconst company-ycmd-completion-properties
   '(kind
     extra_menu_info
@@ -46,13 +36,15 @@
                  ""
                  ;;(buffer-substring-no-properties (line-beginning-position) (point))
                  ))
-    ;; TODO: (candidates (cons :async
-    ;;                         (lambda (cb) (company-clang--candidates arg cb))))
-    (candidates (company-ycmd-candidates))
+    (candidates
+     (cons :async
+           (lambda (cb)
+             (apply cb
+                    (company-ycmd-candidates)
+                    '()))))
     (meta (company-ycmd-get-metadata arg))
     (annotation (company-ycmd-get-annotation arg))
-    (no-cache 't) ; Until we get is all sorted out...
-    ))
+    (no-cache 't))) ; No caching until everything is stable.
 
 ;;;###autoload
 (defun company-ycmd-setup ()
