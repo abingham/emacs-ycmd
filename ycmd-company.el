@@ -24,6 +24,9 @@
     (meta       (company-clang--meta arg))
     ))
 
-(add-to-list 'company-backends 'company-ycmd-backend)
+;;;###autoload
+(defun company-ycmd-setup ()
+  "Add company-ycmd-backend to company-backends"
+  (add-to-list 'company-backends 'company-ycmd-backend))
 
-
+(provide 'company-ycmd)
