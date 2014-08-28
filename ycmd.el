@@ -1,4 +1,5 @@
 (require 'hmac-def)
+(require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
 (require 'request)
 
@@ -16,11 +17,20 @@ string or a list."
 
 (defvar ycmd-server-actual-port 0
   "The actual port being used by the ycmd server. This is set
-  based on the output from the server itself."
-  :type int
-  :group 'ycmd)
+  based on the output from the server itself.")
 
 (defconst ycmd-hmac-secret "1234123412341234") ; TODO: Create real secret code.
+
+(defconst ycmd-server-process "ycmd-server")
+
+(defun ycmd-json-encode (obj)
+  "A version of json-encode that uses {} instead of null for nil
+values. This produces output for empty alists that ycmd expects."
+  (let ((json-encode-keyword (lambda (k)
+			       (cond ((eq k t)          "true")
+				     ((eq k json-false) "false")
+				     ((eq k json-null)  "{}")))))
+    (json-encode obj)))
 
 (define-hmac-function ycmd-hmac-function
   (lambda (x) (secure-hash 'sha256 x nil nil 1))
@@ -52,12 +62,15 @@ string or a list."
       (semantic_triggers . ())
       (auto_trigger . 1))))
 
+(defun ycmd-running? ()
+  (interactive)
+  (if (get-process ycmd-server-process) 't nil))
+
 (defun ycmd-create-options-file (hmac-secret)
   (let ((options-file (make-temp-file "ycmd-options"))
         (options (ycmd-options-contents hmac-secret)))
     (with-temp-file options-file
-      ; TODO: Need to encode the semantic-triggers (and all empty lists) as "{}" rather than "null".
-      (insert (json-encode options)))
+      (insert (ycmd-json-encode options)))
     options-file))
 
 (defun ycmd-open ()
@@ -72,7 +85,7 @@ string or a list."
                              (list ycmd-server-command)))
            (args (list (concat "--options_file=" options-file)))
            (server-program+args (append server-command args))
-           (proc (apply #'start-process "ycmd-server" proc-buff server-program+args))
+           (proc (apply #'start-process ycmd-server-process proc-buff server-program+args))
            (cont 1))
       (while cont
         (set-process-query-on-exit-flag proc nil)
@@ -83,7 +96,7 @@ string or a list."
 	   ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
 	    (progn
               (set-variable 'ycmd-server-actual-port
-                            (string-to-number (match-string 1 proc-output)))c
+                            (string-to-number (match-string 1 proc-output)))
               (setq cont nil)))
 	   (t
 	    (incf cont)
