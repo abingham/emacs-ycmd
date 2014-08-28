@@ -1,3 +1,73 @@
+;;; ycmd.el --- emacs bindings to the ycmd completion server
+;;
+;; Copyright (c) 2014 Austin Bingham
+;;
+;; Author: Austin Bingham <austin.bingham@gmail.com>
+;; Version: 0.1
+;; URL: https://github.com/abingham/emacs-ycmd
+;; Package-Requires: ((request "0.2.0"))
+;;
+;; This file is not part of GNU Emacs.
+;;
+;;; Commentary:
+;;
+;; Description:
+;;
+;; ycmd is a server that provides clang-based completion for
+;; C/C++/ObjC. This module provides an emacs client for that server.
+;;
+;; For more details, see the project page at
+;; https://github.com/abingham/emacs-ycmd.
+;;
+;; Installation:
+;;
+;; ycmd depends on the following packages:
+;;
+;;   request
+;;
+;; Copy this file to to some location in your emacs load path. Then add
+;; "(require 'ycmd)" to your emacs initialization (.emacs,
+;; init.el, or something).
+;;
+;; Example config:
+;;
+;;   (require 'ycmd)
+;;
+;; Basic usage:
+;;
+;; To start a ycmd server, use 'ycmd-open. Before you do anything else, you need to instruct it to load a configuration file with 'ycmd-load-conf-file. Then you can use 'ycmd-get-completions to get completions at some point in a file. For example:
+;;
+;;   (ycmd-open)
+;;   (ycmd-load-conf-file "/full/path/to/some/conf.json")
+;;   (ycmd-get-completions (point))
+;;
+;; You can use 'ycmd-display-completions to toy around with completion
+;; interactively and see the shape of the structures in use.
+;;
+;;; License:
+;;
+;; Permission is hereby granted, free of charge, to any person
+;; obtaining a copy of this software and associated documentation
+;; files (the "Software"), to deal in the Software without
+;; restriction, including without limitation the rights to use, copy,
+;; modify, merge, publish, distribute, sublicense, and/or sell copies
+;; of the Software, and to permit persons to whom the Software is
+;; furnished to do so, subject to the following conditions:
+;;
+;; The above copyright notice and this permission notice shall be
+;; included in all copies or substantial portions of the Software.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+;; NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+;; BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+;; ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+;; SOFTWARE.
+
+;;; Code:
+
 (require 'hmac-def)
 (require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
@@ -164,3 +234,5 @@ values. This produces output for empty alists that ycmd expects."
       :type "POST"))))
 
 (provide 'ycmd)
+
+;;; ycmd.el ends here
