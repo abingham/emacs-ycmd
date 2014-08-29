@@ -85,6 +85,11 @@ string or a list."
   :type '(string)
   :group 'ycmd)
 
+(defcustom ycmd-server-args (list "--log" "info")
+  "Extra arguments to pass to the ycmd server."
+  :type '()
+  :group 'ycmd)
+
 (defvar ycmd-server-actual-port 0
   "The actual port being used by the ycmd server. This is set
   based on the output from the server itself.")
@@ -179,7 +184,7 @@ values. This produces output for empty alists that ycmd expects."
            (server-command (if (listp ycmd-server-command)
                                ycmd-server-command
                              (list ycmd-server-command)))
-           (args (list (concat "--options_file=" options-file)))
+           (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
            (server-program+args (append server-command args))
            (proc (apply #'start-process ycmd-server-process proc-buff server-program+args))
            (cont 1))
