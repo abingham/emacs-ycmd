@@ -68,6 +68,9 @@
     detailed_info
     menu_text))
 
+(defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
+  "The list of modes for which company-ycmd will attempt completions.")
+
 (defun company-ycmd-construct-candidate (src)
   (let ((candidate (assoc-default 'insertion_text src)))
     (dolist (prop company-ycmd-completion-properties candidate)
@@ -93,7 +96,7 @@
   ; See company.el for more info.
   (case command
     (interactive (company-begin-backend 'company-ycmd-backend))
-    (prefix (and (memq major-mode '(c++-mode))
+    (prefix (and (memq major-mode company-ycmd-modes)
                  buffer-file-name
                  (ycmd-running?)
                  (not (company-in-string-or-comment))
