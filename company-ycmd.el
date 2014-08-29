@@ -71,8 +71,6 @@
 (defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
   "The list of modes for which company-ycmd will attempt completions.")
 
-(defconst company-ycmd-last-candidates nil)
-
 (defun company-ycmd-construct-candidate (src)
   (let ((candidate (assoc-default 'insertion_text src)))
     (dolist (prop company-ycmd-completion-properties candidate)
@@ -95,23 +93,15 @@
 (defun company-ycmd-get-annotation (candidate)
   (format " [%s]" (get-text-property 0 'kind candidate)))
 
-(defun company-ycmd-grab (regexp &optional expression limit)
-  (when (looking-back regexp limit t)
-    (or (match-string-no-properties (or expression 0)) "")))
-
 (defun company-ycmd-get-prefix ()
   (and (memq major-mode company-ycmd-modes)
        buffer-file-name
        (ycmd-running?)
        (not (company-in-string-or-comment))
-       
-       (let* ((candidates (company-ycmd-candidates))
-              (prefix (company-grab-symbol-cons "\\.\\|->\\|::" 2)))
-         (setq company-ycmd-last-candidates candidates)
-         (if candidates prefix))))
+       (company-grab-symbol-cons "\\.\\|->\\|::" 2)))
 
 (defun company-ycmd-get-candidates (prefix)
-  company-ycmd-last-candidates)
+  (company-ycmd-candidates))
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
   (interactive (list 'interactive))
@@ -120,7 +110,10 @@
   (case command
     (interactive (company-begin-backend 'company-ycmd-backend))
     (prefix (company-ycmd-get-prefix))
-    (candidates (company-ycmd-get-candidates arg))
+    (candidates
+     (cons :async
+           (lambda (cb) (cb (company-ycmd-get-candidates arg))))
+     (company-ycmd-get-candidates arg))
     (meta (company-ycmd-get-metadata arg))
     (annotation (company-ycmd-get-annotation arg))
     (no-cache 't))) ; Don't cache. It interferes with fuzzy matching.
