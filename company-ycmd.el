@@ -13,8 +13,9 @@
 ;;
 ;; Description:
 ;;
-;; ycmd provides clang-based completion for C/C++/ObjC. This module
-;; supplies a company-mode backend for these completions.
+;; ycmd is a modular code-completion framework. It includes, for
+;; example, C/C++/ObjC and Python. This module supplies a company-mode
+;; backend for these completions.
 ;;
 ;; For more details, see the project page at
 ;; https://github.com/abingham/emacs-ycmd.
@@ -92,7 +93,7 @@
   ; See company.el for more info.
   (case command
     (interactive (company-begin-backend 'company-ycmd-backend))
-    (prefix (and (eq major-mode 'c++-mode)
+    (prefix (and (memq major-mode '(c++-mode))
                  buffer-file-name
                  (ycmd-running?)
                  (not (company-in-string-or-comment))

@@ -13,8 +13,9 @@
 ;;
 ;; Description:
 ;;
-;; ycmd provides clang-based completion for C/C++/ObjC. This module
-;; supplies an auto-complete-mode source for these completions.
+;; ycmd provides completion for C/C++/ObjC and Python, among other
+;; languages. This module supplies an auto-complete-mode source for
+;; these completions.
 ;;
 ;; For more details, see the project page at
 ;; https://github.com/abingham/emacs-ycmd.
@@ -61,6 +62,8 @@
 
 (require 'auto-complete)
 (require 'ycmd)
+
+(warn "ycmd-autocomplete is incomplete and probably doesn't work right now!")
 
 ;; (defvar ac-ycmd-cache nil
 ;;   "Hold the results of the last ycmd-get-completions.")

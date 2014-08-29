@@ -13,8 +13,9 @@
 ;;
 ;; Description:
 ;;
-;; ycmd is a server that provides clang-based completion for
-;; C/C++/ObjC. This module provides an emacs client for that server.
+;; ycmd is a modular server that provides completion for C/C++/ObjC
+;; and Python, among other languages. This module provides an emacs
+;; client for that server.
 ;;
 ;; For more details, see the project page at
 ;; https://github.com/abingham/emacs-ycmd.
