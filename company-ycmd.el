@@ -106,8 +106,6 @@
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
   (interactive (list 'interactive))
-
-  ; See company.el for more info.
   (case command
     (interactive (company-begin-backend 'company-ycmd-backend))
     (prefix      (company-ycmd-get-prefix))
