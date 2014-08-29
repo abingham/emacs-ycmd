@@ -23,7 +23,7 @@ documentation should describe how to create one.
 To use the emacs bindings, put the `.el` from emacs-ycmd files
 somewhere that emacs can find them. Then do something like this:
 
-```
+```emacs
 (require 'ycmd)
 
 (ycmd-open "/full/path/to/.ycm_extra_conf.py")
@@ -38,7 +38,7 @@ More likely, you'll want to use a completion framework like
 `company-mode` to manage the completions for you. Here's how to do
 that:
 
-```
+```emacs
 (require 'company-ycmd)
 (company-ycmd-setup)
 ```
