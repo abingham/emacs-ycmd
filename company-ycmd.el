@@ -98,11 +98,12 @@
        buffer-file-name
        (ycmd-running?)
        (not (company-in-string-or-comment))
-       (company-grab-symbol-cons "\\.\\|->\\|::" 2)))
+       (if (looking-back "\\.\\|->\\|::")
+           (company-grab-symbol-cons "\\.\\|->\\|::" 2))))
 
 (defun company-ycmd-get-candidates (prefix)
   (cons :async
-        (lambda (cb) (cb (company-ycmd-candidates)))))
+        (lambda (cb) (funcall cb (company-ycmd-candidates)))))
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
   (interactive (list 'interactive))
