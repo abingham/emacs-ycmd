@@ -101,7 +101,9 @@ string or a list."
       (setq result (cons (byte-to-string (random 256)) result)))
     (apply 'concat result)))
 
-(defconst ycmd-server-process "ycmd-server")
+(defconst ycmd-server-process "ycmd-server"
+  "The emacs name of the server process. This is used by
+  functions like start-process, get-process, and delete-process.")
 
 (defun ycmd-json-encode (obj)
   "A version of json-encode that uses {} instead of null for nil
@@ -161,6 +163,11 @@ values. This produces output for empty alists that ycmd expects."
     (ycmd-start-server hmac-secret)
     (setq ycmd-hmac-secret hmac-secret)
     (ycmd-load-conf-file filename)))
+
+(defun ycmd-close ()
+  (interactive)
+  (if (ycmd-running?)
+      (delete-process ycmd-server-process)))
 
 (defun ycmd-start-server (hmac-secret)
   (let ((proc-buff (get-buffer-create "*ycmd-server*")))
