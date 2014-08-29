@@ -153,16 +153,21 @@ values. This produces output for empty alists that ycmd expects."
       (insert (ycmd-json-encode options)))
     options-file))
 
-(defun ycmd-open ()
-  (interactive)
+(defun ycmd-open (filename)
+  (interactive
+  (list
+   (read-file-name "Filename: ")))
+  (let ((hmac-secret (ycmd-generate-hmac-secret)))
+    (ycmd-start-server hmac-secret)
+    (setq ycmd-hmac-secret hmac-secret)
+    (ycmd-load-conf-file filename)))
 
-  (setq ycmd-hmac-secret (ycmd-generate-hmac-secret))
-  
+(defun ycmd-start-server (hmac-secret)
   (let ((proc-buff (get-buffer-create "*ycmd-server*")))
     (set-buffer proc-buff)
     (erase-buffer)
     
-    (let* ((options-file (ycmd-create-options-file ycmd-hmac-secret))
+    (let* ((options-file (ycmd-create-options-file hmac-secret))
            (server-command (if (listp ycmd-server-command)
                                ycmd-server-command
                              (list ycmd-server-command)))
@@ -186,6 +191,15 @@ values. This produces output for empty alists that ycmd expects."
 	    (when (< 3000 cont) ; timeout after 3 seconds
 	      (error "Server timeout.")))))))))
 
+(defun ycmd-load-conf-file (filename)
+  (interactive
+   (list
+    (read-file-name "Filename: ")))
+  (let ((filename (expand-file-name filename)))
+    (ycmd-request
+     "/load_extra_conf_file"
+     `(("filepath" . ,filename)))))
+
 ;; TODO: ycmd-close
 
 (defun ycmd-display-completions (pos)
@@ -208,15 +222,6 @@ values. This produces output for empty alists that ycmd expects."
                     ("filepath" . ,full-path)
                     ("line_num" . ,line-num))))
          (ycmd-request "/completions" content :parser 'json-read)))
-
-(defun ycmd-load-conf-file (filename)
-  (interactive
-   (list
-    (read-file-name "Filename: ")))
-  (let ((filename (expand-file-name filename)))
-    (ycmd-request
-     "/load_extra_conf_file"
-     `(("filepath" . ,filename)))))
 
 (defun* ycmd-request (location content &key (parser 'buffer-string))
   (let* ((content (json-encode content))
