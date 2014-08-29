@@ -104,9 +104,7 @@
     (candidates
      (cons :async
            (lambda (cb)
-             (apply cb
-                    (company-ycmd-candidates)
-                    '()))))
+             (funcall cb (company-ycmd-candidates)))))
     (meta (company-ycmd-get-metadata arg))
     (annotation (company-ycmd-get-annotation arg))
     (no-cache 't))) ; Don't cache. It interferes with fuzzy matching.
