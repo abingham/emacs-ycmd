@@ -158,6 +158,7 @@ values. This produces output for empty alists that ycmd expects."
   (interactive
   (list
    (read-file-name "Filename: ")))
+  (ycmd-close)
   (let ((hmac-secret (ycmd-generate-hmac-secret)))
     (ycmd-start-server hmac-secret)
     (setq ycmd-hmac-secret hmac-secret)
