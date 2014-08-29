@@ -101,7 +101,8 @@
        (company-grab-symbol-cons "\\.\\|->\\|::" 2)))
 
 (defun company-ycmd-get-candidates (prefix)
-  (company-ycmd-candidates))
+  (cons :async
+        (lambda (cb) (cb (company-ycmd-candidates)))))
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
   (interactive (list 'interactive))
@@ -109,14 +110,12 @@
   ; See company.el for more info.
   (case command
     (interactive (company-begin-backend 'company-ycmd-backend))
-    (prefix (company-ycmd-get-prefix))
-    (candidates
-     (cons :async
-           (lambda (cb) (cb (company-ycmd-get-candidates arg))))
-     (company-ycmd-get-candidates arg))
-    (meta (company-ycmd-get-metadata arg))
-    (annotation (company-ycmd-get-annotation arg))
-    (no-cache 't))) ; Don't cache. It interferes with fuzzy matching.
+    (prefix      (company-ycmd-get-prefix))
+    (candidates  (company-ycmd-get-candidates arg))
+    (meta        (company-ycmd-get-metadata arg))
+    (annotation  (company-ycmd-get-annotation arg))
+    (no-cache    't) ; Don't cache. It interferes with fuzzy matching.
+    )) 
 
 ;;;###autoload
 (defun company-ycmd-setup ()
