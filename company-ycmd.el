@@ -106,7 +106,7 @@
                     '()))))
     (meta (company-ycmd-get-metadata arg))
     (annotation (company-ycmd-get-annotation arg))
-    (no-cache 't))) ; No caching until everything is stable.
+    (no-cache 't))) ; Don't cache. It interferes with fuzzy matching.
 
 ;;;###autoload
 (defun company-ycmd-setup ()
