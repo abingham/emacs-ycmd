@@ -132,7 +132,7 @@ completion for C/C++."
 
 ;;;###autoload
 (defun company-ycmd-setup ()
-  "Add company-ycmd-backend to company-backends"
+  "Add company-ycmd-backend to the front of company-backends"
   (add-to-list 'company-backends 'company-ycmd-backend))
 
 (provide 'company-ycmd)
