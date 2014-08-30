@@ -213,8 +213,6 @@ values. This produces output for empty alists that ycmd expects."
      "/load_extra_conf_file"
      `(("filepath" . ,filename)))))
 
-;; TODO: ycmd-close
-
 (defun ycmd-display-completions (pos)
   (interactive "d")
   (let ((completions (ycmd-get-completions pos)))
