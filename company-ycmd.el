@@ -17,18 +17,6 @@
 ;; example, completion for C/C++/ObjC and Python. This module supplies
 ;; a company-mode backend for these completions.
 ;;
-;; ycmd is a bit peculiar in a few ways. First, communication with the
-;; server uses HMAC to authenticate HTTP messages. The server is
-;; started with an HMAC secret that the client uses to generate hashes
-;; of the content it sends. Second, the server gets this HMAC
-;; information (as well as other configuration information) from a
-;; file that the server deletes after reading. So when the code in
-;; this module starts a server, it has to create a file containing the
-;; secret code. Since the server deletes this file, this code has to
-;; create a new one for each server it starts. Hopefully by knowing
-;; this, you'll be able to make more sense of some of what you see
-;; below.
-;;
 ;; For more details, see the project page at
 ;; https://github.com/abingham/emacs-ycmd.
 ;;
