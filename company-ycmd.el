@@ -64,21 +64,29 @@
 (require 'ycmd)
 
 (defconst company-ycmd-completion-properties
-  '(kind
-    extra_menu_info
-    detailed_info
-    menu_text))
+  '(kind extra_menu_info detailed_info menu_text)
+  "Fields from ycmd completions structurs that we attach as text
+  properties to company completion strings.")
 
 (defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
   "The list of modes for which company-ycmd will attempt completions.")
 
 (defun company-ycmd-construct-candidate (src)
+  "Converts a ycmd completion structure to a candidate string.
+
+Takes a ycmd completion structure SRC, extracts the
+'insertion_text', attaches other properties to that string as
+text-properties, and returns the string."
   (let ((candidate (assoc-default 'insertion_text src)))
     (dolist (prop company-ycmd-completion-properties candidate)
       (put-text-property 0 1 prop (assoc-default prop src) candidate))))
 
 (defun company-ycmd-candidates ()
-  "Get list of completion candidate structs at point."
+  "Get list of completion candidate strings at point.
+
+The returned strings have annotation, metadata, and other pieces
+of information added as text-properties.
+"
   (if (ycmd-running?)
       (mapcar
        'company-ycmd-construct-candidate
@@ -89,12 +97,15 @@
     nil))
 
 (defun company-ycmd-get-metadata (candidate)
+  "Fetch the metadata text-property from a candidate string."
   (get-text-property 0 'detailed_info candidate))
 
 (defun company-ycmd-get-annotation (candidate)
+  "Fetch the annotation text-property from a candidate string."
   (format " [%s]" (get-text-property 0 'kind candidate)))
 
 (defun company-ycmd-get-prefix ()
+  "Prefix-command handler for the company backend."
   (and (memq major-mode company-ycmd-modes)
        buffer-file-name
        (ycmd-running?)
@@ -103,10 +114,12 @@
            (company-grab-symbol-cons "\\.\\|->\\|::" 2))))
 
 (defun company-ycmd-get-candidates (prefix)
+  "Candidates-command handler for the company backend."
   (cons :async
         (lambda (cb) (funcall cb (company-ycmd-candidates)))))
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
+  "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-ycmd-backend))
@@ -119,10 +132,11 @@
 
 (defun company-ycmd-enable-comprehensive-automatic-completion ()
   "This updates company-begin-commands so that automatic
-completion will occur after typing :: and ->. By default
-company-mode will not start automatic completion after : and >
-characters, so you need to call this if you want full automatic
-completion for C/C++."
+completion will occur after typing :: and ->. 
+
+By default company-mode will not start automatic completion
+after : and > characters, so you need to call this if you want
+full automatic completion for C/C++."
   (interactive)
   (mapcar
    (lambda (x)
