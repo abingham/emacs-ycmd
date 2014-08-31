@@ -96,12 +96,12 @@
 (defcustom ycmd-server-command '("python" "/Users/sixtynorth/projects/ycmd/ycmd")
   "The name of the ycmd server program. This may be a single
 string or a list."
-  :type '(string)
+  :type '(repeat string)
   :group 'ycmd)
 
-(defcustom ycmd-server-args (list "--log" "info")
+(defcustom ycmd-server-args '("--log=debug" "--keep_logfile")
   "Extra arguments to pass to the ycmd server."
-  :type '()
+  :type '(repeat string)
   :group 'ycmd)
 
 (defun ycmd-open (filename)
