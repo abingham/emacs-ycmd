@@ -226,7 +226,6 @@ there is no established mapping, return nil."
 (defun ycmd--start-notification-timer ()
   "Kill any existing notification timer and start a new one."
   (ycmd--kill-notification-timer)
-  ;; TODO: Timer frequency should be configurable
   (setq ycmd--notification-timer
         (run-with-idle-timer
          2 t (lambda () (ycmd-notify-file-ready-to-parse)))))
@@ -246,10 +245,9 @@ there is no established mapping, return nil."
 (defun ycmd--json-encode (obj)
   "A version of json-encode that uses {} instead of null for nil
 values. This produces output for empty alists that ycmd expects."
-  ;; TODO: replace flat with cl-flet or cl-letf
-  (flet ((json-encode-keyword (k) (cond ((eq k t)          "true")
-                                        ((eq k json-false) "false")
-                                        ((eq k json-null)  "{}"))))
+  (cl-flet ((json-encode-keyword (k) (cond ((eq k t)          "true")
+                                           ((eq k json-false) "false")
+                                           ((eq k json-null)  "{}"))))
     (json-encode obj)))
 
 ;; This defines 'ycmd--hmac-function which we use to combine an HMAC
