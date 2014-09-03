@@ -114,16 +114,15 @@ control.) The newly started server will have a new HMAC secret."
   (interactive
   (list
    (read-file-name "Filename: ")))
+  
   (ycmd-close)
+  
   (let ((hmac-secret (ycmd-generate-hmac-secret)))
     (ycmd-start-server hmac-secret)
     (setq ycmd-hmac-secret hmac-secret)
     (ycmd-load-conf-file filename))
 
-  ;; TODO: Timer frequency should be configurable
-  (unless ycmd-notification-timer
-    (setq ycmd-notification-timer
-          (ycmd-create-notification-timer)))
+  (ycmd-start-notification-timer)
   
   (add-hook 'kill-emacs-hook (lambda () (ycmd-close))))
 
@@ -132,12 +131,12 @@ control.) The newly started server will have a new HMAC secret."
 
 This does nothing if no server is running."
   (interactive)
+  
   (unwind-protect
       (when (ycmd-running?)
 	(delete-process ycmd-server-process)))
-  (when ycmd-notification-timer
-    (cancel-timer ycmd-notification-timer)
-    (setq ycmd-notification-timer nil)))
+  
+  (ycmd-kill-notification-timer))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
@@ -220,11 +219,18 @@ ycmd-display-completions."
 (defvar ycmd-notification-timer nil
   "Timer for notifying ycmd server to do work, e.g. parsing files.")
 
-(defun ycmd-create-notification-timer ()
-  (run-with-idle-timer
-   2 t (lambda () (progn
-                    (message "timer executed!")
-                    (ycmd-notify-file-ready-to-parse (point))))))
+(defun ycmd-start-notification-timer ()
+  "Kill any existing notification timer and start a new one."
+  (ycmd-kill-notification-timer)
+  ;; TODO: Timer frequency should be configurable
+  (setq ycmd-notification-timer
+        (run-with-idle-timer
+         2 t (lambda () (ycmd-notify-file-ready-to-parse (point))))))
+
+(defun ycmd-kill-notification-timer ()
+  (when ycmd-notification-timer
+    (cancel-timer ycmd-notification-timer)
+    (setq ycmd-notification-timer nil)))
 
 (defun ycmd-generate-hmac-secret ()
   "Generate a new, random 16-byte HMAC secret key."
