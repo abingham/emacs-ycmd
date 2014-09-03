@@ -111,12 +111,16 @@ of information added as text-properties.
        (ycmd-running?)
        (not (company-in-string-or-comment))
        (if (looking-back "\\.\\|->\\|::")
-           (company-grab-symbol-cons "\\.\\|->\\|::" 2))))
+           (company-grab-symbol-cons "\\.\\|->\\|::" 2)
+         (company-grab-symbol))))
 
 (defun company-ycmd-get-candidates (prefix)
   "Candidates-command handler for the company backend."
   (cons :async
         (lambda (cb) (funcall cb (company-ycmd-candidates)))))
+
+(defun company-ycmd-get-match (prefix)
+  (point))
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
@@ -127,6 +131,7 @@ of information added as text-properties.
     (candidates  (company-ycmd-get-candidates arg))
     (meta        (company-ycmd-get-metadata arg))
     (annotation  (company-ycmd-get-annotation arg))
+    (match       (company-ycmd-get-match arg))
     (no-cache    't) ; Don't cache. It interferes with fuzzy matching.
     )) 
 

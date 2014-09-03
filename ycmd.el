@@ -99,7 +99,9 @@ string or a list."
   :type '(repeat string)
   :group 'ycmd)
 
-(defcustom ycmd-server-args '("--log=debug" "--keep_logfile")
+(defcustom ycmd-server-args '("--log=debug"
+                              "--keep_logfile"
+                              "--idle_suicide_seconds=10800")
   "Extra arguments to pass to the ycmd server."
   :type '(repeat string)
   :group 'ycmd)
@@ -116,15 +118,26 @@ control.) The newly started server will have a new HMAC secret."
   (let ((hmac-secret (ycmd-generate-hmac-secret)))
     (ycmd-start-server hmac-secret)
     (setq ycmd-hmac-secret hmac-secret)
-    (ycmd-load-conf-file filename)))
+    (ycmd-load-conf-file filename))
+
+  ;; TODO: Timer frequency should be configurable
+  (unless ycmd-notification-timer
+    (setq ycmd-notification-timer
+          (ycmd-create-notification-timer)))
+  
+  (add-hook 'kill-emacs-hook (lambda () (ycmd-close))))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
 
 This does nothing if no server is running."
   (interactive)
-  (if (ycmd-running?)
-      (delete-process ycmd-server-process)))
+  (unwind-protect
+      (when (ycmd-running?)
+	(delete-process ycmd-server-process)))
+  (when ycmd-notification-timer
+    (cancel-timer ycmd-notification-timer)
+    (setq ycmd-notification-timer nil)))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
@@ -156,7 +169,8 @@ ycmd-display-completions."
          (line-num (line-number-at-pos (point)))
          (full-path (buffer-file-name))
          (file-contents (buffer-string))
-         (file-types '("cpp" "python"))
+	 ;; TODO: Need to detect actual file type
+         (file-types '("cpp"))
          (content `(("column_num" . ,column-num)
                     ("file_data" .
                      ((,full-path . (("contents" . ,file-contents)
@@ -164,6 +178,27 @@ ycmd-display-completions."
                     ("filepath" . ,full-path)
                     ("line_num" . ,line-num))))
          (ycmd-request "/completions" content :parser 'json-read)))
+
+(defun ycmd-notify-file-ready-to-parse (pos)
+  ;; TODO: This should probably be handled asynchronously.
+  ;; TODO: Need function for calculating column-num
+  (when (memq major-mode '(c++-mode))
+    (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
+           (line-num (line-number-at-pos (point)))
+           (full-path (buffer-file-name))
+           (file-contents (buffer-string))
+           ;; TODO: Need to detect actual file type
+           (file-types '("cpp"))
+           (content `(("event_name" . "FileReadyToParse")
+                      ("file_data" .
+                       ((,full-path . (("contents" . ,file-contents)
+                                       ("filetypes" . ,file-types)))))
+                      ("filepath" . ,full-path)
+                      ("line_num" . ,line-num)
+                      ("column_num" . ,column-num))))
+      ;; TODO: We should display the returned information somehow. It
+      ;; will include things like errors and warning.
+      (ycmd-request "/event_notification" content :parser 'json-read))))
 
 ;; Private: Stuff users should probably not touch.
 
@@ -181,6 +216,15 @@ ycmd-display-completions."
 (defconst ycmd-server-process "ycmd-server"
   "The emacs name of the server process. This is used by
   functions like start-process, get-process, and delete-process.")
+
+(defvar ycmd-notification-timer nil
+  "Timer for notifying ycmd server to do work, e.g. parsing files.")
+
+(defun ycmd-create-notification-timer ()
+  (run-with-idle-timer
+   2 t (lambda () (progn
+                    (message "timer executed!")
+                    (ycmd-notify-file-ready-to-parse (point))))))
 
 (defun ycmd-generate-hmac-secret ()
   "Generate a new, random 16-byte HMAC secret key."
@@ -301,7 +345,7 @@ unmodified contents of the response (i.e. not JSON-decoded or
 anything like that.)
 "
   (let* ((content (json-encode content))
-         (hmac (ycmd-hmac-function content ycmd-hmac-secret))
+	 (hmac (ycmd-hmac-function content ycmd-hmac-secret))
          (hex-hmac (encode-hex-string hmac))
          (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
     (request-response-data
