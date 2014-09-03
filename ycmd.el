@@ -87,6 +87,11 @@
 
 ;; Public: Things users might need to use.
 
+(defgroup ycmd nil
+  "a ycmd emacs client"
+  :group 'tools
+  :group 'programming)
+
 (defcustom ycmd-host "127.0.0.1"
   "The host on which the ycmd server is running."
   :type '(string)
