@@ -48,7 +48,11 @@
 ;;
 ;; Basic usage:
 ;;
-;; To start a ycmd server, use 'ycmd-open. Before you do anything else, you need to instruct it to load a configuration file with 'ycmd-load-conf-file. Then you can use 'ycmd-get-completions to get completions at some point in a file. For example:
+;; To start a ycmd server, use 'ycmd-open. The argument to ycmd-open
+;; is a project-specific configuration file which gets loaded with
+;; 'ycmd-load-conf-file (which you can call explicitly if you want as
+;; well.) Then you can use 'ycmd-get-completions to get completions at
+;; some point in a file. For example:
 ;;
 ;;   (ycmd-open "/full/path/to/some/.ycm_extra_conf.py")
 ;;   (ycmd-get-completions)
