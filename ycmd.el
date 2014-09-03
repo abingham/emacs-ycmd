@@ -178,7 +178,6 @@ ycmd-display-completions."
          (ycmd-request "/completions" content :parser 'json-read)))
 
 (defun ycmd-notify-file-ready-to-parse (pos)
-  ;; TODO: This should probably be handled asynchronously.
   ;; TODO: Need function for calculating column-num
   (when (memq major-mode '(c++-mode))
     (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
