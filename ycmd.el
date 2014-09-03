@@ -122,12 +122,12 @@ control.) The newly started server will have a new HMAC secret."
   
   (ycmd-close)
   
-  (let ((hmac-secret (ycmd-generate-hmac-secret)))
-    (ycmd-start-server hmac-secret)
-    (setq ycmd-hmac-secret hmac-secret)
+  (let ((hmac-secret (ycmd--generate-hmac-secret)))
+    (ycmd--start-server hmac-secret)
+    (setq ycmd--hmac-secret hmac-secret)
     (ycmd-load-conf-file filename))
 
-  (ycmd-start-notification-timer)
+  (ycmd--start-notification-timer)
   
   (add-hook 'kill-emacs-hook (lambda () (ycmd-close))))
 
@@ -139,9 +139,14 @@ This does nothing if no server is running."
   
   (unwind-protect
       (when (ycmd-running?)
-	(delete-process ycmd-server-process)))
+	(delete-process ycmd--server-process)))
   
-  (ycmd-kill-notification-timer))
+  (ycmd--kill-notification-timer))
+
+(defun ycmd-running? ()
+  "Tells you if a ycmd server is already running."
+  (interactive)
+  (if (get-process ycmd--server-process) 't nil))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
@@ -149,7 +154,7 @@ This does nothing if no server is running."
    (list
     (read-file-name "Filename: ")))
   (let ((filename (expand-file-name filename)))
-    (ycmd-request
+    (ycmd--request
      "/load_extra_conf_file"
      `(("filepath" . ,filename)))))
 
@@ -169,42 +174,41 @@ it might be interesting for some users."
 
 To see what the returned structure looks like, you can use
 ycmd-display-completions."
-  (when (ycmd-major-mode-to-file-types major-mode)
-    (ycmd-request "/completions"
-                  (ycmd-standard-content)
+  (when (ycmd--major-mode-to-file-types major-mode)
+    (ycmd--request "/completions"
+                  (ycmd--standard-content)
                   :parser 'json-read)))
 
 (defun ycmd-notify-file-ready-to-parse ()
-  (when (ycmd-major-mode-to-file-types major-mode)
+  (when (ycmd--major-mode-to-file-types major-mode)
     (let ((content (cons '("event_name" . "FileReadyToParse")
-                         (ycmd-standard-content))))
+                         (ycmd--standard-content))))
       ;; TODO: We should display the returned information somehow. It
       ;; will include things like errors and warning.
-      (ycmd-request "/event_notification"
+      (ycmd--request "/event_notification"
                     content
                     :parser 'json-read))))
 
 ;; Private: Stuff users should probably not touch.
 
-(defconst ycmd-server-actual-port 0
+(defvar ycmd--server-actual-port 0
   "The actual port being used by the ycmd server. This is set
-  based on the output from the server itself. Users should never
-  change this.")
+  based on the output from the server itself.")
 
-(defconst ycmd-hmac-secret nil
+(defvar ycmd--hmac-secret nil
   "This is populated with the hmac secret of the current
   connection. Users should never need to modify this, hence the
   defconst. It is not, however, treated as a constant by this
   code. This value gets set in ycmd-open.")
 
-(defconst ycmd-server-process "ycmd-server"
+(defconst ycmd--server-process "ycmd-server"
   "The emacs name of the server process. This is used by
   functions like start-process, get-process, and delete-process.")
 
-(defvar ycmd-notification-timer nil
+(defvar ycmd--notification-timer nil
   "Timer for notifying ycmd server to do work, e.g. parsing files.")
 
-(defconst ycmd-file-type-map
+(defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
     (c-mode . ("cpp"))
     (python-mode . ("python"))
@@ -214,32 +218,32 @@ ycmd-display-completions."
   determine a) which major modes we support and b) how to
   describe them to ycmd.")
 
-(defun ycmd-major-mode-to-file-types (mode)
+(defun ycmd--major-mode-to-file-types (mode)
   "Map a major mode to a list of file-types suitable for ycmd. If
 there is no established mapping, return nil."
-  (cdr (assoc mode ycmd-file-type-map)))
+  (cdr (assoc mode ycmd--file-type-map)))
 
-(defun ycmd-start-notification-timer ()
+(defun ycmd--start-notification-timer ()
   "Kill any existing notification timer and start a new one."
-  (ycmd-kill-notification-timer)
+  (ycmd--kill-notification-timer)
   ;; TODO: Timer frequency should be configurable
-  (setq ycmd-notification-timer
+  (setq ycmd--notification-timer
         (run-with-idle-timer
          2 t (lambda () (ycmd-notify-file-ready-to-parse)))))
 
-(defun ycmd-kill-notification-timer ()
-  (when ycmd-notification-timer
-    (cancel-timer ycmd-notification-timer)
-    (setq ycmd-notification-timer nil)))
+(defun ycmd--kill-notification-timer ()
+  (when ycmd--notification-timer
+    (cancel-timer ycmd--notification-timer)
+    (setq ycmd--notification-timer nil)))
 
-(defun ycmd-generate-hmac-secret ()
+(defun ycmd--generate-hmac-secret ()
   "Generate a new, random 16-byte HMAC secret key."
   (let ((result '()))
     (dotimes (x 16 result)
       (setq result (cons (byte-to-string (random 256)) result)))
     (apply 'concat result)))
 
-(defun ycmd-json-encode (obj)
+(defun ycmd--json-encode (obj)
   "A version of json-encode that uses {} instead of null for nil
 values. This produces output for empty alists that ycmd expects."
   ;; TODO: replace flat with cl-flet or cl-letf
@@ -248,13 +252,13 @@ values. This produces output for empty alists that ycmd expects."
                                         ((eq k json-null)  "{}"))))
     (json-encode obj)))
 
-;; This defines 'ycmd-hmac-function which we use to combine an HMAC
+;; This defines 'ycmd--hmac-function which we use to combine an HMAC
 ;; key and message contents.
-(define-hmac-function ycmd-hmac-function
+(define-hmac-function ycmd--hmac-function
   (lambda (x) (secure-hash 'sha256 x nil nil 1))
   64 64)
 
-(defun ycmd-options-contents (hmac-secret)
+(defun ycmd--options-contents (hmac-secret)
   "Return a struct which can be JSON encoded into a file to
 create a ycmd options file.
 
@@ -288,35 +292,30 @@ file."
       (semantic_triggers . ())
       (auto_trigger . 1))))
 
-(defun ycmd-running? ()
-  "Tells you if a ycmd server is already running."
-  (interactive)
-  (if (get-process ycmd-server-process) 't nil))
-
-(defun ycmd-create-options-file (hmac-secret)
+(defun ycmd--create-options-file (hmac-secret)
   "This creates a new options file for a ycmd server.
 
 This creates a new tempfile and fills it with options. Returns
 the name of the newly created file."
   (let ((options-file (make-temp-file "ycmd-options"))
-        (options (ycmd-options-contents hmac-secret)))
+        (options (ycmd--options-contents hmac-secret)))
     (with-temp-file options-file
-      (insert (ycmd-json-encode options)))
+      (insert (ycmd--json-encode options)))
     options-file))
 
-(defun ycmd-start-server (hmac-secret)
+(defun ycmd--start-server (hmac-secret)
   "This starts a new server using HMAC-SECRET as its HMAC secret."
   (let ((proc-buff (get-buffer-create "*ycmd-server*")))
     (set-buffer proc-buff)
     (erase-buffer)
     
-    (let* ((options-file (ycmd-create-options-file hmac-secret))
+    (let* ((options-file (ycmd--create-options-file hmac-secret))
            (server-command (if (listp ycmd-server-command)
                                ycmd-server-command
                              (list ycmd-server-command)))
            (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
            (server-program+args (append server-command args))
-           (proc (apply #'start-process ycmd-server-process proc-buff server-program+args))
+           (proc (apply #'start-process ycmd--server-process proc-buff server-program+args))
            (cont 1))
       (while cont
         (set-process-query-on-exit-flag proc nil)
@@ -326,7 +325,7 @@ the name of the newly created file."
 	  (cond
 	   ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
 	    (progn
-              (set-variable 'ycmd-server-actual-port
+              (set-variable 'ycmd--server-actual-port
                             (string-to-number (match-string 1 proc-output)))
               (setq cont nil)))
 	   (t
@@ -334,7 +333,7 @@ the name of the newly created file."
 	    (when (< 3000 cont) ; timeout after 3 seconds
 	      (error "Server timeout.")))))))))
 
-(defun ycmd-standard-content (&optional buffer)
+(defun ycmd--standard-content (&optional buffer)
   "Generate the 'standard' content for ycmd posts.
 
 This extracts a bunch of information from BUFFER. If BUFFER is
@@ -345,7 +344,7 @@ nil, this uses the current buffer.
            (line-num (line-number-at-pos (point)))
            (full-path (buffer-file-name))
            (file-contents (buffer-string))
-           (file-types (ycmd-major-mode-to-file-types major-mode)))
+           (file-types (ycmd--major-mode-to-file-types major-mode)))
       `(("file_data" .
          ((,full-path . (("contents" . ,file-contents)
                          ("filetypes" . ,file-types)))))
@@ -353,7 +352,7 @@ nil, this uses the current buffer.
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
 
-(defun* ycmd-request (location content &key (parser 'buffer-string))
+(defun* ycmd--request (location content &key (parser 'buffer-string))
   "Send a request to the ycmd server.
 
 LOCATION specifies the location portion of the URL. For example,
@@ -370,12 +369,12 @@ unmodified contents of the response (i.e. not JSON-decoded or
 anything like that.)
 "
   (let* ((content (json-encode content))
-	 (hmac (ycmd-hmac-function content ycmd-hmac-secret))
+	 (hmac (ycmd--hmac-function content ycmd--hmac-secret))
          (hex-hmac (encode-hex-string hmac))
          (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
     (request-response-data
      (request
-      (format "http://%s:%s%s" ycmd-host ycmd-server-actual-port location)
+      (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
       :headers `(("Content-Type" . "application/json")
                  ("X-Ycm-Hmac" . ,encoded-hex-hmac))
       :sync 1
