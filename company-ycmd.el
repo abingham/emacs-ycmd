@@ -93,7 +93,7 @@ of information added as text-properties.
        (assoc-default
         'completions
         (with-local-quit
-          (ycmd-get-completions (point)))))
+          (ycmd-get-completions))))
     nil))
 
 (defun company-ycmd-get-metadata (candidate)

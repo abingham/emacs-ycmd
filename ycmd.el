@@ -148,53 +148,36 @@ This does nothing if no server is running."
      "/load_extra_conf_file"
      `(("filepath" . ,filename)))))
 
-(defun ycmd-display-completions (pos)
+(defun ycmd-display-completions ()
   "Get completions at the current point and display them in a buffer.
 
 This is really a utility/debugging function for developers, but
 it might be interesting for some users."
-  (interactive "d")
-  (let ((completions (ycmd-get-completions pos)))
+  (interactive)
+  (let ((completions (ycmd-get-completions)))
     (pop-to-buffer "*ycmd-completions*")
     (erase-buffer)
     (insert (pp-to-string completions))))
 
-(defun ycmd-get-completions (pos)
-  "Get completions at POS from the ycmd server.
+(defun ycmd-get-completions ()
+  "Get completions for the current position from the ycmd server.
 
 To see what the returned structure looks like, you can use
 ycmd-display-completions."
-  (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
-         (line-num (line-number-at-pos (point)))
-         (full-path (buffer-file-name))
-         (file-contents (buffer-string))
-         (file-types (ycmd-major-mode-to-file-types major-mode))
-         (content `(("column_num" . ,column-num)
-                    ("file_data" .
-                     ((,full-path . (("contents" . ,file-contents)
-                                     ("filetypes" . ,file-types)))))
-                    ("filepath" . ,full-path)
-                    ("line_num" . ,line-num))))
-         (ycmd-request "/completions" content :parser 'json-read)))
+  (when (ycmd-major-mode-to-file-types major-mode)
+    (ycmd-request "/completions"
+                  (ycmd-standard-content)
+                  :parser 'json-read)))
 
-(defun ycmd-notify-file-ready-to-parse (pos)
-  ;; TODO: Need function for calculating column-num
-  (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
-         (line-num (line-number-at-pos (point)))
-         (full-path (buffer-file-name))
-         (file-contents (buffer-string))
-         (file-types (ycmd-major-mode-to-file-types major-mode))
-         (content `(("event_name" . "FileReadyToParse")
-                    ("file_data" .
-                     ((,full-path . (("contents" . ,file-contents)
-                                     ("filetypes" . ,file-types)))))
-                    ("filepath" . ,full-path)
-                    ("line_num" . ,line-num)
-                    ("column_num" . ,column-num))))
-    ;; TODO: We should display the returned information somehow. It
-    ;; will include things like errors and warning.
-    (when file-types
-      (ycmd-request "/event_notification" content :parser 'json-read))))
+(defun ycmd-notify-file-ready-to-parse ()
+  (when (ycmd-major-mode-to-file-types major-mode)
+    (let ((content (cons '("event_name" . "FileReadyToParse")
+                         (ycmd-standard-content))))
+      ;; TODO: We should display the returned information somehow. It
+      ;; will include things like errors and warning.
+      (ycmd-request "/event_notification"
+                    content
+                    :parser 'json-read))))
 
 ;; Private: Stuff users should probably not touch.
 
@@ -237,7 +220,7 @@ there is no established mapping, return nil."
   ;; TODO: Timer frequency should be configurable
   (setq ycmd-notification-timer
         (run-with-idle-timer
-         2 t (lambda () (ycmd-notify-file-ready-to-parse (point))))))
+         2 t (lambda () (ycmd-notify-file-ready-to-parse)))))
 
 (defun ycmd-kill-notification-timer ()
   (when ycmd-notification-timer
@@ -345,6 +328,25 @@ the name of the newly created file."
 	    (incf cont)
 	    (when (< 3000 cont) ; timeout after 3 seconds
 	      (error "Server timeout.")))))))))
+
+(defun ycmd-standard-content (&optional buffer)
+  "Generate the 'standard' content for ycmd posts.
+
+This extracts a bunch of information from BUFFER. If BUFFER is
+nil, this uses the current buffer.
+"
+  (with-current-buffer (or buffer (current-buffer))
+    (let* ((column-num (+ 1 (save-excursion (goto-char (point)) (current-column))))
+           (line-num (line-number-at-pos (point)))
+           (full-path (buffer-file-name))
+           (file-contents (buffer-string))
+           (file-types (ycmd-major-mode-to-file-types major-mode)))
+      `(("file_data" .
+         ((,full-path . (("contents" . ,file-contents)
+                         ("filetypes" . ,file-types)))))
+        ("filepath" . ,full-path)
+        ("line_num" . ,line-num)
+        ("column_num" . ,column-num)))))
 
 (defun* ycmd-request (location content &key (parser 'buffer-string))
   "Send a request to the ycmd server.
