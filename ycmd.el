@@ -50,8 +50,8 @@
 ;;
 ;; To start a ycmd server, use 'ycmd-open. Before you do anything else, you need to instruct it to load a configuration file with 'ycmd-load-conf-file. Then you can use 'ycmd-get-completions to get completions at some point in a file. For example:
 ;;
-;;   (ycmd-open "/full/path/to/some/.ycm_extra_conf.json")
-;;   (ycmd-get-completions (point))
+;;   (ycmd-open "/full/path/to/some/.ycm_extra_conf.py")
+;;   (ycmd-get-completions)
 ;;
 ;; You can use 'ycmd-display-completions to toy around with completion
 ;; interactively and see the shape of the structures in use.

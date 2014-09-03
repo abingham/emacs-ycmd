@@ -27,7 +27,7 @@ somewhere that emacs can find them. Then do something like this:
 (require 'ycmd)
 
 (ycmd-open "/full/path/to/.ycm_extra_conf.py")
-(ycmd-display-completions (point))
+(ycmd-display-completions)
 ```
 
 This will try to find possible completions for whatever is at
