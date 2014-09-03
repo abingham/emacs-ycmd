@@ -179,21 +179,21 @@ ycmd-display-completions."
 
 (defun ycmd-notify-file-ready-to-parse (pos)
   ;; TODO: Need function for calculating column-num
-  (when (memq major-mode '(c++-mode))
-    (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
-           (line-num (line-number-at-pos (point)))
-           (full-path (buffer-file-name))
-           (file-contents (buffer-string))
-           (file-types (ycmd-major-mode-to-file-types major-mode))
-           (content `(("event_name" . "FileReadyToParse")
-                      ("file_data" .
-                       ((,full-path . (("contents" . ,file-contents)
-                                       ("filetypes" . ,file-types)))))
-                      ("filepath" . ,full-path)
-                      ("line_num" . ,line-num)
-                      ("column_num" . ,column-num))))
-      ;; TODO: We should display the returned information somehow. It
-      ;; will include things like errors and warning.
+  (let* ((column-num (+ 1 (save-excursion (goto-char pos) (current-column))))
+         (line-num (line-number-at-pos (point)))
+         (full-path (buffer-file-name))
+         (file-contents (buffer-string))
+         (file-types (ycmd-major-mode-to-file-types major-mode))
+         (content `(("event_name" . "FileReadyToParse")
+                    ("file_data" .
+                     ((,full-path . (("contents" . ,file-contents)
+                                     ("filetypes" . ,file-types)))))
+                    ("filepath" . ,full-path)
+                    ("line_num" . ,line-num)
+                    ("column_num" . ,column-num))))
+    ;; TODO: We should display the returned information somehow. It
+    ;; will include things like errors and warning.
+    (when file-types
       (ycmd-request "/event_notification" content :parser 'json-read))))
 
 ;; Private: Stuff users should probably not touch.
