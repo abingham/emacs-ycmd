@@ -132,7 +132,8 @@ control.) The newly started server will have a new HMAC secret."
     (ycmd-load-conf-file filename))
 
   (ycmd--start-notification-timer)
-  
+
+  (add-hook 'find-file-hook 'ycmd-notify-file-ready-to-parse)
   (add-hook 'kill-emacs-hook 'ycmd-close))
 
 (defun ycmd-close ()
