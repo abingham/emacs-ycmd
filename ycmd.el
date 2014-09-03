@@ -129,7 +129,7 @@ control.) The newly started server will have a new HMAC secret."
 
   (ycmd--start-notification-timer)
   
-  (add-hook 'kill-emacs-hook (lambda () (ycmd-close))))
+  (add-hook 'kill-emacs-hook 'ycmd-close))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
