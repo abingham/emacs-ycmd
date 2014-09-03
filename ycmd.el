@@ -168,8 +168,7 @@ ycmd-display-completions."
          (line-num (line-number-at-pos (point)))
          (full-path (buffer-file-name))
          (file-contents (buffer-string))
-	 ;; TODO: Need to detect actual file type
-         (file-types '("cpp"))
+         (file-types (ycmd-major-mode-to-file-types major-mode))
          (content `(("column_num" . ,column-num)
                     ("file_data" .
                      ((,full-path . (("contents" . ,file-contents)
@@ -186,8 +185,7 @@ ycmd-display-completions."
            (line-num (line-number-at-pos (point)))
            (full-path (buffer-file-name))
            (file-contents (buffer-string))
-           ;; TODO: Need to detect actual file type
-           (file-types '("cpp"))
+           (file-types (ycmd-major-mode-to-file-types major-mode))
            (content `(("event_name" . "FileReadyToParse")
                       ("file_data" .
                        ((,full-path . (("contents" . ,file-contents)
@@ -218,6 +216,21 @@ ycmd-display-completions."
 
 (defvar ycmd-notification-timer nil
   "Timer for notifying ycmd server to do work, e.g. parsing files.")
+
+(defconst ycmd-file-type-map
+  '((c++-mode . ("cpp"))
+    (c-mode . ("cpp"))
+    (python-mode . ("python"))
+    (js-mode . ("javascript"))
+    (js2-mode . ("javascript")))
+  "Mapping from major modes to ycmd file-type strings. Used to
+  determine a) which major modes we support and b) how to
+  describe them to ycmd.")
+
+(defun ycmd-major-mode-to-file-types (mode)
+  "Map a major mode to a list of file-types suitable for ycmd. If
+there is no established mapping, return nil."
+  (cdr (assoc mode ycmd-file-type-map)))
 
 (defun ycmd-start-notification-timer ()
   "Kill any existing notification timer and start a new one."
