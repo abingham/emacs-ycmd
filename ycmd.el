@@ -194,6 +194,13 @@ ycmd-display-completions."
                     content
                     :parser 'json-read))))
 
+(defun ycmd-display-file-parse-results ()
+  (interactive)
+  (let ((results (ycmd-notify-file-ready-to-parse)))
+    (pop-to-buffer "*ycmd-file-ready*")
+    (erase-buffer)
+    (insert (pp-to-string results))))
+
 ;; Private: Stuff users should probably not touch.
 
 (defvar ycmd--server-actual-port 0
