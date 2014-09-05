@@ -362,6 +362,16 @@ nil, this uses the current buffer.
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
 
+(defvar ycmd--log-enabled nil
+  "Whether http content should be logged. This is useful for
+  debugging.")
+
+(defun ycmd--log-content (header content)
+  (when ycmd--log-enabled
+    (pop-to-buffer "*ycmd-content-log*")
+    (insert (format "\n%s\n\n" header))
+    (insert (pp-to-string content))))
+
 (defun* ycmd--request (location content &key (parser 'buffer-string))
   "Send a request to the ycmd server.
 
@@ -378,19 +388,22 @@ json-read. This function will be passed an the completely
 unmodified contents of the response (i.e. not JSON-decoded or
 anything like that.)
 "
+  (ycmd--log-content "HTTP REQUEST CONTENT" content)
   (let* ((content (json-encode content))
 	 (hmac (ycmd--hmac-function content ycmd--hmac-secret))
          (hex-hmac (encode-hex-string hmac))
-         (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
-    (request-response-data
-     (request
-      (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
-      :headers `(("Content-Type" . "application/json")
-                 ("X-Ycm-Hmac" . ,encoded-hex-hmac))
-      :sync 1
-      :parser parser
-      :data content
-      :type "POST"))))
+         (encoded-hex-hmac (base64-encode-string hex-hmac 't))
+	 (response (request-response-data
+		    (request
+		     (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
+		     :headers `(("Content-Type" . "application/json")
+				("X-Ycm-Hmac" . ,encoded-hex-hmac))
+		     :sync 1
+		     :parser parser
+		     :data content
+		     :type "POST"))))
+    (ycmd--log-content "HTTP RESPONSE CONTENT" response)
+    response))
 
 (provide 'ycmd)
 
