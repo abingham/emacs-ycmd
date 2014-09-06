@@ -48,13 +48,24 @@
 ;;
 ;; Basic usage:
 ;;
-;; To start a ycmd server, use 'ycmd-open. The argument to ycmd-open
-;; is a project-specific configuration file which gets loaded with
-;; 'ycmd-load-conf-file (which you can call explicitly if you want as
-;; well.) Then you can use 'ycmd-get-completions to get completions at
-;; some point in a file. For example:
+;; First you'll want to configure a few things. If you've got a global ycmd config file, you can specify that with
+;; ycmd-global-config:
 ;;
-;;   (ycmd-open "/full/path/to/some/.ycm_extra_conf.py")
+;;   (set-variable 'ycmd-global-config "/path/to/global_conf.py")
+;;
+;; Then you'll want to configure your "extra-config whitelist"
+;; patterns. These patterns determine which extra-conf files will get
+;; loaded automatically by ycmd. So, for example, if you want to make
+;; sure that ycmd will automatically load all of the extra-conf files
+;; underneath your "~/projects" directory, do this:
+;;
+;;   (set-variable 'ycmd-extra-conf-whitelist '("~/projects/*"))
+;;
+;; Now, wo start a ycmd server, use 'ycmd-open. Then you can use
+;; 'ycmd-get-completions to get completions at some point in a
+;; file. For example:
+;;
+;;   (ycmd-open)
 ;;   (ycmd-get-completions)
 ;;
 ;; You can use 'ycmd-display-completions to toy around with completion
@@ -101,6 +112,12 @@
   :type '(string)
   :group 'ycmd)
 
+(defcustom ycmd-extra-conf-whitelist nil
+  "List of glob expressions which match extra configs to load as
+  needed without confirmation."
+  :type '(repeat string)
+  :group 'ycmd)
+
 (defcustom ycmd-host "127.0.0.1"
   "The host on which the ycmd server is running."
   :type '(string)
@@ -120,21 +137,18 @@ string or a list."
   :type '(repeat string)
   :group 'ycmd)
 
-(defun ycmd-open (filename)
-  "Start a new ycmd server using the 'ycm extra conf' file FILENAME.
+(defun ycmd-open ()
+  "Start a new ycmd server.
 
 This kills any ycmd server already running (under ycmd.el's
 control.) The newly started server will have a new HMAC secret."
-  (interactive
-  (list
-   (read-file-name "Filename: ")))
+  (interactive)
   
   (ycmd-close)
   
   (let ((hmac-secret (ycmd--generate-hmac-secret)))
     (ycmd--start-server hmac-secret)
-    (setq ycmd--hmac-secret hmac-secret)
-    (ycmd-load-conf-file filename))
+    (setq ycmd--hmac-secret hmac-secret))
 
   (ycmd--start-notification-timer)
 
@@ -283,7 +297,8 @@ key. So we need to generate a new options file for each ycmd
 instance. This function effectively produces the contents of that
 file."
   (let ((hmac-secret (base64-encode-string hmac-secret))
-        (global-config (or ycmd-global-config "")))
+        (global-config (or ycmd-global-config ""))
+        (extra-conf-whitelist (or ycmd-extra-conf-whitelist [])))
     `((filetype_blacklist (vimwiki . 1) (mail . 1) (qf . 1) (tagbar . 1) (unite . 1) (infolog . 1) (notes . 1) (text . 1) (pandoc . 1) (markdown . 1))
       (auto_start_csharp_server . 1)
       (filetype_whitelist (* . 1))
@@ -298,7 +313,7 @@ file."
       (confirm_extra_conf . 1)
       (server_keep_logfiles . 1)
       (global_ycm_extra_conf . ,global-config)
-      (extra_conf_globlist . [])
+      (extra_conf_globlist . ,extra-conf-whitelist)
       (hmac_secret . ,hmac-secret)
       (collect_identifiers_from_tags_files . 0)
       (filetype_specific_completion_to_disable (gitcommit . 1))
