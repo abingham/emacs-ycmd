@@ -144,9 +144,9 @@ string or a list."
 This kills any ycmd server already running (under ycmd.el's
 control.) The newly started server will have a new HMAC secret."
   (interactive)
-  
+
   (ycmd-close)
-  
+
   (let ((hmac-secret (ycmd--generate-hmac-secret)))
     (ycmd--start-server hmac-secret)
     (setq ycmd--hmac-secret hmac-secret))
@@ -158,11 +158,11 @@ control.) The newly started server will have a new HMAC secret."
 
 This does nothing if no server is running."
   (interactive)
-  
+
   (unwind-protect
       (when (ycmd-running?)
 	(delete-process ycmd--server-process)))
-  
+
   (ycmd--kill-notification-timer))
 
 (defun ycmd-running? ()
@@ -337,7 +337,7 @@ the name of the newly created file."
   (let ((proc-buff (get-buffer-create "*ycmd-server*")))
     (with-current-buffer proc-buff
       (erase-buffer)
-      
+
       (let* ((options-file (ycmd--create-options-file hmac-secret))
              (server-command (if (listp ycmd-server-command)
                                  ycmd-server-command
@@ -372,7 +372,7 @@ nil, this uses the current buffer.
     (let* ((column-num (+ 1 (save-excursion (goto-char (point)) (current-column))))
            (line-num (line-number-at-pos (point)))
            (full-path (buffer-file-name))
-           (file-contents (buffer-string))
+           (file-contents (buffer-substring-no-properties (point-min) (point-max)))
            (file-types (ycmd--major-mode-to-file-types major-mode)))
       `(("file_data" .
          ((,full-path . (("contents" . ,file-contents)
