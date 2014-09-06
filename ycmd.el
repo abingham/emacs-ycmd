@@ -96,6 +96,11 @@
   :group 'tools
   :group 'programming)
 
+(defcustom ycmd-global-config nil
+  "Path to global extra conf file."
+  :type '(string)
+  :group 'ycmd)
+
 (defcustom ycmd-host "127.0.0.1"
   "The host on which the ycmd server is running."
   :type '(string)
@@ -277,7 +282,8 @@ reads this file and then deletes it since it contains a secret
 key. So we need to generate a new options file for each ycmd
 instance. This function effectively produces the contents of that
 file."
-  (let ((hmac-secret (base64-encode-string hmac-secret)))
+  (let ((hmac-secret (base64-encode-string hmac-secret))
+        (global-config (or ycmd-global-config "")))
     `((filetype_blacklist (vimwiki . 1) (mail . 1) (qf . 1) (tagbar . 1) (unite . 1) (infolog . 1) (notes . 1) (text . 1) (pandoc . 1) (markdown . 1))
       (auto_start_csharp_server . 1)
       (filetype_whitelist (* . 1))
@@ -291,7 +297,7 @@ file."
       (complete_in_comments . 0)
       (confirm_extra_conf . 1)
       (server_keep_logfiles . 1)
-      (global_ycm_extra_conf . "")
+      (global_ycm_extra_conf . ,global-config)
       (extra_conf_globlist . [])
       (hmac_secret . ,hmac-secret)
       (collect_identifiers_from_tags_files . 0)
