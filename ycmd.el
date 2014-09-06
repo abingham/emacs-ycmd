@@ -61,11 +61,12 @@
 ;;
 ;;   (set-variable 'ycmd-extra-conf-whitelist '("~/projects/*"))
 ;;
-;; Now, wo start a ycmd server, use 'ycmd-open. Then you can use
-;; 'ycmd-get-completions to get completions at some point in a
+;; Now, the first time you open a file for which ycmd can perform
+;; completions, a ycmd server will be automatically started.
+;;
+;; Use 'ycmd-get-completions to get completions at some point in a
 ;; file. For example:
 ;;
-;;   (ycmd-open)
 ;;   (ycmd-get-completions)
 ;;
 ;; You can use 'ycmd-display-completions to toy around with completion
@@ -150,10 +151,7 @@ control.) The newly started server will have a new HMAC secret."
     (ycmd--start-server hmac-secret)
     (setq ycmd--hmac-secret hmac-secret))
 
-  (ycmd--start-notification-timer)
-
-  (add-hook 'find-file-hook 'ycmd-notify-file-ready-to-parse)
-  (add-hook 'kill-emacs-hook 'ycmd-close))
+  (ycmd--start-notification-timer))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
@@ -337,32 +335,32 @@ the name of the newly created file."
 (defun ycmd--start-server (hmac-secret)
   "This starts a new server using HMAC-SECRET as its HMAC secret."
   (let ((proc-buff (get-buffer-create "*ycmd-server*")))
-    (set-buffer proc-buff)
-    (erase-buffer)
-    
-    (let* ((options-file (ycmd--create-options-file hmac-secret))
-           (server-command (if (listp ycmd-server-command)
-                               ycmd-server-command
-                             (list ycmd-server-command)))
-           (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
-           (server-program+args (append server-command args))
-           (proc (apply #'start-process ycmd--server-process proc-buff server-program+args))
-           (cont 1))
-      (while cont
-        (set-process-query-on-exit-flag proc nil)
-        (accept-process-output proc 0 100 t)
-        (let ((proc-output (with-current-buffer proc-buff
-			     (buffer-string))))
-	  (cond
-	   ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
-	    (progn
-              (set-variable 'ycmd--server-actual-port
-                            (string-to-number (match-string 1 proc-output)))
-              (setq cont nil)))
-	   (t
-	    (incf cont)
-	    (when (< 3000 cont) ; timeout after 3 seconds
-	      (error "Server timeout.")))))))))
+    (with-current-buffer proc-buff
+      (erase-buffer)
+      
+      (let* ((options-file (ycmd--create-options-file hmac-secret))
+             (server-command (if (listp ycmd-server-command)
+                                 ycmd-server-command
+                               (list ycmd-server-command)))
+             (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
+             (server-program+args (append server-command args))
+             (proc (apply #'start-process ycmd--server-process proc-buff server-program+args))
+             (cont 1))
+        (while cont
+          (set-process-query-on-exit-flag proc nil)
+          (accept-process-output proc 0 100 t)
+          (let ((proc-output (with-current-buffer proc-buff
+                               (buffer-string))))
+            (cond
+             ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
+              (progn
+                (set-variable 'ycmd--server-actual-port
+                              (string-to-number (match-string 1 proc-output)))
+                (setq cont nil)))
+             (t
+              (incf cont)
+              (when (< 3000 cont) ; timeout after 3 seconds
+                (error "Server timeout."))))))))))
 
 (defun ycmd--standard-content (&optional buffer)
   "Generate the 'standard' content for ycmd posts.
@@ -425,6 +423,14 @@ anything like that.)
 		     :type "POST"))))
     (ycmd--log-content "HTTP RESPONSE CONTENT" response)
     response))
+
+(defun ycmd--on-find-file ()
+  (when (ycmd--major-mode-to-file-types major-mode)
+    (unless (ycmd-running?) (ycmd-open))
+    (ycmd-notify-file-ready-to-parse)))
+
+(add-hook 'find-file-hook 'ycmd--on-find-file)
+(add-hook 'kill-emacs-hook 'ycmd-close)
 
 (provide 'ycmd)
 
