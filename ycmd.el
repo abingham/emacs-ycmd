@@ -387,9 +387,10 @@ nil, this uses the current buffer.
 
 (defun ycmd--log-content (header content)
   (when ycmd--log-enabled
-    (pop-to-buffer "*ycmd-content-log*")
-    (insert (format "\n%s\n\n" header))
-    (insert (pp-to-string content))))
+    (let ((buffer (get-buffer-create "*ycmd-content-log*")))
+      (with-current-buffer buffer
+        (insert (format "\n%s\n\n" header))
+        (insert (pp-to-string content))))))
 
 (defun* ycmd--request (location content &key (parser 'buffer-string))
   "Send a request to the ycmd server.
