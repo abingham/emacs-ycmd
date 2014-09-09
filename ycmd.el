@@ -48,8 +48,8 @@
 ;;
 ;; Basic usage:
 ;;
-;; First you'll want to configure a few things. If you've got a global ycmd config file, you can specify that with
-;; ycmd-global-config:
+;; First you'll want to configure a few things. If you've got a global
+;; ycmd config file, you can specify that with ycmd-global-config:
 ;;
 ;;   (set-variable 'ycmd-global-config "/path/to/global_conf.py")
 ;;
