@@ -60,6 +60,7 @@
 ;;; Code:
 
 (require 'cc-cmds)
+(require 'cl-lib)
 (require 'company)
 (require 'ycmd)
 
@@ -125,7 +126,7 @@ of information added as text-properties.
 (defun company-ycmd-backend (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
-  (case command
+  (cl-case command
     (interactive (company-begin-backend 'company-ycmd-backend))
     (prefix      (company-ycmd-get-prefix))
     (candidates  (company-ycmd-get-candidates arg))
