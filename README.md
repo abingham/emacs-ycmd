@@ -18,10 +18,18 @@ ycmd itself, so if you feel lost you might read
 Quickstart
 ----------
 
-The first thing you need to do is `require` the emacs-ycmd code in your emacs config:
+First make sure that `ycmd` is installed on your system. See [the ycmd instructions](https://github.com/Valloric/ycmd#building) for more details.
+
+Then `require` the emacs-ycmd code in your emacs config:
 
 ```
 (require 'ycmd)
+```
+
+Use the variable `ycmd-server-command` to specify how to run the server. It will typically be something like:
+
+```
+(set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
 ```
 
 If you've got a *global ycmd configuration*, specify that in your
