@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((request "0.2.0"))
+;; Package-Requires: ((request "0.2.0") (deferred "0.3.2") (request-deferred "0.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -36,7 +36,9 @@
 ;;
 ;; ycmd depends on the following packages:
 ;;
+;;   deferred
 ;;   request
+;;   request-deferred
 ;;
 ;; Copy this file to to some location in your emacs load path. Then add
 ;; "(require 'ycmd)" to your emacs initialization (.emacs,
@@ -96,10 +98,12 @@
 
 ;;; Code:
 
+(require 'deferred)
 (require 'hmac-def)
 (require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
 (require 'request)
+(require 'request-deferred)
 
 ;; Public: Things users might need to use.
 
@@ -203,13 +207,15 @@ ycmd-display-completions."
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
-    (let ((content (cons '("event_name" . "FileReadyToParse")
-                         (ycmd--standard-content))))
+    (lexical-let ((content (cons '("event_name" . "FileReadyToParse")
+                                 (ycmd--standard-content))))
       ;; TODO: We should display the returned information somehow. It
       ;; will include things like errors and warning.
-      (ycmd--request "/event_notification"
-                    content
-                    :parser 'json-read))))
+      (deferred:$
+        
+        (ycmd--deferred-request "/event_notification"
+                                content
+                                :parser 'json-read)))))
 
 (defun ycmd-display-file-parse-results ()
   (interactive)
@@ -424,6 +430,35 @@ anything like that.)
 		     :type "POST"))))
     (ycmd--log-content "HTTP RESPONSE CONTENT" response)
     response))
+
+(defun* ycmd--deferred-request (location content &key (parser 'buffer-string))
+  "Send a deferred request to the ycmd server.
+
+LOCATION specifies the location portion of the URL. For example,
+if LOCATION is '/feed_llama', the request URL is
+'http://host:port/feed_llama'.
+
+CONTENT will be JSON-encoded and sent over at the content of the
+HTTP message.
+
+PARSER specifies the function that will be used to parse the
+response to the message. Typical values are buffer-string and
+json-read. This function will be passed an the completely
+unmodified contents of the response (i.e. not JSON-decoded or
+anything like that.)
+"
+  (lexical-let* ((request-backend 'url-retrieve)
+                 (content (json-encode content))
+                 (hmac (ycmd--hmac-function content ycmd--hmac-secret))
+                 (hex-hmac (encode-hex-string hmac))
+                 (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
+    (request-deferred
+     (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
+     :headers `(("Content-Type" . "application/json")
+                ("X-Ycm-Hmac" . ,encoded-hex-hmac))
+     :parser parser
+     :data content
+     :type "POST")))
 
 (defun ycmd--on-find-file ()
   (when (ycmd--major-mode-to-file-types major-mode)
