@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "0.1") (company "0.8.3"))
+;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -26,6 +26,7 @@
 ;;
 ;;   ycmd
 ;;   company
+;;   deferred
 ;;
 ;; Copy this file to to some location in your emacs load path. Then add
 ;; "(require 'company-ycmd)" to your emacs initialization (.emacs,
@@ -94,7 +95,9 @@ of information added as text-properties.
        (assoc-default
         'completions
         (with-local-quit
-          (ycmd-get-completions))))
+          (deferred:$
+            (ycmd-get-completions)
+            (deferred:sync! it)))))
     nil))
 
 (defun company-ycmd-get-metadata (candidate)

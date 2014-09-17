@@ -190,20 +190,26 @@ This does nothing if no server is running."
 This is really a utility/debugging function for developers, but
 it might be interesting for some users."
   (interactive)
-  (let ((completions (ycmd-get-completions)))
-    (pop-to-buffer "*ycmd-completions*")
-    (erase-buffer)
-    (insert (pp-to-string completions))))
+  (deferred:$
+    (ycmd-get-completions)
+    (deferred:nextc it
+      (lambda (completions)
+        (pop-to-buffer "*ycmd-completions*")
+        (erase-buffer)
+        (insert (pp-to-string completions))))))
 
 (defun ycmd-get-completions ()
   "Get completions for the current position from the ycmd server.
 
+Returns a deferred object.
+
 To see what the returned structure looks like, you can use
 ycmd-display-completions."
   (when (ycmd--major-mode-to-file-types major-mode)
-    (ycmd--request "/completions"
-                  (ycmd--standard-content)
-                  :parser 'json-read)))
+    (ycmd--request
+     "/completions"
+     (ycmd--standard-content)
+     :parser 'json-read)))
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
@@ -211,11 +217,9 @@ ycmd-display-completions."
                                  (ycmd--standard-content))))
       ;; TODO: We should display the returned information somehow. It
       ;; will include things like errors and warning.
-      (deferred:$
-        
-        (ycmd--deferred-request "/event_notification"
-                                content
-                                :parser 'json-read)))))
+      (ycmd--request "/event_notification"
+                     content
+                     :parser 'json-read))))
 
 (defun ycmd-display-file-parse-results ()
   (interactive)
@@ -398,41 +402,13 @@ nil, this uses the current buffer.
         (insert (format "\n%s\n\n" header))
         (insert (pp-to-string content))))))
 
-(defun* ycmd--request (location content &key (parser 'buffer-string))
-  "Send a request to the ycmd server.
+(defun* ycmd--request (location
+                       content
+                       &key (parser 'buffer-string))
+  "Send an asynchronous HTTP request to the ycmd server.
 
-LOCATION specifies the location portion of the URL. For example,
-if LOCATION is '/feed_llama', the request URL is
-'http://host:port/feed_llama'.
-
-CONTENT will be JSON-encoded and sent over at the content of the
-HTTP message.
-
-PARSER specifies the function that will be used to parse the
-response to the message. Typical values are buffer-string and
-json-read. This function will be passed an the completely
-unmodified contents of the response (i.e. not JSON-decoded or
-anything like that.)
-"
-  (ycmd--log-content "HTTP REQUEST CONTENT" content)
-  (let* ((content (json-encode content))
-	 (hmac (ycmd--hmac-function content ycmd--hmac-secret))
-         (hex-hmac (encode-hex-string hmac))
-         (encoded-hex-hmac (base64-encode-string hex-hmac 't))
-	 (response (request-response-data
-		    (request
-		     (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
-		     :headers `(("Content-Type" . "application/json")
-				("X-Ycm-Hmac" . ,encoded-hex-hmac))
-		     :sync 1
-		     :parser parser
-		     :data content
-		     :type "POST"))))
-    (ycmd--log-content "HTTP RESPONSE CONTENT" response)
-    response))
-
-(defun* ycmd--deferred-request (location content &key (parser 'buffer-string))
-  "Send a deferred request to the ycmd server.
+Returns a deferred object which resolves to the content of the
+response message.
 
 LOCATION specifies the location portion of the URL. For example,
 if LOCATION is '/feed_llama', the request URL is
@@ -452,13 +428,23 @@ anything like that.)
                  (hmac (ycmd--hmac-function content ycmd--hmac-secret))
                  (hex-hmac (encode-hex-string hmac))
                  (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
-    (request-deferred
-     (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
-     :headers `(("Content-Type" . "application/json")
-                ("X-Ycm-Hmac" . ,encoded-hex-hmac))
-     :parser parser
-     :data content
-     :type "POST")))
+    (ycmd--log-content "HTTP REQUEST CONTENT" content)
+    
+    (deferred:$
+       
+     (request-deferred
+      (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
+      :headers `(("Content-Type" . "application/json")
+                 ("X-Ycm-Hmac" . ,encoded-hex-hmac))
+      :parser parser
+      :data content
+      :type "POST")
+
+     (deferred:nextc it
+       (lambda (req)
+         (let ((content (request-response-data req)))
+           (ycmd--log-content "HTTP RESPONSE CONTENT" content)
+           content))))))
 
 (defun ycmd--on-find-file ()
   (when (ycmd--major-mode-to-file-types major-mode)
