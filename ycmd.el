@@ -223,10 +223,13 @@ ycmd-display-completions."
 
 (defun ycmd-display-file-parse-results ()
   (interactive)
-  (let ((results (ycmd-notify-file-ready-to-parse)))
-    (pop-to-buffer "*ycmd-file-ready*")
-    (erase-buffer)
-    (insert (pp-to-string results))))
+  (deferred:$
+    (ycmd-notify-file-ready-to-parse)
+    (deferred:nextc it
+      (lambda (content)
+        (pop-to-buffer "*ycmd-file-ready*")
+        (erase-buffer)
+        (insert (pp-to-string content))))))
 
 ;; Private: Stuff users should probably not touch.
 
