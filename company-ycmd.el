@@ -63,6 +63,7 @@
 (require 'cc-cmds)
 (require 'cl-lib)
 (require 'company)
+(require 'deferred)
 (require 'ycmd)
 
 (defconst company-ycmd-completion-properties
@@ -83,22 +84,27 @@ text-properties, and returns the string."
     (dolist (prop company-ycmd-completion-properties candidate)
       (put-text-property 0 1 prop (assoc-default prop src) candidate))))
 
-(defun company-ycmd-candidates ()
+(defun company-ycmd-candidates (cb)
   "Get list of completion candidate strings at point.
 
 The returned strings have annotation, metadata, and other pieces
 of information added as text-properties.
 "
-  (if (ycmd-running?)
-      (mapcar
-       'company-ycmd-construct-candidate
-       (assoc-default
-        'completions
-        (with-local-quit
-          (deferred:$
-            (ycmd-get-completions)
-            (deferred:sync! it)))))
-    nil))
+  (lexical-let ((cb cb))
+    (deferred:$
+      
+      (deferred:try
+        (deferred:$
+          (if (ycmd-running?)
+              (ycmd-get-completions)))
+        :catch (lambda (err) nil))
+      
+      (deferred:nextc it
+        (lambda (c)
+          (funcall
+           cb
+           (mapcar 'company-ycmd-construct-candidate
+                   (assoc-default 'completions c))))))))
 
 (defun company-ycmd-get-metadata (candidate)
   "Fetch the metadata text-property from a candidate string."
@@ -120,8 +126,7 @@ of information added as text-properties.
 
 (defun company-ycmd-get-candidates (prefix)
   "Candidates-command handler for the company backend."
-  (cons :async
-        (lambda (cb) (funcall cb (company-ycmd-candidates)))))
+  (cons :async 'company-ycmd-candidates))
 
 (defun company-ycmd-get-match (prefix)
   (point))
