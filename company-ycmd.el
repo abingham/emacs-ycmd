@@ -1,4 +1,4 @@
-;;; company-ycmd.el --- company-mode backend for ycmd
+;;; company-ycmd.el --- company-mode backend for ycmd ; -*- lexical-binding: t -*-
 ;;
 ;; Copyright (c) 2014 Austin Bingham
 ;;
@@ -90,21 +90,20 @@ text-properties, and returns the string."
 The returned strings have annotation, metadata, and other pieces
 of information added as text-properties.
 "
-  (lexical-let ((cb cb))
-    (deferred:$
-      
-      (deferred:try
-        (deferred:$
-          (if (ycmd-running?)
-              (ycmd-get-completions)))
-        :catch (lambda (err) nil))
-      
-      (deferred:nextc it
-        (lambda (c)
-          (funcall
-           cb
-           (mapcar 'company-ycmd-construct-candidate
-                   (assoc-default 'completions c))))))))
+  (deferred:$
+    
+    (deferred:try
+      (deferred:$
+        (if (ycmd-running?)
+            (ycmd-get-completions)))
+      :catch (lambda (err) nil))
+    
+    (deferred:nextc it
+      (lambda (c)
+        (funcall
+         cb
+         (mapcar 'company-ycmd-construct-candidate
+                 (assoc-default 'completions c)))))))
 
 (defun company-ycmd-get-metadata (candidate)
   "Fetch the metadata text-property from a candidate string."

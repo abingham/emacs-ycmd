@@ -1,4 +1,4 @@
-;;; ycmd.el --- emacs bindings to the ycmd completion server
+;;; ycmd.el --- emacs bindings to the ycmd completion server ; -*- lexical-binding: t -*-
 ;;
 ;; Copyright (c) 2014 Austin Bingham
 ;;
@@ -213,8 +213,8 @@ ycmd-display-completions."
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
-    (lexical-let ((content (cons '("event_name" . "FileReadyToParse")
-                                 (ycmd--standard-content))))
+    (let ((content (cons '("event_name" . "FileReadyToParse")
+                         (ycmd--standard-content))))
       ;; TODO: We should display the returned information somehow. It
       ;; will include things like errors and warning.
       (ycmd--request "/event_notification"
