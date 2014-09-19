@@ -212,6 +212,11 @@ ycmd-display-completions."
      :parser 'json-read)))
 
 (defun ycmd--col-line-to-position (col line)
+  "Convert COL and LINE into a position in the current buffer.
+
+COL and LINE are expected to be as returned from ycmd, e.g. from
+notify-file-ready.
+"
   (car (compute-motion (window-start)
                        '(0 . 0)
                        (point-max)
@@ -222,9 +227,13 @@ ycmd-display-completions."
 
 (defconst ycmd--file-ready-faces
   '(("ERROR" . (error (underline t) bold))
-    ("WARNING" . (warning))))
+    ("WARNING" . (warning)))
+  "alist of file-parse types to faces. These faces are applied to
+  buffers as ycmd reports errors, etc.")
 
 (defun ycmd--decorate-single-parse-result (r)
+  "Decorates a buffer based on the contents of a single parse
+result struct."
   (destructuring-bind
       ((location_extent
         (end
@@ -252,13 +261,16 @@ ycmd-display-completions."
                       end-line-num))
             (face (assoc-default kind ycmd--file-ready-faces)))
         (message "%s %s" start-pos end-pos)
-        (set-text-properties
+	(set-text-properties
          start-pos end-pos `(font-lock-face ,face))))))
 
 (defun ycmd--decorate-with-parse-results (results)
-  (set-text-properties (point-min) (point-max) nil)
-  (mapcar 'ycmd--decorate-single-parse-result results)
-  results)
+  "Decorates a buffer using the results of a file-ready parse
+list."
+  (with-silent-modifications
+    (set-text-properties (point-min) (point-max) nil)
+    (mapcar 'ycmd--decorate-single-parse-result results)
+    results))
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
