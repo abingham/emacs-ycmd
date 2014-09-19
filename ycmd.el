@@ -211,15 +211,64 @@ ycmd-display-completions."
      (ycmd--standard-content)
      :parser 'json-read)))
 
+(defun ycmd--col-line-to-position (col line)
+  (car (compute-motion (window-start)
+                       '(0 . 0)
+                       (point-max)
+                       (cons col (- line 1))
+                       (window-width)
+                       (cons (window-hscroll) 0)
+                       (selected-window))))
+
+(defconst ycmd--file-ready-faces
+  '(("ERROR" . (error (underline t) bold))
+    ("WARNING" . (warning))))
+
+(defun ycmd--decorate-single-parse-result (r)
+  (destructuring-bind
+      ((location_extent
+        (end
+         (_ . end-line-num)
+         (_ . end-column-num)
+         (_ . end-filepath))
+        (start
+         (_ . start-line-num)
+         (_ . start-column-num)
+         (_ . start-filepath)))
+       (location
+        (_ . line-num)
+        (_ . column-num)
+        (_ . filepath))
+       (_ . kind)
+       (_ . text)
+       (_ . ranges))
+      r
+    (when (string-equal filepath (buffer-file-name))
+      (let ((start-pos (ycmd--col-line-to-position
+                        start-column-num
+                        start-line-num))
+            (end-pos (ycmd--col-line-to-position
+                      end-column-num
+                      end-line-num))
+            (face (assoc-default kind ycmd--file-ready-faces)))
+        (message "%s %s" start-pos end-pos)
+        (set-text-properties
+         start-pos end-pos `(font-lock-face ,face))))))
+
+(defun ycmd--decorate-with-parse-results (results)
+  (set-text-properties (point-min) (point-max) nil)
+  (mapcar 'ycmd--decorate-single-parse-result results)
+  results)
+
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content))))
-      ;; TODO: We should display the returned information somehow. It
-      ;; will include things like errors and warning.
-      (ycmd--request "/event_notification"
-                     content
-                     :parser 'json-read))))
+      (deferred:$
+        (ycmd--request "/event_notification"
+                       content
+                       :parser 'json-read)
+        (deferred:nextc it 'ycmd--decorate-with-parse-results)))))
 
 (defun ycmd-display-file-parse-results ()
   (interactive)
