@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((request "0.2.0") (deferred "0.3.2") (request-deferred "0.2.0"))
+;; Package-Requires: ((anaphoa "1.0.0") (request "0.2.0") (deferred "0.3.2") (request-deferred "0.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -36,6 +36,7 @@
 ;;
 ;; ycmd depends on the following packages:
 ;;
+;;   anaphora
 ;;   deferred
 ;;   request
 ;;   request-deferred
@@ -98,14 +99,13 @@
 
 ;;; Code:
 
+(require 'anaphora)
 (require 'deferred)
 (require 'hmac-def)
 (require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
 (require 'request)
 (require 'request-deferred)
-
-;; Public: Things users might need to use.
 
 (defgroup ycmd nil
   "a ycmd emacs client"
@@ -217,13 +217,10 @@ ycmd-display-completions."
 COL and LINE are expected to be as returned from ycmd, e.g. from
 notify-file-ready.
 "
-  (car (compute-motion (window-start)
-                       '(0 . 0)
-                       (point-max)
-                       (cons col (- line 1))
-                       (window-width)
-                       (cons (window-hscroll) 0)
-                       (selected-window))))
+  (save-excursion
+    (goto-line line)
+    (forward-char (- col 1))
+    (point)))
 
 (defconst ycmd--file-ready-faces
   '(("ERROR" . (error (underline t) bold))
@@ -252,25 +249,26 @@ result struct."
        (_ . text)
        (_ . ranges))
       r
-    (when (string-equal filepath (buffer-file-name))
-      (let ((start-pos (ycmd--col-line-to-position
-                        start-column-num
-                        start-line-num))
-            (end-pos (ycmd--col-line-to-position
-                      end-column-num
-                      end-line-num))
-            (face (assoc-default kind ycmd--file-ready-faces)))
-        (message "%s %s" start-pos end-pos)
-	(set-text-properties
-         start-pos end-pos `(font-lock-face ,face))))))
+    (awhen (find-buffer-visiting filepath)
+      (with-current-buffer it
+        (let ((start-pos (ycmd--col-line-to-position
+                          start-column-num
+                          start-line-num))
+              (end-pos (ycmd--col-line-to-position
+                        end-column-num
+                        end-line-num))
+              (face (assoc-default kind ycmd--file-ready-faces)))
+          (with-silent-modifications
+            (set-text-properties
+             start-pos end-pos `(font-lock-face ,face))))))))
 
 (defun ycmd--decorate-with-parse-results (results)
   "Decorates a buffer using the results of a file-ready parse
 list."
   (with-silent-modifications
-    (set-text-properties (point-min) (point-max) nil)
-    (mapcar 'ycmd--decorate-single-parse-result results)
-    results))
+    (set-text-properties (point-min) (point-max) nil))
+  (mapcar 'ycmd--decorate-single-parse-result results)
+  results)
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
@@ -291,8 +289,6 @@ list."
         (pop-to-buffer "*ycmd-file-ready*")
         (erase-buffer)
         (insert (pp-to-string content))))))
-
-;; Private: Stuff users should probably not touch.
 
 (defvar ycmd--server-actual-port 0
   "The actual port being used by the ycmd server. This is set
