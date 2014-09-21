@@ -215,18 +215,37 @@ ycmd-display-completions."
   "Convert COL and LINE into a position in the current buffer.
 
 COL and LINE are expected to be as returned from ycmd, e.g. from
-notify-file-ready.
+notify-file-ready. Apparently COL can be 0 sometimes, in which
+case this function returns 0.
 "
-  (save-excursion
-    (goto-line line)
-    (forward-char (- col 1))
-    (point)))
+  (if (= col 0)
+      0
+      (save-excursion
+        (goto-line line)
+        (forward-char (- col 1))
+        (point))))
 
-(defconst ycmd--file-ready-faces
-  '(("ERROR" . (error (underline t) bold))
-    ("WARNING" . (warning)))
-  "alist of file-parse types to faces. These faces are applied to
-  buffers as ycmd reports errors, etc.")
+(define-button-type 'ycmd--error-button
+  'face '(error bold underline)
+  'button 't)
+
+(define-button-type 'ycmd--warning-button
+  'face '(warning)
+  'button 't)
+
+(defun ycmd--make-button (start end type message)
+  "Make a button of type TYPE from START to STOP in the current buffer.
+
+When clicked, this will popup MESSAGE."
+  (make-text-button
+   start end
+   'type type
+   'action (lambda (b) (popup-tip message))))
+
+(defconst ycmd--file-ready-buttons
+  '(("ERROR" . ycmd--error-button)
+    ("WARNING" . ycmd--warning-button))
+  "A mapping from parse 'kind' to button types.")
 
 (defun ycmd--decorate-single-parse-result (r)
   "Decorates a buffer based on the contents of a single parse
@@ -257,10 +276,16 @@ result struct."
               (end-pos (ycmd--col-line-to-position
                         end-column-num
                         end-line-num))
-              (face (assoc-default kind ycmd--file-ready-faces)))
-          (with-silent-modifications
-            (set-text-properties
-             start-pos end-pos `(font-lock-face ,face))))))))
+              (btype (assoc-default kind ycmd--file-ready-buttons)))
+          (when btype
+            (with-silent-modifications
+              (ycmd--make-button
+               start-pos end-pos
+               btype
+               (concat kind ": " text)))))))))
+
+(defun ycmd--display-error (msg)
+  (message "ERROR: %s" msg))
 
 (defun ycmd--decorate-with-parse-results (results)
   "Decorates a buffer using the results of a file-ready parse
@@ -278,7 +303,8 @@ list."
         (ycmd--request "/event_notification"
                        content
                        :parser 'json-read)
-        (deferred:nextc it 'ycmd--decorate-with-parse-results)))))
+        (deferred:nextc it 'ycmd--decorate-with-parse-results)
+        ))))
 
 (defun ycmd-display-file-parse-results ()
   (interactive)
