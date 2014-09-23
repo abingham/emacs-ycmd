@@ -230,7 +230,7 @@ case this function returns 0.
   'button 't)
 
 (define-button-type 'ycmd--warning-button
-  'face '(warning)
+  'face '(warning bold underline)
   'button 't)
 
 (defun ycmd--make-button (start end type message)
@@ -246,6 +246,20 @@ When clicked, this will popup MESSAGE."
   '(("ERROR" . ycmd--error-button)
     ("WARNING" . ycmd--warning-button))
   "A mapping from parse 'kind' to button types.")
+
+(defun ycmd--line-start-position (line)
+  "Find position at the start of LINE."
+  (save-excursion
+    (goto-line line)
+    (beginning-of-line)
+    (point)))
+
+(defun ycmd--line-end-position (line)
+  "Find position at the end of LINE."
+  (save-excursion
+    (goto-line line)
+    (end-of-line)
+    (point)))
 
 (defun ycmd--decorate-single-parse-result (r)
   "Decorates a buffer based on the contents of a single parse
@@ -270,13 +284,9 @@ result struct."
       r
     (awhen (find-buffer-visiting filepath)
       (with-current-buffer it
-        (let ((start-pos (ycmd--col-line-to-position
-                          start-column-num
-                          start-line-num))
-              (end-pos (ycmd--col-line-to-position
-                        end-column-num
-                        end-line-num))
-              (btype (assoc-default kind ycmd--file-ready-buttons)))
+        (let* ((start-pos (ycmd--line-start-position line-num))
+               (end-pos (ycmd--line-end-position line-num))
+               (btype (assoc-default kind ycmd--file-ready-buttons)))
           (when btype
             (with-silent-modifications
               (ycmd--make-button
@@ -307,6 +317,9 @@ list."
         ))))
 
 (defun ycmd-display-file-parse-results ()
+  "Request file-parse results and display them in a buffer.
+
+This is primarily a debug/developer tool."
   (interactive)
   (deferred:$
     (ycmd-notify-file-ready-to-parse)
