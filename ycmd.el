@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((anaphoa "1.0.0") (request "0.2.0") (deferred "0.3.2") (request-deferred "0.2.0"))
+;; Package-Requires: ((anaphora "1.0.0") (request "0.2.0") (deferred "0.3.2") (request-deferred "0.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
