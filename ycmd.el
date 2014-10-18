@@ -38,6 +38,7 @@
 ;;
 ;;   anaphora
 ;;   deferred
+;;   popup
 ;;   request
 ;;   request-deferred
 ;;
@@ -104,6 +105,7 @@
 (require 'hmac-def)
 (require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
+(require 'popup)
 (require 'request)
 (require 'request-deferred)
 
