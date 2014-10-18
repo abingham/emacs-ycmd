@@ -213,6 +213,32 @@ ycmd-display-completions."
      (ycmd--standard-content)
      :parser 'json-read)))
 
+(defun ycmd-goto ()
+  "Go to the definition or declaration (whichever is most
+sensible) of the symbol at the current position."
+  (interactive)
+  (when (ycmd--major-mode-to-file-types major-mode)
+    (let ((content (cons '("command_arguments" . ("GoTo"))
+                         (ycmd--standard-content))))
+      (deferred:$
+
+        (ycmd--request
+         "/run_completer_command"
+         content
+         :parser 'json-read)
+
+        (deferred:nextc it
+          (lambda (location)
+            (when location (ycmd--goto-location location))))))))
+
+(defun ycmd--goto-location (location)
+  "Move cursor to LOCATION, a structure as returned from e.g. the
+various GoTo commands."
+  (find-file (assoc-default 'filepath location))
+  (goto-char (ycmd--col-line-to-position
+              (assoc-default 'column_num location)
+              (assoc-default 'line_num location))))
+
 (defun ycmd--col-line-to-position (col line)
   "Convert COL and LINE into a position in the current buffer.
 
