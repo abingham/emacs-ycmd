@@ -315,8 +315,7 @@ list."
         (ycmd--request "/event_notification"
                        content
                        :parser 'json-read)
-        (deferred:nextc it 'ycmd--decorate-with-parse-results)
-        ))))
+        (deferred:nextc it 'ycmd--decorate-with-parse-results)))))
 
 (defun ycmd-display-file-parse-results ()
   "Request file-parse results and display them in a buffer.
