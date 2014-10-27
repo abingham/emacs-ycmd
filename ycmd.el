@@ -144,6 +144,11 @@ string or a list."
   :type '(repeat string)
   :group 'ycmd)
 
+(defcustom ycmd-enable-buttons t
+  "Make a button on single parse result."
+  :type '(boolean)
+  :group 'ycmd)
+
 (defun ycmd-open ()
   "Start a new ycmd server.
 
@@ -310,17 +315,18 @@ result struct."
        (_ . text)
        (_ . ranges))
       r
-    (awhen (find-buffer-visiting filepath)
-      (with-current-buffer it
-        (let* ((start-pos (ycmd--line-start-position line-num))
-               (end-pos (ycmd--line-end-position line-num))
-               (btype (assoc-default kind ycmd--file-ready-buttons)))
-          (when btype
-            (with-silent-modifications
-              (ycmd--make-button
-               start-pos end-pos
-               btype
-               (concat kind ": " text)))))))))
+    (when ycmd-enable-buttons
+      (awhen (find-buffer-visiting filepath)
+        (with-current-buffer it
+          (let* ((start-pos (ycmd--line-start-position line-num))
+                 (end-pos (ycmd--line-end-position line-num))
+                 (btype (assoc-default kind ycmd--file-ready-buttons)))
+            (when btype
+              (with-silent-modifications
+                (ycmd--make-button
+                 start-pos end-pos
+                 btype
+                 (concat kind ": " text))))))))))
 
 (defun ycmd--display-error (msg)
   (message "ERROR: %s" msg))
