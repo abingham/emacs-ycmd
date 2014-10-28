@@ -111,7 +111,15 @@ of information added as text-properties.
 
 (defun company-ycmd-get-annotation (candidate)
   "Fetch the annotation text-property from a candidate string."
-  (format " [%s]" (get-text-property 0 'kind candidate)))
+  (let ((params (get-text-property 0 'menu_text candidate))
+        (type (get-text-property 0 'kind candidate))
+        (extra (get-text-property 0 'extra_menu_info candidate)))
+    (concat (unless (zerop (length params))
+              (substring params (length candidate)))
+            (unless (zerop (length type))
+              (format " [%s]" (downcase (substring type 0 1))))
+            (unless (zerop (length extra))
+              (concat " -> " extra)))))
 
 (defun company-ycmd-get-prefix ()
   "Prefix-command handler for the company backend."
