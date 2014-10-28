@@ -144,10 +144,10 @@ string or a list."
   :type '(repeat string)
   :group 'ycmd)
 
-(defcustom ycmd-enable-buttons t
-  "Make a button on single parse result."
-  :type '(boolean)
-  :group 'ycmd)
+;; TODO: Is this the right naming convention, i.e. "hook" rather than
+;; "hooks" because these are non-standard hooks?
+(defvar ycmd-file-parse-result-hooks '(ycmd-decorate-with-parse-results)
+  "Functions to run with file-parse results.")
 
 (defun ycmd-open ()
   "Start a new ycmd server.
@@ -315,29 +315,60 @@ result struct."
        (_ . text)
        (_ . ranges))
       r
-    (when ycmd-enable-buttons
-      (awhen (find-buffer-visiting filepath)
-        (with-current-buffer it
-          (let* ((start-pos (ycmd--line-start-position line-num))
-                 (end-pos (ycmd--line-end-position line-num))
-                 (btype (assoc-default kind ycmd--file-ready-buttons)))
-            (when btype
-              (with-silent-modifications
-                (ycmd--make-button
-                 start-pos end-pos
-                 btype
-                 (concat kind ": " text))))))))))
+    (awhen (find-buffer-visiting filepath)
+      (with-current-buffer it
+        (let* ((start-pos (ycmd--line-start-position line-num))
+               (end-pos (ycmd--line-end-position line-num))
+               (btype (assoc-default kind ycmd--file-ready-buttons)))
+          (when btype
+            (with-silent-modifications
+              (ycmd--make-button
+               start-pos end-pos
+               btype
+               (concat kind ": " text)))))))))
 
 (defun ycmd--display-error (msg)
   (message "ERROR: %s" msg))
 
-(defun ycmd--decorate-with-parse-results (results)
+(defun ycmd-decorate-with-parse-results (results)
   "Decorates a buffer using the results of a file-ready parse
-list."
+list.
+
+This is suitable as an entry in `ycmd-file-parse-result-hooks`.
+"
   (with-silent-modifications
     (set-text-properties (point-min) (point-max) nil))
   (mapcar 'ycmd--decorate-single-parse-result results)
   results)
+
+(defun ycmd--display-single-file-parse-result (r)
+    (destructuring-bind
+        ((location_extent
+          (end
+           (_ . end-line-num)
+           (_ . end-column-num)
+           (_ . end-filepath))
+          (start
+           (_ . start-line-num)
+           (_ . start-column-num)
+           (_ . start-filepath)))
+         (location
+          (_ . line-num)
+          (_ . column-num)
+          (_ . filepath))
+         (_ . kind)
+         (_ . text)
+         (_ . ranges))
+        r
+      (insert (format "%s:%s - %s - %s\n" filepath line-num kind text))))
+
+(defun ycmd-display-file-parse-results (results)
+  (let ((buffer "*ycmd-file-parse-results*"))
+    (get-buffer-create buffer)
+    (with-current-buffer buffer 
+      (erase-buffer)
+      (mapcar 'ycmd--display-single-file-parse-result results))
+    (display-buffer buffer)))
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
@@ -347,10 +378,13 @@ list."
         (ycmd--request "/event_notification"
                        content
                        :parser 'json-read)
-        (deferred:nextc it 'ycmd--decorate-with-parse-results)))))
+        (deferred:nextc it
+          (lambda (results)
+            (dolist (hook ycmd-file-parse-result-hooks)
+              (funcall hook results))))))))
 
-(defun ycmd-display-file-parse-results ()
-  "Request file-parse results and display them in a buffer.
+(defun ycmd-display-raw-file-parse-results ()
+  "Request file-parse results and display them in a buffer in raw form.
 
 This is primarily a debug/developer tool."
   (interactive)
