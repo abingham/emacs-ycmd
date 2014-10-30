@@ -276,7 +276,7 @@ useful in cases in which compile-time might be considerable."
     (let ((content (cons (list "command_arguments" type)
                          (ycmd--standard-content))))
       (deferred:$
-        (ycmd--display-error content)
+
         (ycmd--request
          "/run_completer_command"
          content
