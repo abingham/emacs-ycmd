@@ -154,10 +154,18 @@ ycmd-decorate-with-parse-results from it.)"
   :type 'hook
   :risky t)
 
+(defcustom ycmd-parse-delay 0.2
+  "Number of seconds to wait after buffer modification before re-parsing the contents."
+  :group 'ycmd
+  :type '(number))
+
 (defcustom ycmd-keepalive-period 30
   "Number of seconds between keepalive messages."
   :group 'ycmd
   :type '(number))
+
+(defvar-local ycmd--buffer-needs-parse nil
+  "Indicates if a buffer has been modified since its last parse.")
 
 (defun ycmd-open ()
   "Start a new ycmd server.
@@ -375,7 +383,8 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
     (display-buffer buffer)))
 
 (defun ycmd-notify-file-ready-to-parse ()
-  (when (ycmd--major-mode-to-file-types major-mode)
+  (when (and ycmd--buffer-needs-parse
+             (ycmd--major-mode-to-file-types major-mode))
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content))))
       (deferred:$
@@ -384,7 +393,8 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
                        :parser 'json-read)
         (deferred:nextc it
           (lambda (results)
-	    (run-hook-with-args 'ycmd-file-parse-result-hook results)))))))
+	    (run-hook-with-args 'ycmd-file-parse-result-hook results)
+            (setq ycmd--buffer-needs-parse nil)))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -439,7 +449,7 @@ there is no established mapping, return nil."
   (ycmd--kill-notification-timer)
   (setq ycmd--notification-timer
         (run-with-idle-timer
-         2 t (lambda () (ycmd-notify-file-ready-to-parse)))))
+         ycmd-parse-delay t (lambda () (ycmd-notify-file-ready-to-parse)))))
 
 (defun ycmd--kill-notification-timer ()
   (when ycmd--notification-timer
@@ -638,9 +648,15 @@ anything like that.)
 
 (defun ycmd--on-find-file ()
   (when (ycmd--major-mode-to-file-types major-mode)
+    (setq ycmd--buffer-needs-parse t)
     (ycmd-notify-file-ready-to-parse)))
 
+(defun ycmd--on-buffer-modified (beginning end length)
+  (when (ycmd--major-mode-to-file-types major-mode)
+    (setq ycmd--buffer-needs-parse t)))
+
 (add-hook 'find-file-hook 'ycmd--on-find-file)
+(add-hook 'after-change-functions 'ycmd--on-buffer-modified)
 (add-hook 'kill-emacs-hook 'ycmd-close)
 
 (provide 'ycmd)
