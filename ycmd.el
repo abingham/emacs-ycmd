@@ -144,10 +144,15 @@ string or a list."
   :type '(repeat string)
   :group 'ycmd)
 
-;; TODO: Is this the right naming convention, i.e. "hook" rather than
-;; "hooks" because these are non-standard hooks?
-(defvar ycmd-file-parse-result-hooks '(ycmd-decorate-with-parse-results)
-  "Functions to run with file-parse results.")
+(defcustom ycmd-file-parse-result-hook '(ycmd-decorate-with-parse-results)
+  "Functions to run with file-parse results.
+
+The default value will decorate the parsed buffer. To disable
+this decoration, set this to nil (or otherwise remove
+ycmd-decorate-with-parse-results from it.)"
+  :group 'ycmd
+  :type 'hook
+  :risky t)
 
 (defun ycmd-open ()
   "Start a new ycmd server.
@@ -334,7 +339,7 @@ result struct."
   "Decorates a buffer using the results of a file-ready parse
 list.
 
-This is suitable as an entry in `ycmd-file-parse-result-hooks`.
+This is suitable as an entry in `ycmd-file-parse-result-hook`.
 "
   (with-silent-modifications
     (set-text-properties (point-min) (point-max) nil))
@@ -380,8 +385,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hooks`.
                        :parser 'json-read)
         (deferred:nextc it
           (lambda (results)
-            (dolist (hook ycmd-file-parse-result-hooks)
-              (funcall hook results))))))))
+	    (run-hook-with-args 'ycmd-file-parse-result-hook results)))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
