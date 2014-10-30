@@ -265,8 +265,8 @@ sensible) of the symbol at the current position."
   (ycmd--goto "GoToImplementation"))
 
 (defun ycmd-goto-imprecise ()
-  "Fast implementation of Go to at the cost of precision,
-useful in cases in which compile-time might be considerable."
+  "Fast implementation of Go To at the cost of precision,
+useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToImprecise"))
 
