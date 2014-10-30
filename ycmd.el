@@ -299,55 +299,8 @@ When clicked, this will popup MESSAGE."
     (end-of-line)
     (point)))
 
-(defun ycmd--decorate-single-parse-result (r)
-  "Decorates a buffer based on the contents of a single parse
-result struct."
-  (destructuring-bind
-      ((location_extent
-        (end
-         (_ . end-line-num)
-         (_ . end-column-num)
-         (_ . end-filepath))
-        (start
-         (_ . start-line-num)
-         (_ . start-column-num)
-         (_ . start-filepath)))
-       (location
-        (_ . line-num)
-        (_ . column-num)
-        (_ . filepath))
-       (_ . kind)
-       (_ . text)
-       (_ . ranges))
-      r
-    (awhen (find-buffer-visiting filepath)
-      (with-current-buffer it
-        (let* ((start-pos (ycmd--line-start-position line-num))
-               (end-pos (ycmd--line-end-position line-num))
-               (btype (assoc-default kind ycmd--file-ready-buttons)))
-          (when btype
-            (with-silent-modifications
-              (ycmd--make-button
-               start-pos end-pos
-               btype
-               (concat kind ": " text)))))))))
-
-(defun ycmd--display-error (msg)
-  (message "ERROR: %s" msg))
-
-(defun ycmd-decorate-with-parse-results (results)
-  "Decorates a buffer using the results of a file-ready parse
-list.
-
-This is suitable as an entry in `ycmd-file-parse-result-hook`.
-"
-  (with-silent-modifications
-    (set-text-properties (point-min) (point-max) nil))
-  (mapcar 'ycmd--decorate-single-parse-result results)
-  results)
-
-(defun ycmd--display-single-file-parse-result (r)
-    (destructuring-bind
+(defmacro ycmd--with-destructured-parse-result (result body)
+   `(destructuring-bind
         ((location_extent
           (end
            (_ . end-line-num)
@@ -364,8 +317,42 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
          (_ . kind)
          (_ . text)
          (_ . ranges))
-        r
-      (insert (format "%s:%s - %s - %s\n" filepath line-num kind text))))
+        ,result
+      ,body))
+
+(defun ycmd--decorate-single-parse-result (r)
+  "Decorates a buffer based on the contents of a single parse
+result struct."
+  (ycmd--with-destructured-parse-result r
+   (awhen (find-buffer-visiting filepath)
+     (with-current-buffer it
+       (let* ((start-pos (ycmd--line-start-position line-num))
+              (end-pos (ycmd--line-end-position line-num))
+              (btype (assoc-default kind ycmd--file-ready-buttons)))
+         (when btype
+           (with-silent-modifications
+             (ycmd--make-button
+              start-pos end-pos
+              btype
+              (concat kind ": " text)))))))))
+
+(defun ycmd--display-error (msg)
+  (message "ERROR: %s" msg))
+
+(defun ycmd-decorate-with-parse-results (results)
+  "Decorates a buffer using the results of a file-ready parse
+list.
+
+This is suitable as an entry in `ycmd-file-parse-result-hook`.
+"
+  (with-silent-modifications
+    (set-text-properties (point-min) (point-max) nil))
+  (mapcar 'ycmd--decorate-single-parse-result results)
+  results)
+
+(defun ycmd--display-single-file-parse-result (r)
+  (ycmd--with-destructured-parse-result r
+    (insert (format "%s:%s - %s - %s\n" filepath line-num kind text))))
 
 (defun ycmd-display-file-parse-results (results)
   (let ((buffer "*ycmd-file-parse-results*"))
