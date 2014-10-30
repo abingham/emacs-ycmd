@@ -247,28 +247,36 @@ ycmd-display-completions."
   "Go to the definition or declaration (whichever is most
 sensible) of the symbol at the current position."
   (interactive)
-  (when (ycmd--major-mode-to-file-types major-mode)
-    (let ((content (cons '("command_arguments" . ("GoTo"))
-                         (ycmd--standard-content))))
-      (deferred:$
+  (ycmd--goto "GoTo"))
 
-        (ycmd--request
-         "/run_completer_command"
-         content
-         :parser 'json-read)
-
-        (deferred:nextc it
-          (lambda (location)
-            (when location (ycmd--goto-location location))))))))
+(defun ycmd-goto-declaration ()
+  "Go to the declaration of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToDeclaration"))
 
 (defun ycmd-goto-definition ()
   "Go to the definition of the symbol at the current position."
   (interactive)
+  (ycmd--goto "GoToDefinition"))
+
+(defun ycmd-goto-implementation ()
+  "Go to the implementation of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToImplementation"))
+
+(defun ycmd-goto-imprecise ()
+  "Fast implementation of Go to at the cost of precision,
+useful in cases in which compile-time might be considerable."
+  (interactive)
+  (ycmd--goto "GoToImprecise"))
+
+(defun ycmd--goto (type)
+  "Implementation of GoTo according to the request type."
   (when (ycmd--major-mode-to-file-types major-mode)
-    (let ((content (cons '("command_arguments" . ("GoToDefinition"))
+    (let ((content (cons (list "command_arguments" type)
                          (ycmd--standard-content))))
       (deferred:$
-
+        (ycmd--display-error content)
         (ycmd--request
          "/run_completer_command"
          content
