@@ -154,6 +154,11 @@ ycmd-decorate-with-parse-results from it.)"
   :type 'hook
   :risky t)
 
+(defcustom ycmd-keepalive-period 30
+  "Number of seconds between keepalive messages."
+  :group 'ycmd
+  :type '(number))
+
 (defun ycmd-open ()
   "Start a new ycmd server.
 
@@ -167,6 +172,7 @@ control.) The newly started server will have a new HMAC secret."
     (ycmd--start-server hmac-secret)
     (setq ycmd--hmac-secret hmac-secret))
 
+  (ycmd--start-keepalive-timer)
   (ycmd--start-notification-timer))
 
 (defun ycmd-close ()
@@ -185,6 +191,12 @@ This does nothing if no server is running."
   "Tells you if a ycmd server is already running."
   (interactive)
   (if (get-process ycmd--server-process) 't nil))
+
+(defun ycmd--keepalive ()
+  "Sends an unspecified message to the server.
+
+This is simply for keepalive functionality."
+  (ycmd--request "/healthy" '() :type "GET"))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
@@ -404,6 +416,9 @@ This is primarily a debug/developer tool."
 (defvar ycmd--notification-timer nil
   "Timer for notifying ycmd server to do work, e.g. parsing files.")
 
+(defvar ycmd--keepalive-timer nil
+  "Timer for sending keepalive messages to the server.")
+
 (defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
     (c-mode . ("cpp"))
@@ -430,6 +445,20 @@ there is no established mapping, return nil."
   (when ycmd--notification-timer
     (cancel-timer ycmd--notification-timer)
     (setq ycmd--notification-timer nil)))
+
+(defun ycmd--start-keepalive-timer ()
+  "Kill any existing keepalive timer and start a new one."
+  (ycmd--kill-keepalive-timer)
+  (setq ycmd--keepalive-timer
+        (run-with-timer
+         ycmd-keepalive-period
+         ycmd-keepalive-period
+         (lambda () (ycmd--keepalive)))))
+
+(defun ycmd--kill-keepalive-timer ()
+  (when ycmd--keepalive-timer
+    (cancel-timer ycmd--keepalive-timer)
+    (setq ycmd--keepalive-timer nil)))
 
 (defun ycmd--generate-hmac-secret ()
   "Generate a new, random 16-byte HMAC secret key."
@@ -561,8 +590,10 @@ nil, this uses the current buffer.
 
 (defun* ycmd--request (location
                        content
-                       &key (parser 'buffer-string))
+                       &key (parser 'buffer-string) (type "POST"))
   "Send an asynchronous HTTP request to the ycmd server.
+
+This starts the server if necessary.
 
 Returns a deferred object which resolves to the content of the
 response message.
@@ -580,6 +611,8 @@ json-read. This function will be passed an the completely
 unmodified contents of the response (i.e. not JSON-decoded or
 anything like that.)
 "
+  (unless (ycmd-running?) (ycmd-open))
+  
   (lexical-let* ((request-backend 'url-retrieve)
                  (content (json-encode content))
                  (hmac (ycmd--hmac-function content ycmd--hmac-secret))
@@ -595,7 +628,7 @@ anything like that.)
                  ("X-Ycm-Hmac" . ,encoded-hex-hmac))
       :parser parser
       :data content
-      :type "POST")
+      :type type)
 
      (deferred:nextc it
        (lambda (req)
@@ -605,7 +638,6 @@ anything like that.)
 
 (defun ycmd--on-find-file ()
   (when (ycmd--major-mode-to-file-types major-mode)
-    (unless (ycmd-running?) (ycmd-open))
     (ycmd-notify-file-ready-to-parse)))
 
 (add-hook 'find-file-hook 'ycmd--on-find-file)
