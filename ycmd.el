@@ -261,6 +261,23 @@ sensible) of the symbol at the current position."
           (lambda (location)
             (when location (ycmd--goto-location location))))))))
 
+(defun ycmd-goto-definition ()
+  "Go to the definition of the symbol at the current position."
+  (interactive)
+  (when (ycmd--major-mode-to-file-types major-mode)
+    (let ((content (cons '("command_arguments" . ("GoToDefinition"))
+                         (ycmd--standard-content))))
+      (deferred:$
+
+        (ycmd--request
+         "/run_completer_command"
+         content
+         :parser 'json-read)
+
+        (deferred:nextc it
+          (lambda (location)
+            (when location (ycmd--goto-location location))))))))
+
 (defun ycmd--goto-location (location)
   "Move cursor to LOCATION, a structure as returned from e.g. the
 various GoTo commands."
@@ -377,7 +394,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
 (defun ycmd-display-file-parse-results (results)
   (let ((buffer "*ycmd-file-parse-results*"))
     (get-buffer-create buffer)
-    (with-current-buffer buffer 
+    (with-current-buffer buffer
       (erase-buffer)
       (mapcar 'ycmd--display-single-file-parse-result results))
     (display-buffer buffer)))
@@ -622,16 +639,16 @@ unmodified contents of the response (i.e. not JSON-decoded or
 anything like that.)
 "
   (unless (ycmd-running?) (ycmd-open))
-  
+
   (lexical-let* ((request-backend 'url-retrieve)
                  (content (json-encode content))
                  (hmac (ycmd--hmac-function content ycmd--hmac-secret))
                  (hex-hmac (encode-hex-string hmac))
                  (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
-    
+
     (deferred:$
-       
+
      (request-deferred
       (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
       :headers `(("Content-Type" . "application/json")
