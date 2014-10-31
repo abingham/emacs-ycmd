@@ -139,7 +139,7 @@ of information added as text-properties.
 (defun company-ycmd--match (prefix)
   (point))
 
-(defun company-ycmd-backend (command &optional arg &rest ignored)
+(defun company-ycmd (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
   (cl-case command
@@ -168,8 +168,8 @@ full automatic completion for C/C++."
 
 ;;;###autoload
 (defun company-ycmd-setup ()
-  "Add company-ycmd-backend to the front of company-backends"
-  (add-to-list 'company-backends 'company-ycmd-backend))
+  "Add company-ycmd to the front of company-backends"
+  (add-to-list 'company-backends 'company-ycmd))
 
 (provide 'company-ycmd)
 
