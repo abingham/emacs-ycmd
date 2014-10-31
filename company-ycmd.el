@@ -63,6 +63,7 @@
 (require 'cc-cmds)
 (require 'cl-lib)
 (require 'company)
+(require 'company-template)
 (require 'deferred)
 (require 'ycmd)
 
@@ -73,6 +74,10 @@
 
 (defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
   "The list of modes for which company-ycmd will attempt completions.")
+
+(defcustom company-ycmd-insert-arguments t
+  "When non-nil, insert function arguments as a template after completion."
+  :type 'boolean)
 
 (defun company-ycmd--construct-candidate (src)
   "Converts a ycmd completion structure to a candidate string.
@@ -109,14 +114,20 @@ of information added as text-properties.
   "Fetch the metadata text-property from a candidate string."
   (get-text-property 0 'detailed_info candidate))
 
+(defun company-ycmd--params (candidate)
+  (let ((params (get-text-property 0 'menu_text candidate)))
+    (cond
+     ((null params) nil)
+     ((string-match "[^:]:[^:]" params)
+      (substring params (1+ (match-beginning 0))))
+     ((string-match "\\((.*)[ a-z]*\\'\\)" params)
+      (match-string 1 params)))))
+
 (defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a candidate string."
-  (let ((params (get-text-property 0 'menu_text candidate))
-        (type (get-text-property 0 'kind candidate))
+  (let ((type (get-text-property 0 'kind candidate))
         (extra (get-text-property 0 'extra_menu_info candidate)))
-    (concat (unless (zerop (length params))
-              (when (string-match "\(\\(.*\\)\)" params)
-                (match-string 0 params)))
+    (concat (company-ycmd--params candidate)
             (unless (zerop (length type))
               (format " [%s]" (downcase (substring type 0 1))))
             (unless (zerop (length extra))
@@ -143,13 +154,18 @@ of information added as text-properties.
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
   (cl-case command
-    (interactive (company-begin-backend 'company-ycmd-backend))
-    (prefix      (company-ycmd--prefix))
-    (candidates  (company-ycmd--candidates arg))
-    (meta        (company-ycmd--meta arg))
-    (annotation  (company-ycmd--annotation arg))
-    (match       (company-ycmd--match arg))
-    (no-cache    't) ; Don't cache. It interferes with fuzzy matching.
+    (interactive     (company-begin-backend 'company-ycmd-backend))
+    (prefix          (company-ycmd--prefix))
+    (candidates      (company-ycmd--candidates arg))
+    (meta            (company-ycmd--meta arg))
+    (annotation      (company-ycmd--annotation arg))
+    (match           (company-ycmd--match arg))
+    (no-cache        't) ; Don't cache. It interferes with fuzzy matching.
+    (post-completion (let ((params (company-ycmd--params arg)))
+                       (when (and company-ycmd-insert-arguments params)
+                         (insert params)
+                         (company-template-c-like-templatify
+                          (concat arg params)))))
     ))
 
 (defun company-ycmd-enable-comprehensive-automatic-completion ()
