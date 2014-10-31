@@ -115,6 +115,7 @@ of information added as text-properties.
   (get-text-property 0 'detailed_info candidate))
 
 (defun company-ycmd--params (candidate)
+  "Fetch function parameters from a CANDIDATE string if possible."
   (let ((params (get-text-property 0 'menu_text candidate)))
     (cond
      ((null params) nil)
