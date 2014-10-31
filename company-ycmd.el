@@ -74,7 +74,7 @@
 (defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
   "The list of modes for which company-ycmd will attempt completions.")
 
-(defun company-ycmd-construct-candidate (src)
+(defun company-ycmd--construct-candidate (src)
   "Converts a ycmd completion structure to a candidate string.
 
 Takes a ycmd completion structure SRC, extracts the
@@ -84,7 +84,7 @@ text-properties, and returns the string."
     (dolist (prop company-ycmd-completion-properties candidate)
       (put-text-property 0 1 prop (assoc-default prop src) candidate))))
 
-(defun company-ycmd-candidates (cb)
+(defun company-ycmd--get-candidates (cb)
   "Get list of completion candidate strings at point.
 
 The returned strings have annotation, metadata, and other pieces
@@ -102,14 +102,14 @@ of information added as text-properties.
       (lambda (c)
         (funcall
          cb
-         (mapcar 'company-ycmd-construct-candidate
+         (mapcar 'company-ycmd--construct-candidate
                  (assoc-default 'completions c)))))))
 
-(defun company-ycmd-get-metadata (candidate)
+(defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a candidate string."
   (get-text-property 0 'detailed_info candidate))
 
-(defun company-ycmd-get-annotation (candidate)
+(defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a candidate string."
   (let ((params (get-text-property 0 'menu_text candidate))
         (type (get-text-property 0 'kind candidate))
@@ -122,7 +122,7 @@ of information added as text-properties.
             (unless (zerop (length extra))
               (concat " -> " extra)))))
 
-(defun company-ycmd-get-prefix ()
+(defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
   (and (memq major-mode company-ycmd-modes)
        buffer-file-name
@@ -132,11 +132,11 @@ of information added as text-properties.
            (company-grab-symbol-cons "\\.\\|->\\|::" 2)
          (company-grab-symbol))))
 
-(defun company-ycmd-get-candidates (prefix)
+(defun company-ycmd--candidates (prefix)
   "Candidates-command handler for the company backend."
-  (cons :async 'company-ycmd-candidates))
+  (cons :async 'company-ycmd--get-candidates))
 
-(defun company-ycmd-get-match (prefix)
+(defun company-ycmd--match (prefix)
   (point))
 
 (defun company-ycmd-backend (command &optional arg &rest ignored)
@@ -144,13 +144,13 @@ of information added as text-properties.
   (interactive (list 'interactive))
   (cl-case command
     (interactive (company-begin-backend 'company-ycmd-backend))
-    (prefix      (company-ycmd-get-prefix))
-    (candidates  (company-ycmd-get-candidates arg))
-    (meta        (company-ycmd-get-metadata arg))
-    (annotation  (company-ycmd-get-annotation arg))
-    (match       (company-ycmd-get-match arg))
+    (prefix      (company-ycmd--prefix))
+    (candidates  (company-ycmd--candidates arg))
+    (meta        (company-ycmd--meta arg))
+    (annotation  (company-ycmd--annotation arg))
+    (match       (company-ycmd--match arg))
     (no-cache    't) ; Don't cache. It interferes with fuzzy matching.
-    )) 
+    ))
 
 (defun company-ycmd-enable-comprehensive-automatic-completion ()
   "This updates company-begin-commands so that automatic
