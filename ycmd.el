@@ -247,8 +247,33 @@ ycmd-display-completions."
   "Go to the definition or declaration (whichever is most
 sensible) of the symbol at the current position."
   (interactive)
+  (ycmd--goto "GoTo"))
+
+(defun ycmd-goto-declaration ()
+  "Go to the declaration of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToDeclaration"))
+
+(defun ycmd-goto-definition ()
+  "Go to the definition of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToDefinition"))
+
+(defun ycmd-goto-implementation ()
+  "Go to the implementation of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToImplementation"))
+
+(defun ycmd-goto-imprecise ()
+  "Fast implementation of Go To at the cost of precision,
+useful in case compile-time is considerable."
+  (interactive)
+  (ycmd--goto "GoToImprecise"))
+
+(defun ycmd--goto (type)
+  "Implementation of GoTo according to the request type."
   (when (ycmd--major-mode-to-file-types major-mode)
-    (let ((content (cons '("command_arguments" . ("GoTo"))
+    (let ((content (cons (list "command_arguments" type)
                          (ycmd--standard-content))))
       (deferred:$
 
@@ -377,7 +402,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
 (defun ycmd-display-file-parse-results (results)
   (let ((buffer "*ycmd-file-parse-results*"))
     (get-buffer-create buffer)
-    (with-current-buffer buffer 
+    (with-current-buffer buffer
       (erase-buffer)
       (mapcar 'ycmd--display-single-file-parse-result results))
     (display-buffer buffer)))
@@ -622,16 +647,16 @@ unmodified contents of the response (i.e. not JSON-decoded or
 anything like that.)
 "
   (unless (ycmd-running?) (ycmd-open))
-  
+
   (lexical-let* ((request-backend 'url-retrieve)
                  (content (json-encode content))
                  (hmac (ycmd--hmac-function content ycmd--hmac-secret))
                  (hex-hmac (encode-hex-string hmac))
                  (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
-    
+
     (deferred:$
-       
+
      (request-deferred
       (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
       :headers `(("Content-Type" . "application/json")
