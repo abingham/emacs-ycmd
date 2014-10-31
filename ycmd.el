@@ -131,9 +131,8 @@
   :group 'ycmd)
 
 ; TODO: Figure out the best default value for this.
-(defcustom ycmd-server-command '("python" "/Users/sixtynorth/projects/ycmd/ycmd")
-  "The name of the ycmd server program. This may be a single
-string or a list."
+(defcustom ycmd-server-command '("ycmd")
+  "The ycmd server program command."
   :type '(repeat string)
   :group 'ycmd)
 
@@ -570,9 +569,7 @@ the name of the newly created file."
       (erase-buffer)
 
       (let* ((options-file (ycmd--create-options-file hmac-secret))
-             (server-command (if (listp ycmd-server-command)
-                                 ycmd-server-command
-                               (list ycmd-server-command)))
+             (server-command ycmd-server-command)
              (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
              (server-program+args (append server-command args))
              (proc (apply #'start-process ycmd--server-process proc-buff server-program+args))
