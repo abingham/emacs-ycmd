@@ -128,10 +128,10 @@ of information added as text-properties.
   (let ((type (get-text-property 0 'kind candidate))
         (extra (get-text-property 0 'extra_menu_info candidate)))
     (concat (company-ycmd--params candidate)
-            (unless (zerop (length type))
-              (format " [%s]" (downcase (substring type 0 1))))
             (unless (zerop (length extra))
-              (concat " -> " extra)))))
+              (concat " -> " extra))
+            (unless (zerop (length type))
+              (format " [%s]" (downcase (substring type 0 1)))))))
 
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
