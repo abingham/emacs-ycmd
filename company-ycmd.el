@@ -67,17 +67,25 @@
 (require 'deferred)
 (require 'ycmd)
 
+(defgroup company-ycmd nil
+  "Company-mode completion backend for ycmd."
+  :group 'company
+  :group 'ycmd)
+
 (defconst company-ycmd-completion-properties
   '(kind extra_menu_info detailed_info menu_text)
   "Fields from ycmd completions structures that we attach as text
   properties to company completion strings.")
 
 (defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
-  "The list of modes for which company-ycmd will attempt completions.")
+  "The list of modes for which company-ycmd will attempt completions."
+  :type '(repeat (symbol :tag "Major-mode"))
+  :group 'company-ycmd)
 
 (defcustom company-ycmd-insert-arguments t
   "When non-nil, insert function arguments as a template after completion."
-  :type 'boolean)
+  :type 'boolean
+  :group 'company-ycmd)
 
 (defun company-ycmd--construct-candidate (src)
   "Converts a ycmd completion structure to a candidate string.
