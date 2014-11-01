@@ -617,8 +617,10 @@ nil, this uses the current buffer.
   (when ycmd--log-enabled
     (let ((buffer (get-buffer-create "*ycmd-content-log*")))
       (with-current-buffer buffer
-        (insert (format "\n%s\n\n" header))
-        (insert (pp-to-string content))))))
+        (save-excursion
+          (end-of-buffer)
+          (insert (format "\n%s\n\n" header))
+          (insert (pp-to-string content)))))))
 
 (defun* ycmd--request (location
                        content
