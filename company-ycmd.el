@@ -69,7 +69,7 @@
 
 (defconst company-ycmd-completion-properties
   '(kind extra_menu_info detailed_info menu_text)
-  "Fields from ycmd completions structurs that we attach as text
+  "Fields from ycmd completions structures that we attach as text
   properties to company completion strings.")
 
 (defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
@@ -151,6 +151,13 @@ of information added as text-properties.
 (defun company-ycmd--match (prefix)
   (point))
 
+(defun company-ycmd--post-completion (arg)
+  (let ((params (company-ycmd--params arg)))
+    (when (and company-ycmd-insert-arguments params)
+      (insert params)
+      (company-template-c-like-templatify
+       (concat arg params)))))
+
 (defun company-ycmd (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
@@ -162,12 +169,7 @@ of information added as text-properties.
     (annotation      (company-ycmd--annotation arg))
     (match           (company-ycmd--match arg))
     (no-cache        't) ; Don't cache. It interferes with fuzzy matching.
-    (post-completion (let ((params (company-ycmd--params arg)))
-                       (when (and company-ycmd-insert-arguments params)
-                         (insert params)
-                         (company-template-c-like-templatify
-                          (concat arg params)))))
-    ))
+    (post-completion (company-ycmd--post-completion arg))))
 
 (defun company-ycmd-enable-comprehensive-automatic-completion ()
   "This updates company-begin-commands so that automatic
