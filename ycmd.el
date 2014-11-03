@@ -344,25 +344,23 @@ When clicked, this will popup MESSAGE."
     (point)))
 
 (defmacro ycmd--with-destructured-parse-result (result body)
-   `(destructuring-bind
-        ((location_extent
-          (end
-           (_ . end-line-num)
-           (_ . end-column-num)
-           (_ . end-filepath))
-          (start
-           (_ . start-line-num)
-           (_ . start-column-num)
-           (_ . start-filepath)))
-         (location
-          (_ . line-num)
-          (_ . column-num)
-          (_ . filepath))
-         (_ . kind)
-         (_ . text)
-         (_ . ranges))
-        ,result
-      ,body))
+  `(let* ((location_extent  (assoc-default 'location_extent ,result))
+          (le_end           (assoc-default 'end location_extent))
+          (end-line-num     (assoc-default 'line_num le_end))
+          (end-column-num   (assoc-default 'column_num le_end))
+          (end-filepath     (assoc-default 'filepath le_end))
+          (le_start         (assoc-default 'start location_extent))
+          (start-line-num   (assoc-default 'line_num le_start))
+          (start-column-num (assoc-default 'column_num le_start))
+          (start-filepath   (assoc-default 'filepath le_start))
+          (location         (assoc-default 'location ,result))
+          (line-num         (assoc-default 'line_num location))
+          (column-num       (assoc-default 'column_num location))
+          (filepath         (assoc-default 'filepath location))
+          (kind             (assoc-default 'kind ,result))
+          (text             (assoc-default 'text ,result))
+          (ranges           (assoc-default 'ranges ,result)))
+     ,body))
 
 (defun ycmd--decorate-single-parse-result (r)
   "Decorates a buffer based on the contents of a single parse
