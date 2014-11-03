@@ -410,15 +410,17 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (when (and ycmd--buffer-needs-parse
              (ycmd--major-mode-to-file-types major-mode))
     (let ((content (cons '("event_name" . "FileReadyToParse")
-                         (ycmd--standard-content))))
+                         (ycmd--standard-content)))
+          (buff (current-buffer)))
       (deferred:$
         (ycmd--request "/event_notification"
                        content
                        :parser 'json-read)
         (deferred:nextc it
           (lambda (results)
-	    (run-hook-with-args 'ycmd-file-parse-result-hook results)
-            (setq ycmd--buffer-needs-parse nil)))))))
+            (with-current-buffer buff
+              (run-hook-with-args 'ycmd-file-parse-result-hook results)
+              (setq ycmd--buffer-needs-parse nil))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -617,8 +619,10 @@ nil, this uses the current buffer.
   (when ycmd--log-enabled
     (let ((buffer (get-buffer-create "*ycmd-content-log*")))
       (with-current-buffer buffer
-        (insert (format "\n%s\n\n" header))
-        (insert (pp-to-string content))))))
+        (save-excursion
+          (end-of-buffer)
+          (insert (format "\n%s\n\n" header))
+          (insert (pp-to-string content)))))))
 
 (defun* ycmd--request (location
                        content
