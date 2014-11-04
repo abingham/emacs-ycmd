@@ -177,6 +177,7 @@ of information added as text-properties.
     (annotation      (company-ycmd--annotation arg))
     (match           (company-ycmd--match arg))
     (no-cache        't) ; Don't cache. It interferes with fuzzy matching.
+    (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
 
 (defun company-ycmd-enable-comprehensive-automatic-completion ()
