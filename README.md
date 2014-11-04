@@ -24,6 +24,8 @@ Then `require` the emacs-ycmd code in your emacs config:
 
 ```
 (require 'ycmd)
+(add-hook 'c++-mode-hook 'ycmd-mode)
+(add-hook 'python-mode-hook 'ycmd-mode)
 ```
 
 Use the variable `ycmd-server-command` to specify how to run the server. It will typically be something like:
