@@ -108,6 +108,7 @@
 (require 'popup)
 (require 'request)
 (require 'request-deferred)
+(require 'etags)
 
 (defgroup ycmd nil
   "a ycmd emacs client"
@@ -283,7 +284,10 @@ useful in case compile-time is considerable."
 
         (deferred:nextc it
           (lambda (location)
-            (when location (ycmd--goto-location location))))))))
+            (when location
+              (push-mark)
+              (ring-insert find-tag-marker-ring (point-marker))
+              (ycmd--goto-location location))))))))
 
 (defun ycmd--goto-location (location)
   "Move cursor to LOCATION, a structure as returned from e.g. the
