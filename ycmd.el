@@ -190,8 +190,10 @@ If nil, never set buffer-needs-parse flag.  For a manual reparse,
 use `ycmd-parse-buffer'."
   :group 'ycmd
   :type '(set (const :tag "After the buffer was saved" save)
-              (const :tag "After a new line was inserted" new-line))
-  :safe #'symbolp)
+              (const :tag "After a new line was inserted" new-line)
+              (const :tag "After a buffer was changed and idle" idle-change)
+              (const :tag "After a `ycmd-mode' was enabled." mode-enabled))
+  :safe #'listp)
 
 (defun ycmd-open ()
   "Start a new ycmd server.
