@@ -20,12 +20,18 @@ Quickstart
 
 First make sure that `ycmd` is installed on your system. See [the ycmd instructions](https://github.com/Valloric/ycmd#building) for more details.
 
-Then `require` the emacs-ycmd code in your emacs config:
+To use `ycmd-mode` in all supported modes, add the following to your emacs config:
 
 ```
 (require 'ycmd)
-(add-hook 'c++-mode-hook 'ycmd-mode)
-(add-hook 'python-mode-hook 'ycmd-mode)
+(ycmd-setup)
+```
+
+Or add `ycmd-mode` to a specific supported mode:
+
+```
+(require 'ycmd)
+(add-hook c++-mode-hook 'ycmd-mode)
 ```
 
 Use the variable `ycmd-server-command` to specify how to run the server. It will typically be something like:

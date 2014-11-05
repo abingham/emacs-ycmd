@@ -49,6 +49,7 @@
 ;; Example config:
 ;;
 ;;   (require 'ycmd)
+;;   (ycmd-setup)
 ;;
 ;; Basic usage:
 ;;
@@ -780,6 +781,14 @@ Otherwise behave as if called interactively.
     (dolist (hook ycmd-hooks-alist)
       (remove-hook (car hook) (cdr hook) 'local)))))
 
+;;;###autoload
+(defun ycmd-setup ()
+  "Setup `ycmd-mode'.
+
+Hook `ycmd-mode' into modes in `ycmd--file-type-map'."
+  (interactive)
+  (dolist (it ycmd--file-type-map)
+    (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
 
 (provide 'ycmd)
 
