@@ -699,10 +699,7 @@ anything like that.)
   "Mark buffer for parsing at CONDITION.
 
 The buffer will be marked for parsing, if CONDITION is in
-`ycmd-parse-conditions' or nil.
-
-If FORCE-NOTIFY is non-nil, also send notification to ycmd
-server."
+`ycmd-parse-conditions' or nil."
   (when (and ycmd-mode
              (or (not condition)
                  (memq condition ycmd-parse-conditions)))
