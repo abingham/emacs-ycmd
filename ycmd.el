@@ -433,7 +433,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
 (defun ycmd-parse-buffer ()
   "Parse buffer."
   (interactive)
-  (ycmd--set-buffer-needs-parse))
+  (ycmd--conditional-parse))
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
@@ -695,11 +695,9 @@ anything like that.)
            (ycmd--log-content "HTTP RESPONSE CONTENT" content)
            content))))))
 
-(defun ycmd--set-buffer-needs-parse (&optional condition)
-  "Mark buffer for parsing at CONDITION.
-
-The buffer will be marked for parsing, if CONDITION is in
-`ycmd-parse-conditions' or nil."
+(defun ycmd--conditional-parse (&optional condition)
+  "Reparse the buffer if CONDITION is in `ycmd-parse-conditions'
+or is nil."
   (when (and ycmd-mode
              (or (not condition)
                  (memq condition ycmd-parse-conditions)))
@@ -707,12 +705,12 @@ The buffer will be marked for parsing, if CONDITION is in
 
 (defun ycmd--on-save ()
   "Function to run when the buffer has been saved."
-  (ycmd--set-buffer-needs-parse 'save))
+  (ycmd--conditional-parse 'save))
 
 (defun ycmd--on-idle-change ()
   "Function to run on idle-change."
   (ycmd--kill-notification-timer)
-  (ycmd--set-buffer-needs-parse 'idle-change))
+  (ycmd--conditional-parse 'idle-change))
 
 (defun ycmd--on-change (beg end _len)
   "Function to run when a buffer change between BEG and END."
@@ -720,7 +718,7 @@ The buffer will be marked for parsing, if CONDITION is in
     (when (and ycmd-mode (not (eq beg end)))
       (ycmd--kill-notification-timer)
       (if (string-match-p "\n" (buffer-substring beg end))
-          (ycmd--set-buffer-needs-parse 'new-line)
+          (ycmd--conditional-parse 'new-line)
         (setq ycmd--notification-timer
               (run-at-time ycmd-idle-change-delay nil
                            #'ycmd--on-idle-change))))))
@@ -762,7 +760,7 @@ Otherwise behave as if called interactively.
   :lighter " ycmd"
   :group 'ycmd
   :require 'ycmd
-  :after-hook (ycmd--set-buffer-needs-parse 'mode-enabled)
+  :after-hook (ycmd--conditional-parse 'mode-enabled)
   (cond
    (ycmd-mode
     (dolist (hook ycmd-hooks-alist)
