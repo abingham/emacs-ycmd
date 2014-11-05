@@ -153,18 +153,45 @@ ycmd-decorate-with-parse-results from it.)"
   :type 'hook
   :risky t)
 
-(defcustom ycmd-parse-delay 0.2
-  "Number of seconds to wait after buffer modification before re-parsing the contents."
+(defcustom ycmd-idle-change-delay 0.5
+  "Number of seconds to wait after buffer modification before
+re-parsing the contents."
   :group 'ycmd
-  :type '(number))
+  :type '(number)
+  :safe #'numberp)
 
 (defcustom ycmd-keepalive-period 30
   "Number of seconds between keepalive messages."
   :group 'ycmd
   :type '(number))
 
-(defvar-local ycmd--buffer-needs-parse nil
-  "Indicates if a buffer has been modified since its last parse.")
+(defcustom ycmd-parse-conditions '(save new-line idle-change mode-enabled)
+  "When ycmd should reparse the buffer.
+
+The variable is a list of events that may trigger parsing the
+buffer for new completion:
+
+`save'
+      Set buffer-needs-parse flag after the buffer was saved.
+
+`new-line'
+      Set buffer-needs-parse flag immediately after a new
+      line was inserted into the buffer.
+
+`idle-change'
+      Set buffer-needs-parse flag a short time after a
+      buffer has changed.  (See `ycmd-idle-change-delay')
+
+`mode-enabled'
+      Set buffer-needs-parse flag after `ycmd-mode' has been
+      enabled.
+
+If nil, never set buffer-needs-parse flag.  For a manual reparse,
+use `ycmd-parse-buffer'."
+  :group 'ycmd
+  :type '(set (const :tag "After the buffer was saved" save)
+              (const :tag "After a new line was inserted" new-line))
+  :safe #'symbolp)
 
 (defun ycmd-open ()
   "Start a new ycmd server.
@@ -179,8 +206,7 @@ control.) The newly started server will have a new HMAC secret."
     (ycmd--start-server hmac-secret)
     (setq ycmd--hmac-secret hmac-secret))
 
-  (ycmd--start-keepalive-timer)
-  (ycmd--start-notification-timer))
+  (ycmd--start-keepalive-timer))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
@@ -235,7 +261,7 @@ it might be interesting for some users."
 Returns a deferred object.
 
 To see what the returned structure looks like, you can use
-ycmd-display-completions."
+`ycmd-display-completions'."
   (when (ycmd--major-mode-to-file-types major-mode)
     (ycmd--request
      "/completions"
@@ -404,9 +430,13 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
       (mapcar 'ycmd--display-single-file-parse-result results))
     (display-buffer buffer)))
 
+(defun ycmd-parse-buffer ()
+  "Parse buffer."
+  (interactive)
+  (ycmd--set-buffer-needs-parse))
+
 (defun ycmd-notify-file-ready-to-parse ()
-  (when (and ycmd--buffer-needs-parse
-             (ycmd--major-mode-to-file-types major-mode))
+  (when (ycmd--major-mode-to-file-types major-mode)
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content)))
           (buff (current-buffer)))
@@ -417,8 +447,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
         (deferred:nextc it
           (lambda (results)
             (with-current-buffer buff
-              (run-hook-with-args 'ycmd-file-parse-result-hook results)
-              (setq ycmd--buffer-needs-parse nil))))))))
+              (run-hook-with-args 'ycmd-file-parse-result-hook results))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -447,7 +476,7 @@ This is primarily a debug/developer tool."
   "The emacs name of the server process. This is used by
   functions like start-process, get-process, and delete-process.")
 
-(defvar ycmd--notification-timer nil
+(defvar-local ycmd--notification-timer nil
   "Timer for notifying ycmd server to do work, e.g. parsing files.")
 
 (defvar ycmd--keepalive-timer nil
@@ -463,17 +492,13 @@ This is primarily a debug/developer tool."
   determine a) which major modes we support and b) how to
   describe them to ycmd.")
 
+(defconst ycmd--server-buffer-name "*ycmd-server*"
+  "Name of the ycmd server buffer.")
+
 (defun ycmd--major-mode-to-file-types (mode)
   "Map a major mode to a list of file-types suitable for ycmd. If
 there is no established mapping, return nil."
   (cdr (assoc mode ycmd--file-type-map)))
-
-(defun ycmd--start-notification-timer ()
-  "Kill any existing notification timer and start a new one."
-  (ycmd--kill-notification-timer)
-  (setq ycmd--notification-timer
-        (run-with-idle-timer
-         ycmd-parse-delay t (lambda () (ycmd-notify-file-ready-to-parse)))))
 
 (defun ycmd--kill-notification-timer ()
   (when ycmd--notification-timer
@@ -564,7 +589,7 @@ the name of the newly created file."
 
 (defun ycmd--start-server (hmac-secret)
   "This starts a new server using HMAC-SECRET as its HMAC secret."
-  (let ((proc-buff (get-buffer-create "*ycmd-server*")))
+  (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
       (erase-buffer)
 
@@ -670,18 +695,85 @@ anything like that.)
            (ycmd--log-content "HTTP RESPONSE CONTENT" content)
            content))))))
 
-(defun ycmd--on-find-file ()
-  (when (ycmd--major-mode-to-file-types major-mode)
-    (setq ycmd--buffer-needs-parse t)
+(defun ycmd--set-buffer-needs-parse (&optional condition)
+  "Mark buffer for parsing at CONDITION.
+
+The buffer will be marked for parsing, if CONDITION is in
+`ycmd-parse-conditions' or nil.
+
+If FORCE-NOTIFY is non-nil, also send notification to ycmd
+server."
+  (when (and ycmd-mode
+             (or (not condition)
+                 (memq condition ycmd-parse-conditions)))
     (ycmd-notify-file-ready-to-parse)))
 
-(defun ycmd--on-buffer-modified (beginning end length)
-  (when (ycmd--major-mode-to-file-types major-mode)
-    (setq ycmd--buffer-needs-parse t)))
+(defun ycmd--on-save ()
+  "Function to run when the buffer has been saved."
+  (ycmd--set-buffer-needs-parse 'save))
 
-(add-hook 'find-file-hook 'ycmd--on-find-file)
-(add-hook 'after-change-functions 'ycmd--on-buffer-modified)
+(defun ycmd--on-idle-change ()
+  "Function to run on idle-change."
+  (ycmd--kill-notification-timer)
+  (ycmd--set-buffer-needs-parse 'idle-change))
+
+(defun ycmd--on-change (beg end _len)
+  "Function to run when a buffer change between BEG and END."
+  (save-match-data
+    (when (and ycmd-mode (not (eq beg end)))
+      (ycmd--kill-notification-timer)
+      (if (string-match-p "\n" (buffer-substring beg end))
+          (ycmd--set-buffer-needs-parse 'new-line)
+        (setq ycmd--notification-timer
+              (run-at-time ycmd-idle-change-delay nil
+                           #'ycmd--on-idle-change))))))
+
+(defconst ycmd-hooks-alist
+  '((after-save-hook        . ycmd--on-save)
+    (after-change-functions . ycmd--on-change))
+  "Hooks which ycmd hooks in.")
+
 (add-hook 'kill-emacs-hook 'ycmd-close)
+
+(defvar ycmd-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c Y p") 'ycmd-parse-buffer)
+    (define-key map (kbd "C-c Y o") 'ycmd-open)
+    (define-key map (kbd "C-c Y c") 'ycmd-close)
+    (define-key map (kbd "C-c Y .") 'ycmd-goto)
+    (define-key map (kbd "C-c Y f") 'ycmd-goto-definition)
+    (define-key map (kbd "C-c Y d") 'ycmd-goto-declaration)
+    (define-key map (kbd "C-c Y i") 'ycmd-goto-implementation)
+    (define-key map (kbd "C-c Y I") 'ycmd-goto-imprecise)
+    map)
+  "Keymap for `ycmd-mode'.")
+
+;;;###autoload
+(define-minor-mode ycmd-mode
+  "Minor mode for interaction with the ycmd completion server.
+
+When called interactively, toggle `ycmd-mode'.  With prefix ARG,
+enable `ycmd-mode' if ARG is positive, otherwise disable it.
+
+When called from Lisp, enable `ycmd-mode' if ARG is omitted,
+nil or positive.  If ARG is `toggle', toggle `ycmd-mode'.
+Otherwise behave as if called interactively.
+
+\\{ycmd-mode-map}"
+  :init-value nil
+  :keymap ycmd-mode-map
+  :lighter " ycmd"
+  :group 'ycmd
+  :require 'ycmd
+  :after-hook (ycmd--set-buffer-needs-parse 'mode-enabled)
+  (cond
+   (ycmd-mode
+    (dolist (hook ycmd-hooks-alist)
+      (add-hook (car hook) (cdr hook) nil 'local)))
+   (t
+    (dolist (hook ycmd-hooks-alist)
+      (remove-hook (car hook) (cdr hook) 'local)))))
+
 
 (provide 'ycmd)
 
