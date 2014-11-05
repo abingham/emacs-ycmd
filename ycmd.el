@@ -132,8 +132,13 @@
   :group 'ycmd)
 
 ; TODO: Figure out the best default value for this.
-(defcustom ycmd-server-command '("ycmd")
-  "The ycmd server program command."
+(defcustom ycmd-server-command '("python" "/path/to/ycmd/package/")
+  "The ycmd server program command.
+
+Note that the default value for this variable is intentionally
+incorrect. You will almost certainly need to set it to match your
+system installation.
+"
   :type '(repeat string)
   :group 'ycmd)
 
