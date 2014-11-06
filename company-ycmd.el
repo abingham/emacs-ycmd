@@ -180,20 +180,6 @@ of information added as text-properties.
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
 
-(defun company-ycmd-enable-comprehensive-automatic-completion ()
-  "This updates company-begin-commands so that automatic
-completion will occur after typing :: and ->. 
-
-By default company-mode will not start automatic completion
-after : and > characters, so you need to call this if you want
-full automatic completion for C/C++."
-  (interactive)
-  (mapcar
-   (lambda (x)
-     (unless (memq x company-begin-commands)
-       (push x company-begin-commands)))
-   '(c-electric-colon c-electric-lt-gt)))
-
 ;;;###autoload
 (defun company-ycmd-setup ()
   "Add company-ycmd to the front of company-backends"
