@@ -31,7 +31,7 @@ Or add `ycmd-mode` to a specific supported mode:
 
 ```
 (require 'ycmd)
-(add-hook c++-mode-hook 'ycmd-mode)
+(add-hook 'c++-mode-hook 'ycmd-mode)
 ```
 
 Use the variable `ycmd-server-command` to specify how to run the server. It will typically be something like:
