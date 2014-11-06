@@ -655,7 +655,7 @@ nil, this uses the current buffer.
     (let ((buffer (get-buffer-create "*ycmd-content-log*")))
       (with-current-buffer buffer
         (save-excursion
-          (end-of-buffer)
+          (goto-char (point-max))
           (insert (format "\n%s\n\n" header))
           (insert (pp-to-string content)))))))
 
