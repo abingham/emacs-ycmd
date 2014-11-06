@@ -81,22 +81,3 @@ that:
 ```
 
 Afer this you can use your standard `company-mode` keybindings to do completion.
-
-Enabling automatic completion after `->` and `::`
--------------------------------------------------
-
-By default `company-mode` will not start automatic completion after
-you type `:` or `>`. To enable this, you need to put
-`c-electric-colon` and `c-electric-lt-gt` into the list
-`company-begin-commands`. So if you want to start automatic completion
-after you type `->` or `::` - which is probably what you want for C
-and C++ - then update that list.
-
-For convenience, the functions
-`company-ycmd-enable-comprehensive-automatic-completion` will do this
-for you.
-
-*These symbols will probably be included in the default
-`copmany-begin-commands` at some point in the future. If you know they
-have been added and you see that I haven't updated this note, please
-let me know!*
