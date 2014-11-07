@@ -457,6 +457,23 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (interactive)
   (ycmd--conditional-parse))
 
+(defun ycmd--handle-notify-response (results)
+  ;; If `results` is a vector...
+  (if (vectorp results)
+
+      ;; ...then it's actual parse results...
+      (run-hook-with-args 'ycmd-file-parse-result-hook results)
+
+    ;; ...otherwise it's probably an exception.
+    (aif (assoc-default 'exception results)
+        (let ((conf-file (assoc-default 'extra_conf_file it)))
+          (when (and (string-equal (assoc-default 'TYPE it)
+                                   "UnknownExtraConf")
+                     conf-file)
+            (ycmd--request "/load_extra_conf_file"
+                           `((filepath . ,conf-file)))
+            (ycmd-notify-file-ready-to-parse))))))
+
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
     (let ((content (cons '("event_name" . "FileReadyToParse")
@@ -469,7 +486,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
         (deferred:nextc it
           (lambda (results)
             (with-current-buffer buff
-              (run-hook-with-args 'ycmd-file-parse-result-hook results))))))))
+              (ycmd--handle-notify-response results))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
