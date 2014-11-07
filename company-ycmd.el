@@ -144,7 +144,7 @@ of information added as text-properties.
 
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
-  (and (memq major-mode company-ycmd-modes)
+  (and ycmd-mode
        buffer-file-name
        (ycmd-running?)
        (not (company-in-string-or-comment))
