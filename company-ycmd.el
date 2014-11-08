@@ -1,4 +1,4 @@
-;;; company-ycmd.el --- company-mode backend for ycmd ; -*- lexical-binding: t -*-
+;;; company-ycmd.el --- company-mode backend for ycmd -*- lexical-binding: t -*-
 ;;
 ;; Copyright (c) 2014 Austin Bingham
 ;;
