@@ -1,4 +1,4 @@
-;;; ycmd.el --- emacs bindings to the ycmd completion server ; -*- lexical-binding: t -*-
+;;; ycmd.el --- emacs bindings to the ycmd completion server -*- lexical-binding: t -*-
 ;;
 ;; Copyright (c) 2014 Austin Bingham
 ;;
