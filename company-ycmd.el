@@ -77,11 +77,6 @@
   "Fields from ycmd completions structures that we attach as text
   properties to company completion strings.")
 
-(defcustom company-ycmd-modes '(c++-mode python-mode csharp-mode)
-  "The list of modes for which company-ycmd will attempt completions."
-  :type '(repeat (symbol :tag "Major-mode"))
-  :group 'company-ycmd)
-
 (defcustom company-ycmd-insert-arguments t
   "When non-nil, insert function arguments as a template after completion."
   :type 'boolean
