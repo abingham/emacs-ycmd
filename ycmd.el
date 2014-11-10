@@ -510,15 +510,12 @@ configuration file according the value of
       (ycmd-notify-file-ready-to-parse))))
 
 (defun ycmd--handle-notify-response (results)
-  ;; If `results` is a vector...
+  "If RESULTS is a vector, the response is an acual parse result.
+Otherwise the response is probably an exception."
   (if (vectorp results)
-
-      ;; ...then it's actual parse results...
       (run-hook-with-args 'ycmd-file-parse-result-hook results)
-
-    ;; ...otherwise it's probably an exception.
     (aif (assoc-default 'exception results)
-	(ycmd--handle-notify-exception it))))
+        (ycmd--handle-notify-exception it))))
 
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
