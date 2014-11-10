@@ -137,6 +137,26 @@
   :type '(repeat string)
   :group 'ycmd)
 
+(defcustom ycmd-extra-conf-handler 'ask
+  "What to do when an un-whitelisted extra config is encountered.
+
+Options are:
+
+`load'
+      Automatically load unknown extra confs.
+
+`ignore'
+     Ignore unknown extra confs and do not load them.
+
+`ask'
+     Ask the user for each unknown extra conf.
+"
+  :group 'ycmd
+  :type '(set (const :tag "Load unknown extra confs" load)
+	      (const :tag "Ignore unknown extra confs" ignore)
+	      (const :tag "Ask the user" ask))
+  :risky t)
+
 (defcustom ycmd-host "127.0.0.1"
   "The host on which the ycmd server is running."
   :type '(string)
@@ -457,6 +477,35 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (interactive)
   (ycmd--conditional-parse))
 
+(defun ycmd--handle-notify-exception (ex)
+  (when (string-equal (assoc-default 'TYPE ex) "UnknownExtraConf")
+    (deferred:$
+      (let* ((conf-file (assoc-default 'extra_conf_file ex)))
+        (cond ((not conf-file)
+               (warn "No extra_conf_file included in UnknownExtraConf exception. Consider reporting this."))
+              
+              ((or (eq ycmd-extra-conf-handler 'load)
+                   (and (eq ycmd-extra-conf-handler 'ask)
+                        (y-or-n-p (format "Load YCMD extra conf %s?" conf-file))))
+               (ycmd--request "/load_extra_conf_file"
+                              `((filepath . ,conf-file))))
+              
+              (t
+               (ycmd--request "/ignore_extra_conf_file"
+                                `((filepath . ,conf-file))))))
+      (ycmd-notify-file-ready-to-parse))))
+
+(defun ycmd--handle-notify-response (results)
+  ;; If `results` is a vector...
+  (if (vectorp results)
+
+      ;; ...then it's actual parse results...
+      (run-hook-with-args 'ycmd-file-parse-result-hook results)
+
+    ;; ...otherwise it's probably an exception.
+    (aif (assoc-default 'exception results)
+	(ycmd--handle-notify-exception it))))
+
 (defun ycmd-notify-file-ready-to-parse ()
   (when (ycmd--major-mode-to-file-types major-mode)
     (let ((content (cons '("event_name" . "FileReadyToParse")
@@ -469,7 +518,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
         (deferred:nextc it
           (lambda (results)
             (with-current-buffer buff
-              (run-hook-with-args 'ycmd-file-parse-result-hook results))))))))
+              (ycmd--handle-notify-response results))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
