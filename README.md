@@ -87,3 +87,9 @@ that:
 ```
 
 Afer this you can use your standard `company-mode` keybindings to do completion.
+
+```next-error``` integration
+----------
+emacs-ycmd reports found errors through emacs buttons; to integrate those with
+```next-error``` prepend something like
+```(load-file "contrib/ami-ycmd-next-error.el")``` before require'ing ycmd.
