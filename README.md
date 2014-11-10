@@ -49,7 +49,7 @@ emacs configuration by setting `ycmd-global-config`:
 
 If you've got project-specific ycmd configurations (almost certainly
 called `.ycm_extra_conf.py`), and if you want them automatically
-loaded by ycmd as needed (which you probably do), then you need to
+loaded by ycmd as needed (which you probably do), then you can
 *whitelist* them by adding entries to `ycmd-extra-conf-whitelist`. For
 example, this will allow automatic loading of all `.ycm_extra_conf.py`
 files anywhere under `~/my_projects`
@@ -57,6 +57,12 @@ files anywhere under `~/my_projects`
 ```
 (set-variable 'ycmd-extra-conf-whitelist '("~/my_projects/*"))
 ```
+
+Alternatively, you can set `ycmd-extra-conf-handler` to control how
+`ycmd.el` deals with non-whitelisted extra configs. By default this is
+set to `'ask`, it will ask the user each time one is encountered. The
+other options are `'ignore`, in which case the extra config will be
+ignored, and `'load`, in which case the extra config will be loaded.
 
 Now a ycmd server will be automatically launched whenever it's
 needed. Generally, this means whenever you visit a file with a

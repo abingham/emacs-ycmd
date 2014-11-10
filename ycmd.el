@@ -54,7 +54,7 @@
 ;; Basic usage:
 ;;
 ;; First you'll want to configure a few things. If you've got a global
-;; ycmd config file, you can specify that with ycmd-global-config:
+;; ycmd config file, you can specify that with `ycmd-global-config':
 ;;
 ;;   (set-variable 'ycmd-global-config "/path/to/global_conf.py")
 ;;
@@ -69,12 +69,21 @@
 ;; Now, the first time you open a file for which ycmd can perform
 ;; completions, a ycmd server will be automatically started.
 ;;
-;; Use 'ycmd-get-completions to get completions at some point in a
+;; When ycmd encounters an extra-config that's not on the white list,
+;; it checks `ycmd-extra-conf-handler' to determine what to do. By
+;; default this is set to `ask', in which case the user is asked
+;; whether to load the file or ignore it. You can also set it to
+;; `load', which case all extra-confs are loaded (and you don't really
+;; need to worry about `ycmd-extra-conf-whitelist'.) Or you can set
+;; this to `ignore', in which case all extra-confs are automatically
+;; ignored.
+;;
+;; Use `ycmd-get-completions' to get completions at some point in a
 ;; file. For example:
 ;;
 ;;   (ycmd-get-completions)
 ;;
-;; You can use 'ycmd-display-completions to toy around with completion
+;; You can use `ycmd-display-completions' to toy around with completion
 ;; interactively and see the shape of the structures in use.
 ;;
 ;;; License:
