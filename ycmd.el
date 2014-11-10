@@ -487,18 +487,23 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (ycmd--conditional-parse))
 
 (defun ycmd--handle-notify-exception (ex)
+  "Handle a notify exception.
+
+If EX is an exception of type `UnknownExtraConf', handle
+configuration file according the value of
+`ycmd-extra-conf-handler'."
   (when (string-equal (assoc-default 'TYPE ex) "UnknownExtraConf")
     (deferred:$
-      (let* ((conf-file (assoc-default 'extra_conf_file ex)))
+      (let ((conf-file (assoc-default 'extra_conf_file ex)))
         (cond ((not conf-file)
                (warn "No extra_conf_file included in UnknownExtraConf exception. Consider reporting this."))
-              
+
               ((or (eq ycmd-extra-conf-handler 'load)
                    (and (eq ycmd-extra-conf-handler 'ask)
                         (y-or-n-p (format "Load YCMD extra conf %s?" conf-file))))
                (ycmd--request "/load_extra_conf_file"
                               `((filepath . ,conf-file))))
-              
+
               (t
                (ycmd--request "/ignore_extra_conf_file"
                                 `((filepath . ,conf-file))))))
