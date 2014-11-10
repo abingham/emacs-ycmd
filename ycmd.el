@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (anaphora "1.0.0") (request "0.2.0") (deferred "0.3.2") (request-deferred "0.2.0") (popup "0.5.0"))
+;; Package-Requires: ((emacs "24") (anaphora "1.0.0") (deferred "0.3.2") (popup "0.5.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -107,9 +107,19 @@
 (require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
 (require 'popup)
-(require 'request)
-(require 'request-deferred)
+;; (require 'request)
+;; (require 'request-deferred)
 (require 'etags)
+
+;; Allow loading of our bundled third-party modules
+(add-to-list 'load-path (expand-file-name
+                         "third-party"
+                         (file-name-directory
+                          (or load-file-name
+                              (buffer-file-name)))))
+
+(require 'ycmd-request)
+(require 'ycmd-request-deferred)
 
 (defgroup ycmd nil
   "a ycmd emacs client"
@@ -684,7 +694,7 @@ anything like that.)
 "
   (unless (ycmd-running?) (ycmd-open))
 
-  (lexical-let* ((request-backend 'url-retrieve)
+  (lexical-let* ((ycmd-request-backend 'url-retrieve)
                  (content (json-encode content))
                  (hmac (ycmd--hmac-function content ycmd--hmac-secret))
                  (hex-hmac (encode-hex-string hmac))
@@ -693,7 +703,7 @@ anything like that.)
 
     (deferred:$
 
-     (request-deferred
+     (ycmd-request-deferred
       (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
       :headers `(("Content-Type" . "application/json")
                  ("X-Ycm-Hmac" . ,encoded-hex-hmac))
@@ -703,7 +713,7 @@ anything like that.)
 
      (deferred:nextc it
        (lambda (req)
-         (let ((content (request-response-data req)))
+         (let ((content (ycmd-request-response-data req)))
            (ycmd--log-content "HTTP RESPONSE CONTENT" content)
            content))))))
 
