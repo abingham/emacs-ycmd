@@ -92,4 +92,5 @@ Afer this you can use your standard `company-mode` keybindings to do completion.
 ----------
 emacs-ycmd reports found errors through emacs buttons; to integrate those with
 ```next-error``` prepend something like
-```(load-file "contrib/ami-ycmd-next-error.el")``` before require'ing ycmd.
+```(require 'ycmd-next-error)``` before require'ing ycmd (after adding the
+```contrib``` directory to your ```load-path```).
