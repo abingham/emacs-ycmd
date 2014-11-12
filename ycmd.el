@@ -241,6 +241,11 @@ use `ycmd-parse-buffer'."
               (const :tag "After a `ycmd-mode' was enabled." mode-enabled))
   :safe #'listp)
 
+(defcustom ycmd-force-semantic-completion nil
+  "Whether to use always semantic completion."
+  :group 'ycmd
+  :type 'boolean)
+
 (defun ycmd-open ()
   "Start a new ycmd server.
 
@@ -311,10 +316,13 @@ Returns a deferred object.
 To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
   (when (ycmd--major-mode-to-file-types major-mode)
-    (ycmd--request
-     "/completions"
-     (ycmd--standard-content)
-     :parser 'json-read)))
+    (let ((content (append (ycmd--standard-content)
+                           (when ycmd-force-semantic-completion
+                             '(("force_semantic" . "true"))))))
+      (ycmd--request
+       "/completions"
+       content
+       :parser 'json-read))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration (whichever is most
