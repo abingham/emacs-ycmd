@@ -165,7 +165,7 @@ of information added as text-properties.
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
   (cl-case command
-    (interactive     (company-begin-backend 'company-ycmd-backend))
+    (interactive     (company-begin-backend 'company-ycmd))
     (prefix          (company-ycmd--prefix))
     (candidates      (company-ycmd--candidates arg))
     (meta            (company-ycmd--meta arg))
