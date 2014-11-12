@@ -569,7 +569,10 @@ This is primarily a debug/developer tool."
     (c-mode . ("cpp"))
     (python-mode . ("python"))
     (js-mode . ("javascript"))
-    (js2-mode . ("javascript")))
+    (js2-mode . ("javascript"))
+    (lua-mode . ("lua"))
+    (perl-mode . ("perl"))
+    (ruby-mode . ("ruby")))
   "Mapping from major modes to ycmd file-type strings. Used to
   determine a) which major modes we support and b) how to
   describe them to ycmd.")
