@@ -526,18 +526,52 @@ Otherwise the response is probably an exception."
         (ycmd--handle-notify-exception it))))
 
 (defun ycmd-notify-file-ready-to-parse ()
-  (when (ycmd--major-mode-to-file-types major-mode)
+  "Send a notification to ycmd that the buffer is ready to be parsed.
+
+Only one active notification is allowed per buffer, and this
+function enforces that constraint.
+
+The results of the notification are passed to all of the
+functions in `ycmd-file-parse-result-hook'.
+"
+  (when (and (ycmd--major-mode-to-file-types major-mode)
+             (not ycmd--notification-in-progress))
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content)))
           (buff (current-buffer)))
+      
+      ;; Record that the buffer is being parsed
+      (setq ycmd--notification-in-progress 't)
+
+      ;; TODO: We need to find out the best way to ensure that
+      ;; ycmd--notification-in-progress is unset, no matter how the
+      ;; request might fail. We could try deferred:try with a finally,
+      ;; but docs say that the finally-clause may not always run. So
+      ;; ask the deferred author about the correct/best approach.
+      
       (deferred:$
+
+        ;; Make the request.
         (ycmd--request "/event_notification"
                        content
                        :parser 'json-read)
-        (deferred:nextc it
-          (lambda (results)
-            (with-current-buffer buff
-              (ycmd--handle-notify-response results))))))))
+
+        ;; process results in parallel so that hook processing errors
+        ;; won't prevent unsetting of the notification flag.
+        (deferred:parallel
+
+          ;; Process the results hook.
+          (deferred:nextc it
+            (lambda (results)
+              (with-current-buffer buff
+                (ycmd--handle-notify-response results))))
+
+          ;; Record that the notification is done.
+          (deferred:nextc it
+            (lambda (results)
+              (with-current-buffer buff
+                (message "unsetting notification for %s" (buffer-file-name))
+                (setq ycmd--notification-in-progress nil)))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -571,6 +605,9 @@ This is primarily a debug/developer tool."
 
 (defvar ycmd--keepalive-timer nil
   "Timer for sending keepalive messages to the server.")
+
+(defvar-local ycmd--notification-in-progress nil
+  "Indicates if the current buffer has an active notify/parse in progress.")
 
 (defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
