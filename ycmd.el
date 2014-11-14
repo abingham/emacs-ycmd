@@ -526,18 +526,47 @@ Otherwise the response is probably an exception."
         (ycmd--handle-notify-exception it))))
 
 (defun ycmd-notify-file-ready-to-parse ()
-  (when (ycmd--major-mode-to-file-types major-mode)
+  "Send a notification to ycmd that the buffer is ready to be parsed.
+
+Only one active notification is allowed per buffer, and this
+function enforces that constraint.
+
+The results of the notification are passed to all of the
+functions in `ycmd-file-parse-result-hook'.
+"
+  (when (and (ycmd--major-mode-to-file-types major-mode)
+             (not ycmd--notification-in-progress))
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content)))
           (buff (current-buffer)))
+      
+      ;; Record that the buffer is being parsed
+      (setq ycmd--notification-in-progress 't)
+      
       (deferred:$
-        (ycmd--request "/event_notification"
-                       content
-                       :parser 'json-read)
-        (deferred:nextc it
-          (lambda (results)
-            (with-current-buffer buff
-              (ycmd--handle-notify-response results))))))))
+	;; try
+	(deferred:$
+	  ;; Make the request.
+	  (ycmd--request "/event_notification"
+			 content
+			 :parser 'json-read)
+
+	  (deferred:nextc it
+	    (lambda (results)
+	      (with-current-buffer buff
+		(ycmd--handle-notify-response results)))))
+
+	;; catch
+	(deferred:error it
+	  (lambda (err)
+	    (message "Error sending notification request: %s" err)))
+
+	;; finally. As I understand is, this should always be
+	;; executed.
+	(deferred:nextc it
+	  (lambda ()
+	    (with-current-buffer buff
+	      (setq ycmd--notification-in-progress nil))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -571,6 +600,9 @@ This is primarily a debug/developer tool."
 
 (defvar ycmd--keepalive-timer nil
   "Timer for sending keepalive messages to the server.")
+
+(defvar-local ycmd--notification-in-progress nil
+  "Indicates if the current buffer has an active notify/parse in progress.")
 
 (defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
