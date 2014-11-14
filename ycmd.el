@@ -542,36 +542,31 @@ functions in `ycmd-file-parse-result-hook'.
       
       ;; Record that the buffer is being parsed
       (setq ycmd--notification-in-progress 't)
-
-      ;; TODO: We need to find out the best way to ensure that
-      ;; ycmd--notification-in-progress is unset, no matter how the
-      ;; request might fail. We could try deferred:try with a finally,
-      ;; but docs say that the finally-clause may not always run. So
-      ;; ask the deferred author about the correct/best approach.
       
       (deferred:$
+	;; try
+	(deferred:$
+	  ;; Make the request.
+	  (ycmd--request "/event_notification"
+			 content
+			 :parser 'json-read)
 
-        ;; Make the request.
-        (ycmd--request "/event_notification"
-                       content
-                       :parser 'json-read)
+	  (deferred:nextc it
+	    (lambda (results)
+	      (with-current-buffer buff
+		(ycmd--handle-notify-response results)))))
 
-        ;; process results in parallel so that hook processing errors
-        ;; won't prevent unsetting of the notification flag.
-        (deferred:parallel
+	;; catch
+	(deferred:error it
+	  (lambda (err)
+	    (message "Error sending notification request: %s" err)))
 
-          ;; Process the results hook.
-          (deferred:nextc it
-            (lambda (results)
-              (with-current-buffer buff
-                (ycmd--handle-notify-response results))))
-
-          ;; Record that the notification is done.
-          (deferred:nextc it
-            (lambda (results)
-              (with-current-buffer buff
-                (message "unsetting notification for %s" (buffer-file-name))
-                (setq ycmd--notification-in-progress nil)))))))))
+	;; finally. As I understand is, this should always be
+	;; executed.
+	(deferred:nextc it
+	  (lambda ()
+	    (with-current-buffer buff
+	      (setq ycmd--notification-in-progress nil))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
