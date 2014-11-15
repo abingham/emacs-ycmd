@@ -311,7 +311,26 @@ it might be interesting for some users."
 (defun ycmd-get-completions ()
   "Get completions for the current position from the ycmd server.
 
-Returns a deferred object.
+Returns a deferred object which yields the HTTP message
+content. If completions are available, the structure looks like
+this:
+
+   ((completion_start_column . 6)
+    (completions .
+                 [((kind . \"FUNCTION\")
+                   (extra_menu_info . \"long double\")
+                   (detailed_info . \"long double acoshl( long double )\n\")
+                   (insertion_text . \"acoshl\")
+                   (menu_text . \"acoshl( long double )\"))
+                   . . .]))
+
+If ycmd can't do completion because it's busy parsing, the
+structure looks like this:
+
+  ((message . \"Still parsing file, no completions yet.\")
+   (traceback . \"long traceback string\")
+   (exception
+    (TYPE . \"RuntimeError\")))
 
 To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
