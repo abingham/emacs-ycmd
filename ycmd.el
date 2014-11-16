@@ -334,6 +334,9 @@ structure looks like this:
 
 To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
+  (when ycmd--notification-in-progress
+    (message "Ycmd completion unavailable while parsing is in progress."))
+  
   (when (ycmd--major-mode-to-file-types major-mode)
     (let ((content (append (ycmd--standard-content)
                            (when ycmd-force-semantic-completion
