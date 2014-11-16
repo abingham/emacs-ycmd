@@ -108,10 +108,16 @@ of information added as text-properties.
     
     (deferred:nextc it
       (lambda (c)
-        (funcall
-         cb
-         (mapcar 'company-ycmd--construct-candidate
-                 (assoc-default 'completions c)))))))
+        (if (assoc-default 'exception c)
+
+            (let ((msg (assoc-default 'message c nil "unknown error")))
+              (message "Exception while fetching candidates: %s" msg)
+              '())
+          
+          (funcall
+           cb
+           (mapcar 'company-ycmd--construct-candidate
+                   (assoc-default 'completions c))))))))
 
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a candidate string."
