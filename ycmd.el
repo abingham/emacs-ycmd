@@ -315,7 +315,7 @@ Returns a deferred object.
 
 To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
-  (when (ycmd--major-mode-to-file-types major-mode)
+  (when ycmd-mode
     (let ((content (append (ycmd--standard-content)
                            (when ycmd-force-semantic-completion
                              '(("force_semantic" . "true"))))))
@@ -353,7 +353,7 @@ useful in case compile-time is considerable."
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request type."
-  (when (ycmd--major-mode-to-file-types major-mode)
+  (when ycmd-mode
     (let ((content (cons (list "command_arguments" type)
                          (ycmd--standard-content))))
       (deferred:$
@@ -534,7 +534,7 @@ function enforces that constraint.
 The results of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'.
 "
-  (when (and (ycmd--major-mode-to-file-types major-mode)
+  (when (and ycmd-mode
              (not ycmd--notification-in-progress))
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content)))
