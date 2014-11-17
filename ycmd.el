@@ -607,12 +607,20 @@ This is primarily a debug/developer tool."
 (defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
     (c-mode . ("cpp"))
-    (python-mode . ("python"))
+    (caml-mode . ("ocaml"))
+    (d-mode . ("d"))
+    (erlang-mode . ("erlang"))
+    (go-mode . ("go"))
     (js-mode . ("javascript"))
     (js2-mode . ("javascript"))
     (lua-mode . ("lua"))
+    (objc-mode . ("objc"))
     (perl-mode . ("perl"))
-    (ruby-mode . ("ruby")))
+    (php-mode . ("php"))
+    (python-mode . ("python"))
+    (ruby-mode . ("ruby"))
+    (scala-mode . ("scala"))
+    (tuareg-mode . ("ocaml")))
   "Mapping from major modes to ycmd file-type strings. Used to
   determine a) which major modes we support and b) how to
   describe them to ycmd.")
