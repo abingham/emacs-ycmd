@@ -145,9 +145,11 @@ of information added as text-properties.
        buffer-file-name
        (ycmd-running?)
        (not (company-in-string-or-comment))
-       (if (looking-back "\\.\\|->\\|::")
-           (company-grab-symbol-cons "\\.\\|->\\|::" 2)
-         (company-grab-symbol))))
+       (or (let ((triggers-re "\\.\\|->\\|::"))
+             (if (looking-back triggers-re)
+                 (company-grab-symbol-cons triggers-re 2)
+               (company-grab-symbol)))
+           'stop)))
 
 (defun company-ycmd--candidates (prefix)
   "Candidates-command handler for the company backend."
