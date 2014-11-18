@@ -154,7 +154,7 @@ of information added as text-properties.
   (cons :async 'company-ycmd--get-candidates))
 
 (defun company-ycmd--match (prefix)
-  (point))
+  (length prefix))
 
 (defun company-ycmd--post-completion (arg)
   (let ((params (company-ycmd--params arg)))
