@@ -115,9 +115,11 @@ of information added as text-properties.
                  (assoc-default 'completions c)))))))
 
 (defun company-ycmd--meta (candidate)
-  "Fetch the metadata text-property from a candidate string."
-  (s-trim
-   (get-text-property 0 'detailed_info candidate)))
+  "Fetch the metadata text-property from a CANDIDATE string."
+  (let ((meta (get-text-property 0 'detailed_info candidate)))
+    (if (stringp meta)
+        (s-trim meta)
+      meta)))
 
 (defun company-ycmd--params (candidate)
   "Fetch function parameters from a CANDIDATE string if possible."
