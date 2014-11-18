@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0"))
+;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0") (s "1.0.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -66,6 +66,7 @@
 (require 'company-template)
 (require 'deferred)
 (require 'ycmd)
+(require 's)
 
 (defgroup company-ycmd nil
   "Company-mode completion backend for ycmd."
@@ -115,7 +116,8 @@ of information added as text-properties.
 
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a candidate string."
-  (get-text-property 0 'detailed_info candidate))
+  (s-trim
+   (get-text-property 0 'detailed_info candidate)))
 
 (defun company-ycmd--params (candidate)
   "Fetch function parameters from a CANDIDATE string if possible."
