@@ -759,7 +759,8 @@ nil, this uses the current buffer.
            (line-num (line-number-at-pos (point)))
            (full-path (buffer-file-name))
            (file-contents (buffer-substring-no-properties (point-min) (point-max)))
-           (file-types (ycmd--major-mode-to-file-types major-mode)))
+           (file-types (or (ycmd--major-mode-to-file-types major-mode)
+                           '("generic"))))
       `(("file_data" .
          ((,full-path . (("contents" . ,file-contents)
                          ("filetypes" . ,file-types)))))
