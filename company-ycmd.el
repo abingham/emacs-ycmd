@@ -27,6 +27,7 @@
 ;;   ycmd
 ;;   company
 ;;   deferred
+;;   s
 ;;
 ;; Copy this file to to some location in your emacs load path. Then add
 ;; "(require 'company-ycmd)" to your emacs initialization (.emacs,
