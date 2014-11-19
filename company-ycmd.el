@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0"))
+;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0") (s "1.0.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -27,6 +27,7 @@
 ;;   ycmd
 ;;   company
 ;;   deferred
+;;   s
 ;;
 ;; Copy this file to to some location in your emacs load path. Then add
 ;; "(require 'company-ycmd)" to your emacs initialization (.emacs,
@@ -66,6 +67,7 @@
 (require 'company-template)
 (require 'deferred)
 (require 'ycmd)
+(require 's)
 
 (defgroup company-ycmd nil
   "Company-mode completion backend for ycmd."
@@ -79,6 +81,14 @@
 
 (defcustom company-ycmd-insert-arguments t
   "When non-nil, insert function arguments as a template after completion."
+  :type 'boolean
+  :group 'company-ycmd)
+
+(defcustom company-ycmd-enable-fuzzy-matching t
+  "When non-nil, use fuzzy matching for completion candidates.
+
+Setting this to non-nil disables the `company-mode' internal
+cache feature, in order to be able to use ycmd's fuzzy matching."
   :type 'boolean
   :group 'company-ycmd)
 
@@ -120,8 +130,11 @@ of information added as text-properties.
                    (assoc-default 'completions c))))))))
 
 (defun company-ycmd--meta (candidate)
-  "Fetch the metadata text-property from a candidate string."
-  (get-text-property 0 'detailed_info candidate))
+  "Fetch the metadata text-property from a CANDIDATE string."
+  (let ((meta (get-text-property 0 'detailed_info candidate)))
+    (if (stringp meta)
+        (s-trim meta)
+      meta)))
 
 (defun company-ycmd--params (candidate)
   "Fetch function parameters from a CANDIDATE string if possible."
@@ -153,9 +166,11 @@ of information added as text-properties.
        (ycmd-running?)
        (not ycmd--notification-in-progress)
        (not (company-in-string-or-comment))
-       (if (looking-back "\\.\\|->\\|::")
-           (company-grab-symbol-cons "\\.\\|->\\|::" 2)
-         (company-grab-symbol))))
+       (or (let ((triggers-re "\\.\\|->\\|::"))
+             (if (looking-back triggers-re)
+                 (company-grab-symbol-cons triggers-re 2)
+               (company-grab-symbol)))
+           'stop)))
 
 (defun company-ycmd--candidates (prefix)
   "Candidates-command handler for the company backend."
@@ -180,8 +195,9 @@ of information added as text-properties.
     (candidates      (company-ycmd--candidates arg))
     (meta            (company-ycmd--meta arg))
     (annotation      (company-ycmd--annotation arg))
-    (match           (company-ycmd--match arg))
-    (no-cache        't) ; Don't cache. It interferes with fuzzy matching.
+    (match           (when company-ycmd-enable-fuzzy-matching
+                       (company-ycmd--match arg)))
+    (no-cache        company-ycmd-enable-fuzzy-matching)
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
 

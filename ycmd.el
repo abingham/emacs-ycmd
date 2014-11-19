@@ -211,7 +211,7 @@ re-parsing the contents."
   :group 'ycmd
   :type '(number))
 
-(defcustom ycmd-parse-conditions '(save new-line idle-change mode-enabled)
+(defcustom ycmd-parse-conditions '(save new-line mode-enabled)
   "When ycmd should reparse the buffer.
 
 The variable is a list of events that may trigger parsing the
@@ -336,8 +336,8 @@ To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
   (when ycmd--notification-in-progress
     (message "Ycmd completion unavailable while parsing is in progress."))
-  
-  (when (ycmd--major-mode-to-file-types major-mode)
+
+  (when ycmd-mode
     (let ((content (append (ycmd--standard-content)
                            (when ycmd-force-semantic-completion
                              '(("force_semantic" . "true"))))))
@@ -375,7 +375,7 @@ useful in case compile-time is considerable."
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request type."
-  (when (ycmd--major-mode-to-file-types major-mode)
+  (when ycmd-mode
     (let ((content (cons (list "command_arguments" type)
                          (ycmd--standard-content))))
       (deferred:$
@@ -556,7 +556,7 @@ function enforces that constraint.
 The results of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'.
 "
-  (when (and (ycmd--major-mode-to-file-types major-mode)
+  (when (and ycmd-mode
              (not ycmd--notification-in-progress))
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content)))
@@ -629,12 +629,20 @@ This is primarily a debug/developer tool."
 (defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
     (c-mode . ("cpp"))
-    (python-mode . ("python"))
+    (caml-mode . ("ocaml"))
+    (d-mode . ("d"))
+    (erlang-mode . ("erlang"))
+    (go-mode . ("go"))
     (js-mode . ("javascript"))
     (js2-mode . ("javascript"))
     (lua-mode . ("lua"))
+    (objc-mode . ("objc"))
     (perl-mode . ("perl"))
-    (ruby-mode . ("ruby")))
+    (php-mode . ("php"))
+    (python-mode . ("python"))
+    (ruby-mode . ("ruby"))
+    (scala-mode . ("scala"))
+    (tuareg-mode . ("ocaml")))
   "Mapping from major modes to ycmd file-type strings. Used to
   determine a) which major modes we support and b) how to
   describe them to ycmd.")
