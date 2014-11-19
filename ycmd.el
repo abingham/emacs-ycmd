@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (anaphora "1.0.0") (deferred "0.3.2") (popup "0.5.0"))
+;; Package-Requires: ((emacs "24") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -102,7 +102,7 @@
 
 ;;; Code:
 
-(require 'anaphora)
+(require 'dash)
 (require 'deferred)
 (require 'hmac-def)
 (require 'hmac-md5) ; provides encode-hex-string
@@ -465,7 +465,7 @@ When clicked, this will popup MESSAGE."
   "Decorates a buffer based on the contents of a single parse
 result struct."
   (ycmd--with-destructured-parse-result r
-   (awhen (find-buffer-visiting filepath)
+   (--when-let (find-buffer-visiting filepath)
      (with-current-buffer it
        (let* ((start-pos (ycmd--line-start-position line-num))
               (end-pos (ycmd--line-end-position line-num))
@@ -536,7 +536,7 @@ configuration file according the value of
 Otherwise the response is probably an exception."
   (if (vectorp results)
       (run-hook-with-args 'ycmd-file-parse-result-hook results)
-    (aif (assoc-default 'exception results)
+    (--if-let (assoc-default 'exception results)
         (ycmd--handle-notify-exception it))))
 
 (defun ycmd-notify-file-ready-to-parse ()
