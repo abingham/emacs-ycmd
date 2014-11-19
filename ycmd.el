@@ -211,7 +211,7 @@ re-parsing the contents."
   :group 'ycmd
   :type '(number))
 
-(defcustom ycmd-parse-conditions '(save new-line idle-change mode-enabled)
+(defcustom ycmd-parse-conditions '(save new-line mode-enabled)
   "When ycmd should reparse the buffer.
 
 The variable is a list of events that may trigger parsing the
