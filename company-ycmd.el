@@ -118,10 +118,16 @@ of information added as text-properties.
     
     (deferred:nextc it
       (lambda (c)
-        (funcall
-         cb
-         (mapcar 'company-ycmd--construct-candidate
-                 (assoc-default 'completions c)))))))
+        (if (assoc-default 'exception c)
+
+            (let ((msg (assoc-default 'message c nil "unknown error")))
+              (message "Exception while fetching candidates: %s" msg)
+              '())
+          
+          (funcall
+           cb
+           (mapcar 'company-ycmd--construct-candidate
+                   (assoc-default 'completions c))))))))
 
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
@@ -152,9 +158,13 @@ of information added as text-properties.
 
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
+  (when ycmd--notification-in-progress
+    (message "Ycmd completion unavailable while parsing is in progress."))
+  
   (and ycmd-mode
        buffer-file-name
        (ycmd-running?)
+       (not ycmd--notification-in-progress)
        (not (company-in-string-or-comment))
        (or (let ((triggers-re "\\.\\|->\\|::"))
              (if (looking-back triggers-re)
