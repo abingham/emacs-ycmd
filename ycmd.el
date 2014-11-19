@@ -34,14 +34,6 @@
 ;;
 ;; Installation:
 ;;
-;; ycmd depends on the following packages:
-;;
-;;   anaphora
-;;   deferred
-;;   popup
-;;   request
-;;   request-deferred
-;;
 ;; Copy this file to to some location in your emacs load path. Then add
 ;; "(require 'ycmd)" to your emacs initialization (.emacs,
 ;; init.el, or something).
