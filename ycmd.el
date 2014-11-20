@@ -365,6 +365,15 @@ useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToImprecise"))
 
+(defun ycmd--handle-goto-exception (ex)
+  (let ((msg (assoc-default 'message ex nil "UNKNOWN")))
+    (warn (format "goto exception: %s" msg))))
+
+(defun ycmd--handle-goto-success (location)
+  (push-mark)
+  (ring-insert find-tag-marker-ring (point-marker))
+  (ycmd--goto-location location))
+
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request type."
   (when ycmd-mode
@@ -380,9 +389,9 @@ useful in case compile-time is considerable."
         (deferred:nextc it
           (lambda (location)
             (when location
-              (push-mark)
-              (ring-insert find-tag-marker-ring (point-marker))
-              (ycmd--goto-location location))))))))
+              (if (assoc-default 'exception location)
+                  (ycmd--handle-goto-exception location)
+                (ycmd--handle-goto-success location)))))))))
 
 (defun ycmd--goto-location (location)
   "Move cursor to LOCATION, a structure as returned from e.g. the
