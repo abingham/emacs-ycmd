@@ -760,6 +760,7 @@ the name of the newly created file."
              (t
               (incf cont)
               (when (< 3000 cont) ; timeout after 3 seconds
+                (set-window-buffer nil proc-buff)
                 (error "Server timeout."))))))))))
 
 (defun ycmd--standard-content (&optional buffer)
