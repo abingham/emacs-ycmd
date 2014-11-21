@@ -341,7 +341,7 @@ To see what the returned structure looks like, you can use
 (defun ycmd--handle-exception (results &optional default-handler)
   (cond ((string-equal (assoc-default 'TYPE (assoc-default 'exception results))
                        "UnknownExtraConf")
-         (ycmd--handle-notify-exception results))
+         (ycmd--handle-extra-conf-exception results))
         (default-handler (funcall default-handler results))))
 
 (defun ycmd-goto ()
@@ -523,11 +523,10 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (interactive)
   (ycmd--conditional-parse))
 
-(defun ycmd--handle-notify-exception (result)
-  "Handle a notify exception.
+(defun ycmd--handle-extra-conf-exception (result)
+  "Handle an exception of type `UnknownExtraConf'.
 
-If EX is an exception of type `UnknownExtraConf', handle
-configuration file according the value of
+Handle configuration file according the value of
 `ycmd-extra-conf-handler'."
   (deferred:$
     (let ((conf-file (assoc-default 'extra_conf_file
