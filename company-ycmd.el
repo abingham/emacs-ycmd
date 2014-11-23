@@ -106,7 +106,7 @@ of information added as text-properties.
     (deferred:try
       (deferred:$
         (if (ycmd-running?)
-            (ycmd-get-completions)))
+            (ycmd-get-completions (current-buffer) (point))))
       :catch (lambda (err) nil))
     
     (deferred:nextc it

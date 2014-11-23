@@ -73,7 +73,7 @@
 ;; Use `ycmd-get-completions' to get completions at some point in a
 ;; file. For example:
 ;;
-;;   (ycmd-get-completions)
+;;   (ycmd-get-completions buffer position)
 ;;
 ;; You can use `ycmd-display-completions' to toy around with completion
 ;; interactively and see the shape of the structures in use.
@@ -293,15 +293,15 @@ This is really a utility/debugging function for developers, but
 it might be interesting for some users."
   (interactive)
   (deferred:$
-    (ycmd-get-completions)
+    (ycmd-get-completions (current-buffer) (point))
     (deferred:nextc it
       (lambda (completions)
         (pop-to-buffer "*ycmd-completions*")
         (erase-buffer)
         (insert (pp-to-string completions))))))
 
-(defun ycmd-get-completions ()
-  "Get completions for the current position from the ycmd server.
+(defun ycmd-get-completions (buffer pos)
+  "Get completions for position POS in BUFFER from the ycmd server.
 
 Returns a deferred object which yields the HTTP message
 content. If completions are available, the structure looks like
@@ -326,17 +326,20 @@ structure looks like this:
 
 To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
-  (when ycmd--notification-in-progress
-    (message "Ycmd completion unavailable while parsing is in progress."))
+  (with-current-buffer buffer
+      (goto-char pos)
 
-  (when ycmd-mode
-    (let ((content (append (ycmd--standard-content)
-                           (when ycmd-force-semantic-completion
-                             '(("force_semantic" . "true"))))))
-      (ycmd--request
-       "/completions"
-       content
-       :parser 'json-read))))
+      (when ycmd--notification-in-progress
+        (message "Ycmd completion unavailable while parsing is in progress."))
+
+      (when ycmd-mode
+        (let ((content (append (ycmd--standard-content)
+                               (when ycmd-force-semantic-completion
+                                 '(("force_semantic" . "true"))))))
+          (ycmd--request
+           "/completions"
+           content
+           :parser 'json-read)))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration (whichever is most
@@ -401,19 +404,20 @@ various GoTo commands."
               (assoc-default 'column_num location)
               (assoc-default 'line_num location))))
 
-(defun ycmd--col-line-to-position (col line)
+(defun ycmd--col-line-to-position (col line &optional buff)
   "Convert COL and LINE into a position in the current buffer.
 
 COL and LINE are expected to be as returned from ycmd, e.g. from
 notify-file-ready. Apparently COL can be 0 sometimes, in which
 case this function returns 0.
 "
-  (if (= col 0)
-      0
-      (save-excursion
+  (let ((buff (or buff (current-buffer))))
+    (if (= col 0)
+	0
+      (with-current-buffer buff
         (goto-line line)
         (forward-char (- col 1))
-        (point))))
+        (point)))))
 
 (define-button-type 'ycmd--error-button
   'face '(error bold underline)
@@ -781,7 +785,7 @@ nil, this uses the current buffer.
   (with-current-buffer (or buffer (current-buffer))
     (let* ((column-num (+ 1 (save-excursion (goto-char (point)) (current-column))))
            (line-num (line-number-at-pos (point)))
-           (full-path (buffer-file-name))
+           (full-path (or (buffer-file-name) ""))
            (file-contents (buffer-substring-no-properties (point-min) (point-max)))
            (file-types (or (ycmd--major-mode-to-file-types major-mode)
                            '("generic"))))
