@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0"))
+;; Package-Requires: ((emacs "24") (f "0.17.1") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
