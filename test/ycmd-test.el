@@ -1,18 +1,11 @@
 (require 'ert)
+(require 'f)
 (require 'ycmd)
 
 (setq ycmd-test-cpp-content
-      "class Llama {
-public:
-    void llurp() {}
-};
-
-int main(int, char**) {
-    Llama l;
-    l.
-
-    return 0;
-}")
+      (let* ((this-dir (f-dirname (f-this-file)))
+             (filename (f-join this-dir "test.cpp")))
+        (f-read filename)))
 
 (defun ycmd-test-create-file (content)
   "Create a new temporary file and write CONTENT to it.
