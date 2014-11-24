@@ -104,6 +104,7 @@
 
 (require 'dash)
 (require 'deferred)
+(require 'f)
 (require 'hmac-def)
 (require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
@@ -113,11 +114,7 @@
 (require 'etags)
 
 ;; Allow loading of our bundled third-party modules
-(add-to-list 'load-path (expand-file-name
-                         "third-party"
-                         (file-name-directory
-                          (or load-file-name
-                              (buffer-file-name)))))
+(add-to-list 'load-path (f-join (f-dirname (f-this-file)) "third-party"))
 
 (require 'ycmd-request)
 (require 'ycmd-request-deferred)
