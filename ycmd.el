@@ -585,7 +585,7 @@ functions in `ycmd-file-parse-result-hook'.
 	  (lambda (err)
 	    (message "Error sending notification request: %s" err)))
 
-	;; finally. As I understand is, this should always be
+	;; finally. As I understand it, this should always be
 	;; executed.
 	(deferred:nextc it
 	  (lambda ()
