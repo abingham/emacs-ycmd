@@ -338,6 +338,12 @@ To see what the returned structure looks like, you can use
        content
        :parser 'json-read))))
 
+(defun ycmd--handle-exception (results &optional default-handler)
+  (cond ((string-equal (assoc-default 'TYPE (assoc-default 'exception results))
+                       "UnknownExtraConf")
+         (ycmd--handle-extra-conf-exception results))
+        (default-handler (funcall default-handler results))))
+
 (defun ycmd-goto ()
   "Go to the definition or declaration (whichever is most
 sensible) of the symbol at the current position."
@@ -365,8 +371,8 @@ useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToImprecise"))
 
-(defun ycmd--handle-goto-exception (ex)
-  (let ((msg (assoc-default 'message ex nil "UNKNOWN")))
+(defun ycmd--handle-goto-exception (results)
+  (let ((msg (assoc-default 'message results nil "UNKNOWN")))
     (warn (format "goto exception: %s" msg))))
 
 (defun ycmd--handle-goto-success (location)
@@ -390,7 +396,7 @@ useful in case compile-time is considerable."
           (lambda (location)
             (when location
               (if (assoc-default 'exception location)
-                  (ycmd--handle-goto-exception location)
+                  (ycmd--handle-exception location #'ycmd--handle-goto-exception)
                 (ycmd--handle-goto-success location)))))))))
 
 (defun ycmd--goto-location (location)
@@ -517,36 +523,35 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (interactive)
   (ycmd--conditional-parse))
 
-(defun ycmd--handle-notify-exception (ex)
-  "Handle a notify exception.
+(defun ycmd--handle-extra-conf-exception (result)
+  "Handle an exception of type `UnknownExtraConf'.
 
-If EX is an exception of type `UnknownExtraConf', handle
-configuration file according the value of
+Handle configuration file according the value of
 `ycmd-extra-conf-handler'."
-  (when (string-equal (assoc-default 'TYPE ex) "UnknownExtraConf")
-    (deferred:$
-      (let ((conf-file (assoc-default 'extra_conf_file ex)))
-        (cond ((not conf-file)
-               (warn "No extra_conf_file included in UnknownExtraConf exception. Consider reporting this."))
+  (deferred:$
+    (let ((conf-file (assoc-default 'extra_conf_file
+                                    (assoc-default 'exception result))))
+      (cond ((not conf-file)
+             (warn "No extra_conf_file included in UnknownExtraConf exception. Consider reporting this."))
 
-              ((or (eq ycmd-extra-conf-handler 'load)
-                   (and (eq ycmd-extra-conf-handler 'ask)
-                        (y-or-n-p (format "Load YCMD extra conf %s?" conf-file))))
-               (ycmd--request "/load_extra_conf_file"
-                              `((filepath . ,conf-file))))
+            ((or (eq ycmd-extra-conf-handler 'load)
+                 (and (eq ycmd-extra-conf-handler 'ask)
+                      (y-or-n-p (format "Load YCMD extra conf %s?" conf-file))))
+             (ycmd--request "/load_extra_conf_file"
+                            `((filepath . ,conf-file))))
 
-              (t
-               (ycmd--request "/ignore_extra_conf_file"
-                                `((filepath . ,conf-file))))))
-      (ycmd-notify-file-ready-to-parse))))
+            (t
+             (ycmd--request "/ignore_extra_conf_file"
+                            `((filepath . ,conf-file))))))
+    (ycmd-notify-file-ready-to-parse)))
 
 (defun ycmd--handle-notify-response (results)
   "If RESULTS is a vector, the response is an acual parse result.
 Otherwise the response is probably an exception."
   (if (vectorp results)
       (run-hook-with-args 'ycmd-file-parse-result-hook results)
-    (--if-let (assoc-default 'exception results)
-        (ycmd--handle-notify-exception it))))
+    (when (assoc 'exception results)
+      (ycmd--handle-exception results))))
 
 (defun ycmd-notify-file-ready-to-parse ()
   "Send a notification to ycmd that the buffer is ready to be parsed.
