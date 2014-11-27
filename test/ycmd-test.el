@@ -31,6 +31,8 @@ Returns buffer visiting new file."
 into MODE, and wait for initial ycmd parsing of the file to
 complete.
 
+This has the side-effect of (re)starting ycmd.
+
 Return the buffer.
 "
   (lexical-let ((buff (ycmd-test-create-file content))
