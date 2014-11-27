@@ -381,7 +381,7 @@ useful in case compile-time is considerable."
                          (ycmd--standard-content))))
       (deferred:$
         
-        (ycmd--goto-core type (current-buffer) (point))
+        (ycmd--send-goto-request type (current-buffer) (point))
 
         (deferred:nextc it
           (lambda (location)
@@ -390,7 +390,7 @@ useful in case compile-time is considerable."
                   (ycmd--handle-goto-exception location)
                 (ycmd--handle-goto-success location)))))))))
 
-(defun ycmd--goto-core (type buffer pos)
+(defun ycmd--send-goto-request (type buffer pos)
   (with-current-buffer buffer
     (goto-char pos)
     (let ((content (cons (list "command_arguments" type)

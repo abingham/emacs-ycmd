@@ -69,7 +69,7 @@ Return the buffer.
     (deferred:sync!
       
       (deferred:$
-        (ycmd--goto-core
+        (ycmd--send-goto-request
          "GoToDeclaration"
          buff
          (ycmd--col-line-to-position 7 9 buff))
