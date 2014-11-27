@@ -380,11 +380,8 @@ useful in case compile-time is considerable."
     (let ((content (cons (list "command_arguments" type)
                          (ycmd--standard-content))))
       (deferred:$
-
-        (ycmd--request
-         "/run_completer_command"
-         content
-         :parser 'json-read)
+        
+        (ycmd--goto-core type (current-buffer) (point))
 
         (deferred:nextc it
           (lambda (location)
@@ -392,6 +389,16 @@ useful in case compile-time is considerable."
               (if (assoc-default 'exception location)
                   (ycmd--handle-goto-exception location)
                 (ycmd--handle-goto-success location)))))))))
+
+(defun ycmd--goto-core (type buffer pos)
+  (with-current-buffer buffer
+    (goto-char pos)
+    (let ((content (cons (list "command_arguments" type)
+                         (ycmd--standard-content))))
+      (ycmd--request
+       "/run_completer_command"
+       content
+       :parser 'json-read))))
 
 (defun ycmd--goto-location (location)
   "Move cursor to LOCATION, a structure as returned from e.g. the

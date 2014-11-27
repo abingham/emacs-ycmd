@@ -2,10 +2,16 @@
 (require 'f)
 (require 'ycmd)
 
+(defun ycmd-test-load-file (filename)
+  (let* ((this-dir (f-dirname (f-this-file)))
+         (filename (f-join this-dir filename)))
+    (f-read filename)))
+
 (setq ycmd-test-cpp-content
-      (let* ((this-dir (f-dirname (f-this-file)))
-             (filename (f-join this-dir "test.cpp")))
-        (f-read filename)))
+      (ycmd-test-load-file "test.cpp"))
+
+(setq ycmd-test-goto-declaration-cpp-content
+      (ycmd-test-load-file "test_goto_declaration.cpp"))
 
 (defun ycmd-test-create-file (content)
   "Create a new temporary file and write CONTENT to it.
@@ -55,4 +61,28 @@ Return the buffer.
               (should (= start-col 7)))))))
     
     (kill-buffer buff)))
+
+(ert-deftest ycmd-test-goto-declaration ()
+  "Test that goto-declaration works."
+  (lexical-let ((buff (ycmd-test-prepare-file ycmd-test-goto-declaration-cpp-content 'c++-mode)))
+    
+    (deferred:sync!
+      
+      (deferred:$
+        (ycmd--goto-core
+         "GoToDeclaration"
+         buff
+         (ycmd--col-line-to-position 7 9 buff))
+        
+        (deferred:nextc it
+          (lambda (location)
+            (if (assoc-default 'exception location)
+                (should nil)
+              (progn
+                (should (= (assoc-default 'column_num location) 11))
+                (should (= (assoc-default 'line_num location) 5))))))))
+    
+    (kill-buffer buff)))
+
+
 
