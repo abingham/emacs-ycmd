@@ -169,9 +169,6 @@ of information added as text-properties.
   "Candidates-command handler for the company backend."
   (cons :async 'company-ycmd--get-candidates))
 
-(defun company-ycmd--match (prefix)
-  (length prefix))
-
 (defun company-ycmd--post-completion (arg)
   (let ((params (company-ycmd--params arg)))
     (when (and company-ycmd-insert-arguments params)
@@ -188,8 +185,6 @@ of information added as text-properties.
     (candidates      (company-ycmd--candidates arg))
     (meta            (company-ycmd--meta arg))
     (annotation      (company-ycmd--annotation arg))
-    (match           (when company-ycmd-enable-fuzzy-matching
-                       (company-ycmd--match arg)))
     (no-cache        company-ycmd-enable-fuzzy-matching)
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
