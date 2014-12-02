@@ -122,11 +122,27 @@ of information added as text-properties.
            (mapcar 'company-ycmd--construct-candidate
                    (assoc-default 'completions c))))))))
 
+(cl-defun company-ycmd--fontify-code (code &optional (mode major-mode))
+  "Fontify CODE."
+  (cl-check-type mode function)
+  (if (not (stringp code))
+      code
+    (with-temp-buffer
+      (delay-mode-hooks (funcall mode))
+      (setq font-lock-mode t)
+      (funcall font-lock-function font-lock-mode)
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert code)
+        (font-lock-default-fontify-region
+         (point-min) (point-max) nil))
+      (buffer-string))))
+
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
   (let ((meta (get-text-property 0 'detailed_info candidate)))
     (if (stringp meta)
-        (s-trim meta)
+        (company-ycmd--fontify-code (s-trim meta))
       meta)))
 
 (defun company-ycmd--params (candidate)
