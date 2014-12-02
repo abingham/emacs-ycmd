@@ -85,13 +85,40 @@ cache feature, in order to be able to use ycmd's fuzzy matching."
   :type 'boolean
   :group 'company-ycmd)
 
-(defun company-ycmd--construct-candidate (src)
-  "Converts a ycmd completion structure to a candidate string.
+(defun company-ycmd--construct-candidates (completion-vector)
+  "Contruct candidates list from COMPLETION-VECTOR."
+  (let ((completion-list (append completion-vector nil))
+        (candidates '()))
+    (dolist (candidate completion-list (nreverse candidates))
+      (let* ((detailed-info (assoc-default 'detailed_info candidate))
+             (function-signatures (and (stringp detailed-info)
+                                       (s-split "\n" detailed-info t))))
+        (if (and company-ycmd-insert-arguments function-signatures)
+            (dolist (meta function-signatures)
+              (push (company-ycmd--construct-candidate candidate meta)
+                    candidates))
+          (push (company-ycmd--construct-candidate candidate)
+                candidates))))))
 
-Takes a ycmd completion structure SRC, extracts the
-'insertion_text', attaches other properties to that string as
-text-properties, and returns the string."
-  (let ((candidate (assoc-default 'insertion_text src)))
+(defun company-ycmd--construct-candidate (src &optional meta)
+  "Converts a ycmd completion structure SRC to a candidate string.
+
+META is a string containig the function signature and is used to
+generate cotent for meta and annotation functions.
+
+Takes a ycmd completion structure SRC,
+extracts the 'insertion_text', attaches other properties to that
+string as text-properties, and returns the string."
+  (let ((candidate (substring-no-properties
+                    (assoc-default 'insertion_text src))))
+
+    (put-text-property 0 1 'meta meta candidate)
+    (when (and meta
+               (string-match
+                (concat "\\(.*\\) " (regexp-quote candidate)) meta))
+      (put-text-property
+       0 1 'return_type (match-string 1 meta) candidate))
+
     (dolist (prop company-ycmd-completion-properties candidate)
       (put-text-property 0 1 prop (assoc-default prop src) candidate))))
 
@@ -119,19 +146,19 @@ of information added as text-properties.
           
           (funcall
            cb
-           (mapcar 'company-ycmd--construct-candidate
-                   (assoc-default 'completions c))))))))
+           (company-ycmd--construct-candidates
+            (assoc-default 'completions c))))))))
 
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
-  (let ((meta (get-text-property 0 'detailed_info candidate)))
+  (let ((meta (get-text-property 0 'meta candidate)))
     (if (stringp meta)
         (s-trim meta)
       meta)))
 
 (defun company-ycmd--params (candidate)
   "Fetch function parameters from a CANDIDATE string if possible."
-  (let ((params (get-text-property 0 'menu_text candidate)))
+  (let ((params (get-text-property 0 'meta candidate)))
     (cond
      ((null params) nil)
      ((string-match "[^:]:[^:]" params)
@@ -141,13 +168,16 @@ of information added as text-properties.
 
 (defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a candidate string."
-  (let ((type (get-text-property 0 'kind candidate))
-        (extra (get-text-property 0 'extra_menu_info candidate)))
+  (let ((kind (get-text-property 0 'kind candidate))
+        (return-type (or (get-text-property
+                          0 'return_type candidate)
+                         (get-text-property
+                          0 'extra_menu_info candidate))))
     (concat (company-ycmd--params candidate)
-            (unless (zerop (length extra))
-              (concat " -> " extra))
-            (unless (zerop (length type))
-              (format " [%s]" (downcase (substring type 0 1)))))))
+            (unless (zerop (length return-type))
+              (concat " -> " return-type))
+            (unless (zerop (length kind))
+              (format " [%s]" (downcase (substring kind 0 1)))))))
 
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
