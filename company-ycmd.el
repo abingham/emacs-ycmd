@@ -165,16 +165,23 @@ of information added as text-properties.
          (point-min) (point-max) nil))
       (buffer-string))))
 
+(defun company-ycmd--get-meta-or-fallback (candidate fallback)
+  "Return a CANDIDATE's meta property or a FALLBACK property."
+  (or (get-text-property 0 'meta candidate)
+      (get-text-property 0 fallback candidate)))
+
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
-  (let ((meta (get-text-property 0 'meta candidate)))
+  (let ((meta (company-ycmd--get-meta-or-fallback
+               candidate 'detailed_info)))
     (if (stringp meta)
         (company-ycmd--fontify-code (s-trim meta))
       meta)))
 
 (defun company-ycmd--params (candidate)
   "Fetch function parameters from a CANDIDATE string if possible."
-  (let ((params (get-text-property 0 'meta candidate)))
+  (let ((params (company-ycmd--get-meta-or-fallback
+                 candidate 'menu_text)))
     (cond
      ((null params) nil)
      ((string-match "[^:]:[^:]" params)
