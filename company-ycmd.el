@@ -77,11 +77,12 @@
   :type 'boolean
   :group 'company-ycmd)
 
-(defcustom company-ycmd-enable-fuzzy-matching t
-  "When non-nil, use fuzzy matching for completion candidates.
+(defcustom company-ycmd-disable-caching t
+  "When non-nil, disable `company-mode' internal caching feature.
 
-Setting this to non-nil disables the `company-mode' internal
-cache feature, in order to be able to use ycmd's fuzzy matching."
+When setting this to non-nil, a completion request is sent to
+`ycmd' when completion progresses, e.g. the user inserts a new
+character."
   :type 'boolean
   :group 'company-ycmd)
 
@@ -238,7 +239,7 @@ of information added as text-properties.
     (candidates      (company-ycmd--candidates arg))
     (meta            (company-ycmd--meta arg))
     (annotation      (company-ycmd--annotation arg))
-    (no-cache        company-ycmd-enable-fuzzy-matching)
+    (no-cache        company-ycmd-disable-caching)
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
 
