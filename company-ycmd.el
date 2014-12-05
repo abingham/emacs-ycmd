@@ -80,25 +80,46 @@
 (defcustom company-ycmd-enable-fuzzy-matching t
   "When non-nil, use fuzzy matching for completion candidates.
 
-Setting this to non-nil disables the `company-mode' internal
-cache feature, in order to be able to use ycmd's fuzzy matching."
+Setting this to nil enables the `company-mode' internal cache
+feature."
   :type 'boolean
   :group 'company-ycmd)
 
-(defun company-ycmd--construct-candidates (completion-vector)
-  "Contruct candidates list from COMPLETION-VECTOR."
+(defcustom company-ycmd-no-cache t
+  "When non-nil, disable `company-mode' internal caching feature.
+
+When setting this to non-nil, a completion request is sent to
+`ycmd' when completion progresses, e.g. the user inserts a new
+character."
+  :type 'boolean
+  :group 'company-ycmd)
+
+(defun company-ycmd--prefix-candidate-p (candidate prefix)
+  "Return t if CANDIDATE string begins with PREFIX."
+  (let ((insertion-text (assoc-default 'insertion_text candidate))
+        (case-fold-search t))
+    (equal (string-match (regexp-quote prefix) insertion-text) 0)))
+
+(defun company-ycmd--construct-candidates (completion-vector prefix)
+  "Contruct candidates list from COMPLETION-VECTOR.
+
+When `company-ycmd-enable-fuzzy-matching' is nil, check if
+candidate starts with PREFIX, whether to include candidate in
+candidates list."
   (let ((completion-list (append completion-vector nil))
         (candidates '()))
     (dolist (candidate completion-list (nreverse candidates))
       (let* ((detailed-info (assoc-default 'detailed_info candidate))
              (function-signatures (and (stringp detailed-info)
                                        (s-split "\n" detailed-info t))))
-        (if (and company-ycmd-insert-arguments function-signatures)
-            (dolist (meta function-signatures)
-              (push (company-ycmd--construct-candidate candidate meta)
-                    candidates))
-          (push (company-ycmd--construct-candidate candidate)
-                candidates))))))
+        (when (or company-ycmd-enable-fuzzy-matching
+                  (company-ycmd--prefix-candidate-p candidate prefix))
+          (if (and company-ycmd-insert-arguments function-signatures)
+              (dolist (meta function-signatures)
+                (push (company-ycmd--construct-candidate candidate meta)
+                      candidates))
+            (push (company-ycmd--construct-candidate candidate)
+                  candidates)))))))
 
 (defun company-ycmd--construct-candidate (src &optional meta)
   "Converts a ycmd completion structure SRC to a candidate string.
@@ -122,7 +143,7 @@ string as text-properties, and returns the string."
     (dolist (prop company-ycmd-completion-properties candidate)
       (put-text-property 0 1 prop (assoc-default prop src) candidate))))
 
-(defun company-ycmd--get-candidates (cb)
+(defun company-ycmd--get-candidates (cb prefix)
   "Get list of completion candidate strings at point.
 
 The returned strings have annotation, metadata, and other pieces
@@ -147,7 +168,7 @@ of information added as text-properties.
           (funcall
            cb
            (company-ycmd--construct-candidates
-            (assoc-default 'completions c))))))))
+            (assoc-default 'completions c) prefix)))))))
 
 (cl-defun company-ycmd--fontify-code (code &optional (mode major-mode))
   "Fontify CODE."
@@ -220,7 +241,8 @@ of information added as text-properties.
 
 (defun company-ycmd--candidates (prefix)
   "Candidates-command handler for the company backend."
-  (cons :async 'company-ycmd--get-candidates))
+  (cons :async (lambda (cb)
+                 (company-ycmd--get-candidates cb prefix))))
 
 (defun company-ycmd--post-completion (arg)
   (let ((params (company-ycmd--params arg)))
@@ -238,7 +260,8 @@ of information added as text-properties.
     (candidates      (company-ycmd--candidates arg))
     (meta            (company-ycmd--meta arg))
     (annotation      (company-ycmd--annotation arg))
-    (no-cache        company-ycmd-enable-fuzzy-matching)
+    (no-cache        (and company-ycmd-no-cache
+                          company-ycmd-enable-fuzzy-matching))
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
 
