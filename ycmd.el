@@ -300,6 +300,14 @@ it might be interesting for some users."
         (erase-buffer)
         (insert (pp-to-string completions))))))
 
+(defun ycmd-toggle-force-semantic-completion ()
+  "Toggle whether to use always semantic completion."
+  (interactive)
+  (setq ycmd-force-semantic-completion
+        (not ycmd-force-semantic-completion))
+  (message "ycmd: force semantic completion %s."
+           (if ycmd-force-semantic-completion "enabled" "disabled")))
+
 (defun ycmd-get-completions ()
   "Get completions for the current position from the ycmd server.
 
@@ -903,6 +911,7 @@ or is nil."
     (define-key map (kbd "C-c Y d") 'ycmd-goto-declaration)
     (define-key map (kbd "C-c Y i") 'ycmd-goto-implementation)
     (define-key map (kbd "C-c Y I") 'ycmd-goto-imprecise)
+    (define-key map (kbd "C-c Y s") 'ycmd-toggle-force-semantic-completion)
     map)
   "Keymap for `ycmd-mode'.")
 
@@ -920,7 +929,7 @@ Otherwise behave as if called interactively.
 \\{ycmd-mode-map}"
   :init-value nil
   :keymap ycmd-mode-map
-  :lighter " ycmd"
+  :lighter (" ycmd" (:eval (when ycmd-force-semantic-completion "/s")))
   :group 'ycmd
   :require 'ycmd
   :after-hook (ycmd--conditional-parse 'mode-enabled)
