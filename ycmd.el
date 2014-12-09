@@ -301,12 +301,15 @@ it might be interesting for some users."
         (insert (pp-to-string completions))))))
 
 (defun ycmd-toggle-force-semantic-completion ()
-  "Toggle whether to use always semantic completion."
+  "Toggle whether to use always semantic completion.
+
+Returns the new value of `ycmd-force-semantic-completion`.
+"
   (interactive)
-  (setq ycmd-force-semantic-completion
-        (not ycmd-force-semantic-completion))
-  (message "ycmd: force semantic completion %s."
-           (if ycmd-force-semantic-completion "enabled" "disabled")))
+  (let ((force (not ycmd-force-semantic-completion)))
+    (message "ycmd: force semantic completion %s."
+             (if force "enabled" "disabled"))
+    (setq ycmd-force-semantic-completion force)))
 
 (defun ycmd-get-completions ()
   "Get completions for the current position from the ycmd server.
