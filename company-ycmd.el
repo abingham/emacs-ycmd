@@ -85,15 +85,6 @@ feature."
   :type 'boolean
   :group 'company-ycmd)
 
-(defcustom company-ycmd-no-cache t
-  "When non-nil, disable `company-mode' internal caching feature.
-
-When setting this to non-nil, a completion request is sent to
-`ycmd' when completion progresses, e.g. the user inserts a new
-character."
-  :type 'boolean
-  :group 'company-ycmd)
-
 (defun company-ycmd--prefix-candidate-p (candidate prefix)
   "Return t if CANDIDATE string begins with PREFIX."
   (let ((insertion-text (assoc-default 'insertion_text candidate))
@@ -260,8 +251,7 @@ of information added as text-properties.
     (candidates      (company-ycmd--candidates arg))
     (meta            (company-ycmd--meta arg))
     (annotation      (company-ycmd--annotation arg))
-    (no-cache        (and company-ycmd-no-cache
-                          company-ycmd-enable-fuzzy-matching))
+    (no-cache        company-ycmd-enable-fuzzy-matching)
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))))
 
