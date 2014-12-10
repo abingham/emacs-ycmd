@@ -89,8 +89,20 @@ that:
 Afer this you can use your standard `company-mode` keybindings to do completion.
 
 ```next-error``` integration
-----------
+----------------------------
 emacs-ycmd reports found errors through emacs buttons; to integrate those with
 ```next-error``` prepend something like
 ```(require 'ycmd-next-error)``` before require'ing ycmd (after adding the
 ```contrib``` directory to your ```load-path```).
+
+Running tests
+-------------
+
+`emacs-ycmd` comes with a number of tests that you can. This is mostly
+useful for developers. They are built with `ert`, so you can run them
+using any technique that `ert` provides. For example:
+
+```
+(require 'ycmd-test)
+(ert-run-tests-interactively "ycmd-test")
+```
