@@ -1,3 +1,7 @@
+;;; flycheck-ycmd -- flycheck integration for ycmd
+;;; Commentary:
+;;
+
 (require 'flycheck)
 (require 'ycmd)
 
@@ -9,8 +13,8 @@
 ;; This maps ycmd result 'kinds' to flycheck 'levels'.
 ;; TODO: What are all of the available options?
 (setq flycheck-ycmd--level-map
-      '(("ERROR" . 'error)
-        ("WARNING" . 'warning)))
+      '(("ERROR" . error)
+        ("WARNING" . warning)))
 
 (defun flycheck-ycmd--result-to-error (r)
   "Convert a ycmd parse result structure into a flycheck error
@@ -58,9 +62,13 @@ display."
   )
 
 (defun flycheck-ycmd-setup ()
-  (add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results))
+  (add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results)
+  (add-to-list 'flycheck-checkers 'flycheck-ycmd))
 
 (flycheck-define-generic-checker 'ycmd
   "A flycheck checker using parse results from ycmd."
   :start #'flycheck-ycmd--start
+  :modes '(c++-mode)
   :predicate (lambda () ycmd-mode))
+
+(provide 'flycheck-ycmd)
