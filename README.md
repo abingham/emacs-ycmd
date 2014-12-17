@@ -22,28 +22,28 @@ First make sure that `ycmd` is installed on your system. See [the ycmd instructi
 
 To use `ycmd-mode` in all supported modes, add the following to your emacs config:
 
-```
+```emacs
 (require 'ycmd)
 (ycmd-setup)
 ```
 
 Or add `ycmd-mode` to a specific supported mode:
 
-```
+```emacs
 (require 'ycmd)
 (add-hook 'c++-mode-hook 'ycmd-mode)
 ```
 
 Use the variable `ycmd-server-command` to specify how to run the server. It will typically be something like:
 
-```
+```emacs
 (set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
 ```
 
 If you've got a *global ycmd configuration*, specify that in your
 emacs configuration by setting `ycmd-global-config`:
 
-```
+```emacs
 (set-variable 'ycmd-global-config "/path/to/global_config.py")
 ```
 
@@ -54,7 +54,7 @@ loaded by ycmd as needed (which you probably do), then you can
 example, this will allow automatic loading of all `.ycm_extra_conf.py`
 files anywhere under `~/my_projects`
 
-```
+```emacs
 (set-variable 'ycmd-extra-conf-whitelist '("~/my_projects/*"))
 ```
 
@@ -99,7 +99,7 @@ nice way to quick feedback on problems in your code.
 
 The simple way to enable `flycheck` integration is to use `flycheck-ycmd-setup`:
 
-```
+```emacs
 (require 'flycheck-ycmd)
 (flycheck-ycmd-setup)
 ```
@@ -109,7 +109,7 @@ the `flycheck-ycmd` backend is enabled.
 
 If for some reason you want to do this manually, the instructions are like this:
 
-```
+```emacs
 (require 'flycheck-ycmd)
 
 ;; Make sure the flycheck cache sees the parse results
@@ -133,7 +133,7 @@ Running tests
 useful for developers. They are built with `ert`, so you can run them
 using any technique that `ert` provides. For example:
 
-```
+```emacs
 (require 'ycmd-test)
 (ert-run-tests-interactively "ycmd-test")
 ```
