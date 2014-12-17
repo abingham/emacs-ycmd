@@ -1,4 +1,4 @@
-;;; flycheck-ycmd -- flycheck integration for ycmd
+;;; flycheck-ycmd.el --- flycheck integration for ycmd
 ;; Copyright (c) 2014 Austin Bingham
 ;;
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
@@ -52,9 +52,9 @@
 ;; See http://www.lunaryorn.com/2014/12/03/generic-syntax-checkers-in-flycheck.html for more info
 
 ;; This maps ycmd result 'kinds' to flycheck 'levels'.
-(setq flycheck-ycmd--level-map
-      '(("ERROR" . error)
-        ("WARNING" . warning)))
+(defvar flycheck-ycmd--level-map
+  '(("ERROR" . error)
+    ("WARNING" . warning)))
 
 (defun flycheck-ycmd--result-to-error (r)
   "Convert ycmd parse result structure R into a flycheck error object."
@@ -80,7 +80,7 @@
   ;; OR call (callback 'errored some-message)
   )
 
-(setq flycheck-ycmd--cache '())
+(defvar flycheck-ycmd--cache '())
 
 (defun flycheck-ycmd--cache-parse-results (results)
   "Cache ycmd output RESULTS for error display.
