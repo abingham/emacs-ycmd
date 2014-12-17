@@ -86,14 +86,45 @@ that:
 (company-ycmd-setup)
 ```
 
-Afer this you can use your standard `company-mode` keybindings to do completion.
+After this you can use your standard `company-mode` keybindings to do
+completion.
 
-```next-error``` integration
+`flycheck` integration
+--------------------------
+
+`flycheck-ycmd.el` allows you to use `ycmd` as a backend for
+`flycheck`. With this enabled, whenever `ycmd` parses a file the
+results will be passed to `flycheck` for display. This is a really
+nice way to quick feedback on problems in your code.
+
+The simple way to enable `flycheck` integration is to use `flycheck-ycmd-setup`:
+
+```
+(require 'flycheck-ycmd)
+(flycheck-ycmd-setup)
+```
+
+This will make sure that `flycheck` sees the parse results, and that
+the `flycheck-ycmd` backend is enabled.
+
+If for some reason you want to do this manually, the instructions are like this:
+
+```
+(require 'flycheck-ycmd)
+
+;; Make sure the flycheck cache sees the parse results
+(add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results)
+
+;; Add the ycmd checker to the list of available checkers
+(add-to-list 'flycheck-checkers 'ycmd)
+```
+
+`next-error` integration
 ----------------------------
 emacs-ycmd reports found errors through emacs buttons; to integrate those with
-```next-error``` prepend something like
-```(require 'ycmd-next-error)``` before require'ing ycmd (after adding the
-```contrib``` directory to your ```load-path```).
+`next-error` prepend something like
+`(require 'ycmd-next-error)` before require'ing ycmd (after adding the
+`contrib` directory to your `load-path`).
 
 Running tests
 -------------
