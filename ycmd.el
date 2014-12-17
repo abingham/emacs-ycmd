@@ -178,12 +178,13 @@ system installation.
   :type '(repeat string)
   :group 'ycmd)
 
-(defcustom ycmd-file-parse-result-hook '(ycmd-decorate-with-parse-results)
+(defcustom ycmd-file-parse-result-hook nil
   "Functions to run with file-parse results.
 
-The default value will decorate the parsed buffer. To disable
-this decoration, set this to nil (or otherwise remove
-ycmd-decorate-with-parse-results from it.)"
+Each function will be called with with the results returned from
+ycmd when it parses a file in response to
+/event_notification. See `ycmd--with-destructured-parse-result'
+for some insight into what this structure is shaped like."
   :group 'ycmd
   :type 'hook
   :risky t)
@@ -496,8 +497,10 @@ When clicked, this will popup MESSAGE."
      ,body))
 
 (defun ycmd--decorate-single-parse-result (r)
-  "Decorates a buffer based on the contents of a single parse
-result struct."
+  "Decorates a buffer based on the contents of a single parse result struct R.
+
+This is a fairly crude form of decoration, but it does give
+reasonable visual feedback on the problems found by ycmd."
   (ycmd--with-destructured-parse-result r
    (--when-let (find-buffer-visiting filepath)
      (with-current-buffer it
