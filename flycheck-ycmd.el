@@ -65,7 +65,6 @@ ycmd checker to the list of flycheck checkers."
 (flycheck-define-generic-checker 'ycmd
   "A flycheck checker using parse results from ycmd."
   :start #'flycheck-ycmd--start
-  :modes '(c++-mode)
   :predicate (lambda () ycmd-mode))
 
 (provide 'flycheck-ycmd)
