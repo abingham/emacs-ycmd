@@ -4,7 +4,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (flycheck "0.22"))
+;; Package-Requires: ((emacs "24") (flycheck "0.22") (ycmd "20141217.453"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
