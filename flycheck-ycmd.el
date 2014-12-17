@@ -52,7 +52,6 @@
 ;; See http://www.lunaryorn.com/2014/12/03/generic-syntax-checkers-in-flycheck.html for more info
 
 ;; This maps ycmd result 'kinds' to flycheck 'levels'.
-;; TODO: What are all of the available options?
 (setq flycheck-ycmd--level-map
       '(("ERROR" . error)
         ("WARNING" . warning)))
@@ -88,14 +87,7 @@
 
 We cache the results and use them as the basis for the error
 display."
-  ;; TODO: Proper approach:
-  ;; 1. Find all affected filepaths, and clear them from the cache
-  ;; 2. For each result, insert into cache-long-line-scans
-  ;; 3. Remove things that haven't been used in a while.
-
-  ;; For now, just store the results wholesale
   (setq flycheck-ycmd--cache results)
-
   (flycheck-buffer))
 
 (defun flycheck-ycmd-setup ()
