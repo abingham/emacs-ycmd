@@ -52,7 +52,7 @@
 ;; See http://www.lunaryorn.com/2014/12/03/generic-syntax-checkers-in-flycheck.html for more info
 
 ;; This maps ycmd result 'kinds' to flycheck 'levels'.
-(defvar flycheck-ycmd--level-map
+(defconst flycheck-ycmd--level-map
   '(("ERROR" . error)
     ("WARNING" . warning)))
 
