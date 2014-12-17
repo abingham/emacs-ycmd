@@ -55,11 +55,7 @@ display."
   ;; For now, just store the results wholesale
   (setq flycheck-ycmd--cache results)
 
-  ;; TODO: Force re-flycheck of buffer since new results have
-  ;; arrived. We face a situation right now where parse results arrive
-  ;; at arbitrary times, and we need to be able to tell flycheck to
-  ;; update its records.
-  )
+  (flycheck-buffer))
 
 (defun flycheck-ycmd-setup ()
   (add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results)
