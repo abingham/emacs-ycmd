@@ -73,7 +73,9 @@
   properties to company completion strings.")
 
 (defcustom company-ycmd-insert-arguments t
-  "When non-nil, insert function arguments as a template after completion."
+  "When non-nil, insert function arguments as a template after completion.
+
+Only supported by modes in `company-ycmd-extended-features-modes'"
   :type 'boolean
   :group 'company-ycmd)
 
@@ -84,6 +86,14 @@ Setting this to nil enables the `company-mode' internal cache
 feature."
   :type 'boolean
   :group 'company-ycmd)
+
+(defvar company-ycmd-extended-features-modes
+  '(c++-mode c-mode)
+  "Major modes which have extended features in `company-ycmd'.")
+
+(defun company-ycmd--extended-features-p ()
+  "Check whether to use extended features."
+  (memq major-mode company-ycmd-extended-features-modes))
 
 (defun company-ycmd--prefix-candidate-p (candidate prefix)
   "Return t if CANDIDATE string begins with PREFIX."
@@ -101,11 +111,13 @@ candidates list."
         (candidates '()))
     (dolist (candidate completion-list (nreverse candidates))
       (let* ((detailed-info (assoc-default 'detailed_info candidate))
-             (function-signatures (and (stringp detailed-info)
+             (function-signatures (and (company-ycmd--extended-features-p)
+                                        company-ycmd-insert-arguments
+                                       (stringp detailed-info)
                                        (s-split "\n" detailed-info t))))
         (when (or company-ycmd-enable-fuzzy-matching
                   (company-ycmd--prefix-candidate-p candidate prefix))
-          (if (and company-ycmd-insert-arguments function-signatures)
+          (if function-signatures
               (dolist (meta function-signatures)
                 (push (company-ycmd--construct-candidate candidate meta)
                       candidates))
@@ -187,7 +199,10 @@ of information added as text-properties.
   (let ((meta (company-ycmd--get-meta-or-fallback
                candidate 'detailed_info)))
     (if (stringp meta)
-        (company-ycmd--fontify-code (s-trim meta))
+        (let ((meta-trimmed (s-trim meta)))
+          (if (company-ycmd--extended-features-p)
+              (company-ycmd--fontify-code meta-trimmed)
+            meta-trimmed))
       meta)))
 
 (defun company-ycmd--params (candidate)
@@ -236,11 +251,13 @@ of information added as text-properties.
                  (company-ycmd--get-candidates cb prefix))))
 
 (defun company-ycmd--post-completion (arg)
-  (let ((params (company-ycmd--params arg)))
-    (when (and company-ycmd-insert-arguments params)
-      (insert params)
-      (company-template-c-like-templatify
-       (concat arg params)))))
+  (when (and (company-ycmd--extended-features-p)
+             company-ycmd-insert-arguments)
+    (let ((params (company-ycmd--params arg)))
+      (when params
+        (insert params)
+        (company-template-c-like-templatify
+         (concat arg params))))))
 
 (defun company-ycmd (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
