@@ -1,6 +1,6 @@
 ;;; flycheck-ycmd -- flycheck integration for ycmd
 ;;; Commentary:
-;;
+;;; Code:
 
 (require 'flycheck)
 (require 'ycmd)
@@ -17,8 +17,7 @@
         ("WARNING" . warning)))
 
 (defun flycheck-ycmd--result-to-error (r)
-  "Convert a ycmd parse result structure into a flycheck error
-object."
+  "Convert ycmd parse result structure R into a flycheck error object."
   (ycmd--with-destructured-parse-result
    r
    (if (string-equal filepath (buffer-file-name))
@@ -31,6 +30,7 @@ object."
         :level (assoc-default kind flycheck-ycmd--level-map 'string-equal 'error)))))
 
 (defun flycheck-ycmd--start (checker callback)
+  "Start ycmd flycheck CHECKER using CALLBACK to communicate with flycheck."
   (let ((errors (delq
                  nil
                  (mapcar 'flycheck-ycmd--result-to-error
@@ -43,7 +43,7 @@ object."
 (setq flycheck-ycmd--cache '())
 
 (defun flycheck-ycmd--cache-parse-results (results)
-  "Called by ycmd when new parse results arrive.
+  "Cache ycmd output RESULTS for error display.
 
 We cache the results and use them as the basis for the error
 display."
@@ -58,8 +58,12 @@ display."
   (flycheck-buffer))
 
 (defun flycheck-ycmd-setup ()
+  "Convenience function to setup the ycmd flycheck checker.
+
+This adds a hook to watch for ycmd parse results, and it adds the
+ycmd checker to the list of flycheck checkers."
   (add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results)
-  (add-to-list 'flycheck-checkers 'flycheck-ycmd))
+  (add-to-list 'flycheck-checkers 'ycmd))
 
 (flycheck-define-generic-checker 'ycmd
   "A flycheck checker using parse results from ycmd."
@@ -68,3 +72,4 @@ display."
   :predicate (lambda () ycmd-mode))
 
 (provide 'flycheck-ycmd)
+;;; flycheck-ycmd.el ends here
