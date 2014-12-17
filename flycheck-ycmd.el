@@ -7,9 +7,6 @@
 
 ;; See http://www.lunaryorn.com/2014/12/03/generic-syntax-checkers-in-flycheck.html for more info
 
-;; TODO: Add hook to ycmd-file-parse-result-hook which caches parse results.
-;;       We'll look in that cache later when flycheck does a syntax check.
-
 ;; This maps ycmd result 'kinds' to flycheck 'levels'.
 ;; TODO: What are all of the available options?
 (setq flycheck-ycmd--level-map
@@ -47,7 +44,7 @@
 
 We cache the results and use them as the basis for the error
 display."
-  ;; Proper approach:
+  ;; TODO: Proper approach:
   ;; 1. Find all affected filepaths, and clear them from the cache
   ;; 2. For each result, insert into cache-long-line-scans
   ;; 3. Remove things that haven't been used in a while.
@@ -72,4 +69,5 @@ ycmd checker to the list of flycheck checkers."
   :predicate (lambda () ycmd-mode))
 
 (provide 'flycheck-ycmd)
+
 ;;; flycheck-ycmd.el ends here
