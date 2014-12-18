@@ -88,7 +88,7 @@
 We cache the results and use them as the basis for the error
 display."
   (setq flycheck-ycmd--cache results)
-  (flycheck-buffer))
+  (flycheck-buffer-automatically))
 
 (defun flycheck-ycmd-setup ()
   "Convenience function to setup the ycmd flycheck checker.
