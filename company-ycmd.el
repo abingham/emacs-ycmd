@@ -222,12 +222,12 @@ of information added as text-properties.
   (and ycmd-mode
        buffer-file-name
        (ycmd-running?)
-       (not ycmd--notification-in-progress)
        (not (company-in-string-or-comment))
-       (or (let ((triggers-re "\\.\\|->\\|::"))
-             (if (looking-back triggers-re)
-                 (company-grab-symbol-cons triggers-re 2)
-               (company-grab-symbol)))
+       (or (and (not ycmd--notification-in-progress)
+                (let ((triggers-re "\\.\\|->\\|::"))
+                  (if (looking-back triggers-re)
+                      (company-grab-symbol-cons triggers-re 2)
+                    (company-grab-symbol))))
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
