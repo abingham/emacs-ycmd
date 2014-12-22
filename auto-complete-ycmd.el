@@ -1,4 +1,4 @@
-;;; ycmd-autocomplete.el --- autocomplete-mode source for ycmd
+;;; auto-complete-ycmd.el --- autocomplete-mode source for ycmd
 ;;
 ;; Copyright (c) 2014 Austin Bingham
 ;;
@@ -97,4 +97,4 @@
 
 (provide 'auto-complete-ycmd)
 
-;;; ycmd-autocomplete.el ends here
+;;; auto-complete-ycmd.el ends here
