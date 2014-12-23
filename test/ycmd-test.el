@@ -92,7 +92,7 @@ Return the buffer.
       (ycmd-open)
       (ycmd-mode t)
       (funcall mode)
-      (while ycmd--notification-in-progress (sit-for 0.1)))
+      (while (ycmd-parsing-in-progress-p) (sit-for 0.1)))
     buff))
 
 (ert-deftest ycmd-test-completions ()
