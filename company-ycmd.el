@@ -75,7 +75,7 @@
 (defcustom company-ycmd-insert-arguments t
   "When non-nil, insert function arguments as a template after completion.
 
-Only supported by modes in `company-ycmd-extended-features-modes'"
+Only supported by modes in `company-ycmd--extended-features-modes'"
   :type 'boolean
   :group 'company-ycmd)
 
@@ -87,13 +87,13 @@ feature."
   :type 'boolean
   :group 'company-ycmd)
 
-(defvar company-ycmd-extended-features-modes
+(defconst company-ycmd--extended-features-modes
   '(c++-mode c-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
   "Check whether to use extended features."
-  (memq major-mode company-ycmd-extended-features-modes))
+  (memq major-mode company-ycmd--extended-features-modes))
 
 (defun company-ycmd--prefix-candidate-p (candidate prefix)
   "Return t if CANDIDATE string begins with PREFIX."
