@@ -231,14 +231,14 @@ of information added as text-properties.
 
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
-  (when ycmd--notification-in-progress
+  (when (ycmd-parsing-in-progress-p)
     (message "Ycmd completion unavailable while parsing is in progress."))
   
   (and ycmd-mode
        buffer-file-name
        (ycmd-running?)
        (not (company-in-string-or-comment))
-       (or (and (not ycmd--notification-in-progress)
+       (or (and (not (ycmd-parsing-in-progress-p))
                 (let ((triggers-re "\\.\\|->\\|::"))
                   (if (looking-back triggers-re)
                       (company-grab-symbol-cons triggers-re 2)

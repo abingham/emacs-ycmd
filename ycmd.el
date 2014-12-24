@@ -338,7 +338,7 @@ To see what the returned structure looks like, you can use
   (with-current-buffer buffer
       (goto-char pos)
 
-      (when ycmd--notification-in-progress
+      (when (ycmd-parsing-in-progress-p)
         (message "Ycmd completion unavailable while parsing is in progress."))
 
       (when ycmd-mode
@@ -584,15 +584,14 @@ function enforces that constraint.
 The results of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'.
 "
-  (when (and ycmd-mode
-             (not ycmd--notification-in-progress))
+  (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let ((content (cons '("event_name" . "FileReadyToParse")
                          (ycmd--standard-content)))
           (buff (current-buffer)))
-      
+
       ;; Record that the buffer is being parsed
-      (setq ycmd--notification-in-progress 't)
-      
+      (ycmd--report-status 'parsing)
+
       (deferred:$
 	;; try
 	(deferred:$
@@ -613,10 +612,10 @@ functions in `ycmd-file-parse-result-hook'.
 
 	;; finally. As I understand it, this should always be
 	;; executed.
-	(deferred:nextc it
-	  (lambda ()
-	    (with-current-buffer buff
-	      (setq ycmd--notification-in-progress nil))))))))
+    (deferred:nextc it
+      (lambda ()
+        (with-current-buffer buff
+          (ycmd--report-status 'parsed))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -650,9 +649,6 @@ This is primarily a debug/developer tool."
 
 (defvar ycmd--keepalive-timer nil
   "Timer for sending keepalive messages to the server.")
-
-(defvar-local ycmd--notification-in-progress nil
-  "Indicates if the current buffer has an active notify/parse in progress.")
 
 (defconst ycmd--file-type-map
   '((c++-mode . ("cpp"))
@@ -929,6 +925,27 @@ or is nil."
     map)
   "Keymap for `ycmd-mode'.")
 
+(defvar-local ycmd--last-status-change 'unparsed
+  "The last status of the current buffer.")
+
+(defun ycmd-parsing-in-progress-p ()
+  "Return t if parsing is in progress."
+  (equal ycmd--last-status-change 'parsing))
+
+(defun ycmd--report-status (status)
+  "Report ycmd STATUS."
+  (setq ycmd--last-status-change status)
+  (force-mode-line-update))
+
+(defun ycmd--mode-line-status-text ()
+  "Get text for the mode line."
+  (let ((force-semantic
+         (when ycmd-force-semantic-completion "/s"))
+        (text (pcase ycmd--last-status-change
+                ((or `unparsed `parsed) "")
+                (`parsing "*"))))
+    (concat " ycmd" force-semantic text)))
+
 ;;;###autoload
 (define-minor-mode ycmd-mode
   "Minor mode for interaction with the ycmd completion server.
@@ -943,7 +960,7 @@ Otherwise behave as if called interactively.
 \\{ycmd-mode-map}"
   :init-value nil
   :keymap ycmd-mode-map
-  :lighter (" ycmd" (:eval (when ycmd-force-semantic-completion "/s")))
+  :lighter (:eval (ycmd--mode-line-status-text))
   :group 'ycmd
   :require 'ycmd
   :after-hook (ycmd--conditional-parse 'mode-enabled)
