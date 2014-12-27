@@ -62,8 +62,8 @@
    r
    (if (string-equal filepath (buffer-file-name))
        (flycheck-error-new
-        :line start-line-num
-        :column start-column-num
+        :line line-num
+        :column column-num
         :buffer (current-buffer)
         :filename filepath
         :message text
