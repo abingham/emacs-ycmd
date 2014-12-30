@@ -68,7 +68,7 @@
   :group 'ycmd)
 
 (defconst company-ycmd-completion-properties
-  '(kind extra_menu_info detailed_info menu_text)
+  '(kind extra_menu_info detailed_info menu_text extra_data)
   "Fields from ycmd completions structures that we attach as text
   properties to company completion strings.")
 
@@ -259,6 +259,13 @@ of information added as text-properties.
         (company-template-c-like-templatify
          (concat arg params))))))
 
+(defun company-ycmd--doc-buffer (candidate)
+  "Return buffer with docstring for CANDIDATE if it is available."
+  (let* ((extra-data (get-text-property 0 'extra_data candidate))
+         (doc (cdr (assoc 'doc_string extra-data))))
+    (when (s-present? doc)
+      (company-doc-buffer doc))))
+
 (defun company-ycmd (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
@@ -270,7 +277,8 @@ of information added as text-properties.
     (annotation      (company-ycmd--annotation arg))
     (no-cache        company-ycmd-enable-fuzzy-matching)
     (sorted          't)
-    (post-completion (company-ycmd--post-completion arg))))
+    (post-completion (company-ycmd--post-completion arg))
+    (doc-buffer      (company-ycmd--doc-buffer arg))))
 
 ;;;###autoload
 (defun company-ycmd-setup ()
