@@ -134,7 +134,7 @@ the `flycheck-disabled-checkers` list in your mode hook. For example:
 (add-hook 'python-mode-hook (lambda () (add-to-list 'flycheck-disabled-checkers 'ycmd))
 ```
 
-With this, the ycmd checker will be ignore in `python-mode`. Since
+With this, the ycmd checker will be ignored in `python-mode`. Since
 `flycheck-disabled-checkers` is buffer-local, the ycmd-based checker
 will still be available for other modes.
 
