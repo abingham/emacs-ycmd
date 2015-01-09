@@ -90,7 +90,7 @@ After this you can use your standard `company-mode` keybindings to do
 completion.
 
 `flycheck` integration
---------------------------
+----------------------
 
 `flycheck-ycmd.el` allows you to use `ycmd` as a backend for
 `flycheck`. With this enabled, whenever `ycmd` parses a file the
@@ -118,6 +118,25 @@ If for some reason you want to do this manually, the instructions are like this:
 ;; Add the ycmd checker to the list of available checkers
 (add-to-list 'flycheck-checkers 'ycmd)
 ```
+
+### Disabling ycmd-based flycheck for specific modes
+
+If you use `flycheck-ycmd-set` or otherwise put `ycmd` at the front of
+`flycheck-checkers`, flycheck will use the ycmd checker for every
+buffer in `ycmd-mode`. This may not be what you want. For example,
+even though ycmd supports completion (and, thus, flycheck) for Python,
+you may wish to use pyflakes for flychecking Python code.
+
+To disable ycmd-based flychecking for specific modes, you can modify
+the `flycheck-disabled-checkers` list in your mode hook. For example:
+
+```
+(add-hook 'python-mode-hook (lambda () (add-to-list 'flycheck-disabled-checkers 'ycmd))
+```
+
+With this, the ycmd checker will be ignore in `python-mode`. Since
+`flycheck-disabled-checkers` is buffer-local, the ycmd-based checker
+will still be available for other modes.
 
 `next-error` integration
 ----------------------------
