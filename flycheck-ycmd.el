@@ -4,7 +4,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (flycheck "0.22") (ycmd "20141217.453"))
+;; Package-Requires: ((emacs "24") (dash "1.2.0") (flycheck "0.22") (ycmd "20141217.453"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -46,6 +46,7 @@
 ;;
 ;;; Code:
 
+(require 'dash)
 (require 'flycheck)
 (require 'ycmd)
 
@@ -90,6 +91,11 @@ display."
   (setq flycheck-ycmd--cache results)
   (flycheck-buffer-automatically))
 
+(defun flycheck-ycmd--in-supported-mode ()
+  "Determines if buffer is in `ycmd-mode` and another mode supported by ycmd."
+  (and ycmd-mode
+       (-contains? (mapcar 'car ycmd--file-type-map) major-mode)))
+
 (defun flycheck-ycmd-setup ()
   "Convenience function to setup the ycmd flycheck checker.
 
@@ -101,7 +107,7 @@ ycmd checker to the list of flycheck checkers."
 (flycheck-define-generic-checker 'ycmd
   "A flycheck checker using parse results from ycmd."
   :start #'flycheck-ycmd--start
-  :predicate (lambda () ycmd-mode))
+  :predicate #'flycheck-ycmd--in-supported-mode)
 
 (provide 'flycheck-ycmd)
 
