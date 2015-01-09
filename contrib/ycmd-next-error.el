@@ -1,5 +1,3 @@
-(require 'pulse)
-
 ;;(setq next-error-hook nil)
 (add-hook 'next-error-hook
           '(lambda ()
