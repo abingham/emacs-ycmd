@@ -236,6 +236,30 @@ use `ycmd-parse-buffer'."
   :group 'ycmd
   :type 'boolean)
 
+(defcustom ycmd-file-type-map
+  '((c++-mode . ("cpp"))
+    (c-mode . ("cpp"))
+    (caml-mode . ("ocaml"))
+    (d-mode . ("d"))
+    (erlang-mode . ("erlang"))
+    (go-mode . ("go"))
+    (js-mode . ("javascript"))
+    (js2-mode . ("javascript"))
+    (lua-mode . ("lua"))
+    (objc-mode . ("objc"))
+    (perl-mode . ("perl"))
+    (cperl-mode . ("perl"))
+    (php-mode . ("php"))
+    (python-mode . ("python"))
+    (ruby-mode . ("ruby"))
+    (scala-mode . ("scala"))
+    (tuareg-mode . ("ocaml")))
+  "Mapping from major modes to ycmd file-type strings. Used to
+  determine a) which major modes we support and b) how to
+  describe them to ycmd."
+  :group 'ycmd
+  :type '(alist :key-type symbol :value-type (repeat string)))
+
 (defun ycmd-open ()
   "Start a new ycmd server.
 
@@ -651,35 +675,13 @@ This is primarily a debug/developer tool."
 (defvar ycmd--keepalive-timer nil
   "Timer for sending keepalive messages to the server.")
 
-(defconst ycmd--file-type-map
-  '((c++-mode . ("cpp"))
-    (c-mode . ("cpp"))
-    (caml-mode . ("ocaml"))
-    (d-mode . ("d"))
-    (erlang-mode . ("erlang"))
-    (go-mode . ("go"))
-    (js-mode . ("javascript"))
-    (js2-mode . ("javascript"))
-    (lua-mode . ("lua"))
-    (objc-mode . ("objc"))
-    (perl-mode . ("perl"))
-    (cperl-mode . ("perl"))
-    (php-mode . ("php"))
-    (python-mode . ("python"))
-    (ruby-mode . ("ruby"))
-    (scala-mode . ("scala"))
-    (tuareg-mode . ("ocaml")))
-  "Mapping from major modes to ycmd file-type strings. Used to
-  determine a) which major modes we support and b) how to
-  describe them to ycmd.")
-
 (defconst ycmd--server-buffer-name "*ycmd-server*"
   "Name of the ycmd server buffer.")
 
 (defun ycmd--major-mode-to-file-types (mode)
   "Map a major mode to a list of file-types suitable for ycmd. If
 there is no established mapping, return nil."
-  (cdr (assoc mode ycmd--file-type-map)))
+  (cdr (assoc mode ycmd-file-type-map)))
 
 (defun ycmd--kill-notification-timer ()
   (when ycmd--notification-timer
@@ -978,9 +980,9 @@ Otherwise behave as if called interactively.
 (defun ycmd-setup ()
   "Setup `ycmd-mode'.
 
-Hook `ycmd-mode' into modes in `ycmd--file-type-map'."
+Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
   (interactive)
-  (dolist (it ycmd--file-type-map)
+  (dolist (it ycmd-file-type-map)
     (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
 
 (provide 'ycmd)

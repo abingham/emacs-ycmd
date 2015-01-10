@@ -94,7 +94,7 @@ display."
 (defun flycheck-ycmd--in-supported-mode ()
   "Determines if buffer is in `ycmd-mode` and another mode supported by ycmd."
   (and ycmd-mode
-       (-contains? (mapcar 'car ycmd--file-type-map) major-mode)))
+       (-contains? (mapcar 'car ycmd-file-type-map) major-mode)))
 
 (defun flycheck-ycmd-setup ()
   "Convenience function to setup the ycmd flycheck checker.
