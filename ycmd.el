@@ -663,6 +663,7 @@ This is primarily a debug/developer tool."
     (lua-mode . ("lua"))
     (objc-mode . ("objc"))
     (perl-mode . ("perl"))
+    (cperl-mode . ("perl"))
     (php-mode . ("php"))
     (python-mode . ("python"))
     (ruby-mode . ("ruby"))
