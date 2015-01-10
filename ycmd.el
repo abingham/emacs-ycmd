@@ -254,9 +254,10 @@ use `ycmd-parse-buffer'."
     (ruby-mode . ("ruby"))
     (scala-mode . ("scala"))
     (tuareg-mode . ("ocaml")))
-  "Mapping from major modes to ycmd file-type strings. Used to
-  determine a) which major modes we support and b) how to
-  describe them to ycmd."
+  "Mapping from major modes to ycmd file-type strings. 
+
+Used to determine a) which major modes we support and b) how to
+describe them to ycmd."
   :group 'ycmd
   :type '(alist :key-type symbol :value-type (repeat string)))
 
