@@ -266,8 +266,7 @@ describe them to ycmd."
     "cpp"
     "objc"
     "objcpp"
-    "cs"
-    "python")
+    "cs")
   "A list of ycmd file type strings which support semantic completion.")
 
 (defun ycmd-semantic-file-types (mode)
