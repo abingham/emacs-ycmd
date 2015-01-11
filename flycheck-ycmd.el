@@ -93,7 +93,7 @@ display."
 
 (defun flycheck-ycmd--in-supported-mode ()
   "Determines if buffer is in `ycmd-mode` and another mode supported by ycmd."
-  (and ycmd-mode (ycmd-semantic-file-types major-mode)))
+  (and ycmd-mode (ycmd-diagnostic-file-types major-mode)))
 
 (defun flycheck-ycmd-setup ()
   "Convenience function to setup the ycmd flycheck checker.

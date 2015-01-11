@@ -261,7 +261,7 @@ describe them to ycmd."
   :group 'ycmd
   :type '(alist :key-type symbol :value-type (repeat string)))
 
-(defconst ycmd-semantic-completion-file-types
+(defconst ycmd--diagnostic-file-types
   '("c"
     "cpp"
     "objc"
@@ -269,14 +269,14 @@ describe them to ycmd."
     "cs")
   "A list of ycmd file type strings which support semantic completion.")
 
-(defun ycmd-semantic-file-types (mode)
+(defun ycmd-diagnostic-file-types (mode)
   "Find the ycmd file types for MODE which support semantic completion.
 
 Returns a possibly empty list of ycmd file type strings.  If this
 is empty, then ycmd doesn't support semantic completion (or
 diagnostics) for MODE."
   (-intersection
-   ycmd-semantic-completion-file-types
+   ycmd--diagnostic-file-types
    (ycmd--major-mode-to-file-types mode)))
 
 (defun ycmd-open ()
