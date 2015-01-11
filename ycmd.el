@@ -276,8 +276,9 @@ describe them to ycmd."
 Returns a possibly empty list of ycmd file type strings.  If this
 is empty, then ycmd doesn't support semantic completion (or
 diagnostics) for MODE."
-  (let ((file-types (assoc-default mode ycmd-file-type-map)))
-    (-intersection file-types ycmd-semantic-completion-file-types)))
+  (-intersection
+   ycmd-semantic-completion-file-types
+   (ycmd--major-mode-to-file-types mode)))
 
 (defun ycmd-open ()
   "Start a new ycmd server.
@@ -698,8 +699,9 @@ This is primarily a debug/developer tool."
   "Name of the ycmd server buffer.")
 
 (defun ycmd--major-mode-to-file-types (mode)
-  "Map a major mode to a list of file-types suitable for ycmd. If
-there is no established mapping, return nil."
+  "Map a major mode MODE to a list of file-types suitable for ycmd. 
+
+If there is no established mapping, return nil."
   (cdr (assoc mode ycmd-file-type-map)))
 
 (defun ycmd--kill-notification-timer ()
