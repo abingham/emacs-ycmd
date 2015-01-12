@@ -147,11 +147,7 @@ string as text-properties, and returns the string."
       (put-text-property 0 1 prop (assoc-default prop src) candidate))))
 
 (defun company-ycmd--get-candidates (cb prefix)
-  "Get list of completion candidate strings at point.
-
-The returned strings have annotation, metadata, and other pieces
-of information added as text-properties.
-"
+  "Call CB with completion candidates for PREFIX at the current point."
   (deferred:$
     
     (deferred:try
