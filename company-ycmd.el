@@ -61,6 +61,7 @@
 (require 'deferred)
 (require 'ycmd)
 (require 's)
+(require 'rx)
 
 (defgroup company-ycmd nil
   "Company-mode completion backend for ycmd."
@@ -225,15 +226,27 @@ string as text-properties, and returns the string."
             (unless (zerop (length kind))
               (format " [%s]" (downcase (substring kind 0 1)))))))
 
+(defconst company-ycmd--include-declaration
+  (rx line-start "#" (zero-or-more blank) (or "include" "import")
+      (one-or-more blank)
+      (submatch (in "<\"") (zero-or-more (not (in ">\"")))))
+  "Regular expression to find C/C++/ObjC include directives.")
+
+(defun company-ycmd--in-include ()
+  "Check if text before point is an include statement."
+  (looking-back company-ycmd--include-declaration
+                (line-beginning-position)))
+
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
   (when (ycmd-parsing-in-progress-p)
     (message "Ycmd completion unavailable while parsing is in progress."))
-  
+
   (and ycmd-mode
        buffer-file-name
        (ycmd-running?)
-       (not (company-in-string-or-comment))
+       (or (not (company-in-string-or-comment))
+           (company-ycmd--in-include))
        (or (and (not (ycmd-parsing-in-progress-p))
                 (let ((triggers-re "\\.\\|->\\|::"))
                   (if (looking-back triggers-re)
