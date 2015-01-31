@@ -95,6 +95,7 @@ display."
   "Determines if buffer is in `ycmd-mode` and another mode supported by ycmd."
   (and ycmd-mode (ycmd-diagnostic-file-types major-mode)))
 
+;;;###autoload
 (defun flycheck-ycmd-setup ()
   "Convenience function to setup the ycmd flycheck checker.
 
