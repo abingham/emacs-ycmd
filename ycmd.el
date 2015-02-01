@@ -65,10 +65,10 @@
 ;; it checks `ycmd-extra-conf-handler' to determine what to do. By
 ;; default this is set to `ask', in which case the user is asked
 ;; whether to load the file or ignore it. You can also set it to
-;; `load', which case all extra-confs are loaded (and you don't really
-;; need to worry about `ycmd-extra-conf-whitelist'.) Or you can set
-;; this to `ignore', in which case all extra-confs are automatically
-;; ignored.
+;; `load', in which case all extra-confs are loaded (and you don't
+;; really need to worry about `ycmd-extra-conf-whitelist'.) Or you can
+;; set this to `ignore', in which case all extra-confs are
+;; automatically ignored.
 ;;
 ;; Use `ycmd-get-completions' to get completions at some point in a
 ;; file. For example:
