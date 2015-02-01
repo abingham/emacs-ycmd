@@ -920,7 +920,7 @@ or is nil."
 (defun ycmd--on-change (beg end _len)
   "Function to run when a buffer change between BEG and END."
   (save-match-data
-    (when (and ycmd-mode (not (eq beg end)))
+    (when ycmd-mode
       (ycmd--kill-notification-timer)
       (if (string-match-p "\n" (buffer-substring beg end))
           (ycmd--conditional-parse 'new-line)
