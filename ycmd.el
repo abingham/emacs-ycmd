@@ -231,6 +231,11 @@ use `ycmd-parse-buffer'."
               (const :tag "After a `ycmd-mode' was enabled." mode-enabled))
   :safe #'listp)
 
+(defcustom ycmd-default-tags-file-name "tags"
+  "The default tags file name."
+  :group 'ycmd
+  :type 'string)
+
 (defcustom ycmd-force-semantic-completion nil
   "Whether to use always semantic completion."
   :group 'ycmd
@@ -248,7 +253,7 @@ nil
 
 `auto'
     Look up directory hierarchy for first found tags file with
-    default names 'tags' or 'TAGS'.
+    `ycmd-default-tags-file-name'.
 
 string
     A tags file name.
@@ -388,16 +393,14 @@ Returns the new value of `ycmd-force-semantic-completion`.
   (and (listp obj) (-all? #'stringp obj)))
 
 (defun ycmd--locate-default-tags-file (buffer)
-  "Look up directory hierarchy for first found tags file for BUFFER."
+  "Look up directory hierarchy for first found default tags file for BUFFER."
   (let* ((directory (locate-dominating-file
                      (file-name-directory (buffer-file-name buffer))
                      (lambda (path)
-                       (directory-files path t "^\\(TAGS\\|tags\\)"))))
+                       (directory-files
+                        path t (regexp-quote ycmd-default-tags-file-name)))))
          (tags-file (and directory
-                         (or (and (file-exists-p (expand-file-name "TAGS" directory))
-                                  (expand-file-name "TAGS" directory))
-                             (and (file-exists-p (expand-file-name "tags" directory))
-                                  (expand-file-name "tags" directory))))))
+                         (expand-file-name ycmd-default-tags-file-name directory))))
     tags-file))
 
 (defun ycmd--get-tag-files (buffer)
