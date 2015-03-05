@@ -236,6 +236,37 @@ use `ycmd-parse-buffer'."
   :group 'ycmd
   :type 'boolean)
 
+(defcustom ycmd-tag-files nil
+  "Whether to collect identifiers from tags file.
+
+nil
+    Do not collect identifiers from tag files.
+
+`etags'
+     Use standard tag table files from `etags'.
+    `tags-file-name' or `tags-table-list'.
+
+`auto'
+    Look up directory hierarchy for first found tags file with
+    default names 'tags' or 'TAGS'.
+
+string
+    A tags file name.
+
+list
+    A list of tag file names."
+  :group 'ycmd
+  :type '(choice (const :tag "Don't use tag file." nil)
+                 (const :tag "Use `etags' tags table if set" etags)
+                 (const :tag "Locate tags file automatically" auto)
+                 (string :tag "Tag file name")
+                 (repeat :tag "List of tag files"
+                         (string :tag "Tag file name")))
+  :safe (lambda (obj)
+          (or (symbolp obj)
+              (stringp obj)
+              (ycmd--string-list-p obj))))
+
 (defcustom ycmd-file-type-map
   '((c++-mode . ("cpp"))
     (c-mode . ("cpp"))
@@ -352,6 +383,36 @@ Returns the new value of `ycmd-force-semantic-completion`.
              (if force "enabled" "disabled"))
     (setq ycmd-force-semantic-completion force)))
 
+(defun ycmd--string-list-p (obj)
+  "Return t if OBJ is a list of strings."
+  (and (listp obj) (-all? #'stringp obj)))
+
+(defun ycmd--locate-default-tags-file (buffer)
+  "Look up directory hierarchy for first found tags file for BUFFER."
+  (let* ((directory (locate-dominating-file
+                     (file-name-directory (buffer-file-name buffer))
+                     (lambda (path)
+                       (directory-files path t "^\\(TAGS\\|tags\\)"))))
+         (tags-file (and directory
+                         (or (and (file-exists-p (expand-file-name "TAGS" directory))
+                                  (expand-file-name "TAGS" directory))
+                             (and (file-exists-p (expand-file-name "tags" directory))
+                                  (expand-file-name "tags" directory))))))
+    tags-file))
+
+(defun ycmd--get-tag-files (buffer)
+  "Get tag files list for current BUFFER or nil."
+  (-when-let (tag-files (cond ((eq ycmd-tag-files 'etags)
+                               (or (and tags-file-name (list tags-file-name))
+                                   tags-table-list))
+                              ((eq ycmd-tag-files 'auto)
+                               (list (ycmd--locate-default-tags-file buffer)))
+                              ((stringp ycmd-tag-files)
+                               (list ycmd-tag-files))
+                              ((ycmd--string-list-p ycmd-tag-files)
+                               ycmd-tag-files)))
+    (mapcar 'expand-file-name tag-files)))
+
 (defun ycmd-get-completions (buffer pos)
   "Get completions for position POS in BUFFER from the ycmd server.
 
@@ -385,13 +446,10 @@ To see what the returned structure looks like, you can use
         (message "Ycmd completion unavailable while parsing is in progress."))
 
       (when ycmd-mode
-        (let ((content (append (ycmd--standard-content)
-                               (when ycmd-force-semantic-completion
-                                 '(("force_semantic" . "true"))))))
-          (ycmd--request
-           "/completions"
-           content
-           :parser 'json-read)))))
+        (ycmd--request
+         "/completions"
+         (ycmd--standard-content-with-extras buffer t)
+         :parser 'json-read))))
 
 (defun ycmd--handle-exception (results &optional default-handler)
   (cond ((string-equal (assoc-default 'TYPE (assoc-default 'exception results))
@@ -629,9 +687,9 @@ The results of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'.
 "
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
-    (let ((content (cons '("event_name" . "FileReadyToParse")
-                         (ycmd--standard-content)))
-          (buff (current-buffer)))
+    (let* ((buff (current-buffer))
+           (content (cons '("event_name" . "FileReadyToParse")
+                          (ycmd--standard-content-with-extras buff nil t))))
 
       ;; Record that the buffer is being parsed
       (ycmd--report-status 'parsing)
@@ -771,7 +829,7 @@ file."
       (global_ycm_extra_conf . ,global-config)
       (extra_conf_globlist . ,extra-conf-whitelist)
       (hmac_secret . ,hmac-secret)
-      (collect_identifiers_from_tags_files . 0)
+      (collect_identifiers_from_tags_files . ,(if ycmd-tag-files 1 0))
       (filetype_specific_completion_to_disable (gitcommit . 1))
       (collect_identifiers_from_comments_and_strings . 0)
       (min_num_of_chars_for_completion . 2)
@@ -838,6 +896,16 @@ nil, this uses the current buffer.
         ("filepath" . ,full-path)
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
+
+(defun ycmd--standard-content-with-extras (buffer &optional force-semantic use-tags)
+  "Generate 'standard' content for BUFFER with extras."
+  (append (ycmd--standard-content buffer)
+          (when (and force-semantic ycmd-force-semantic-completion)
+            '(("force_semantic" . "true")))
+          (when (and use-tags ycmd-tag-files)
+            (-when-let (tag-files (ycmd--get-tag-files buffer))
+              `(("tag_files" . ,tag-files))))))
+
 
 (defvar ycmd--log-enabled nil
   "Whether http content should be logged. This is useful for
