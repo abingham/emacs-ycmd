@@ -247,10 +247,6 @@ use `ycmd-parse-buffer'."
 nil
     Do not collect identifiers from tag files.
 
-`etags'
-     Use standard tag table files from `etags'.
-    `tags-file-name' or `tags-table-list'.
-
 `auto'
     Look up directory hierarchy for first found tags file with
     `ycmd-default-tags-file-name'.
@@ -262,7 +258,6 @@ list
     A list of tag file names."
   :group 'ycmd
   :type '(choice (const :tag "Don't use tag file." nil)
-                 (const :tag "Use `etags' tags table if set" etags)
                  (const :tag "Locate tags file automatically" auto)
                  (string :tag "Tag file name")
                  (repeat :tag "List of tag files"
@@ -405,14 +400,12 @@ Returns the new value of `ycmd-force-semantic-completion`.
 
 (defun ycmd--get-tag-files (buffer)
   "Get tag files list for current BUFFER or nil."
-  (-when-let (tag-files (cond ((eq ycmd-tag-files 'etags)
-                               (or tags-file-name tags-table-list))
-                              ((eq ycmd-tag-files 'auto)
-                               (ycmd--locate-default-tags-file buffer))
-                              ((stringp ycmd-tag-files)
-                               ycmd-tag-files)
-                              ((ycmd--string-list-p ycmd-tag-files)
-                               ycmd-tag-files)))
+  (-when-let (tag-files (cond
+                         ((eq ycmd-tag-files 'auto)
+                          (ycmd--locate-default-tags-file buffer))
+                         ((or (stringp ycmd-tag-files)
+                              (ycmd--string-list-p ycmd-tag-files))
+                          ycmd-tag-files)))
     (unless (listp tag-files)
       (setq tag-files (list tag-files)))
     (mapcar 'expand-file-name tag-files)))
