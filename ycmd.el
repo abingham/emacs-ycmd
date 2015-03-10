@@ -389,14 +389,11 @@ Returns the new value of `ycmd-force-semantic-completion`.
 
 (defun ycmd--locate-default-tags-file (buffer)
   "Look up directory hierarchy for first found default tags file for BUFFER."
-  (let* ((directory (locate-dominating-file
-                     (file-name-directory (buffer-file-name buffer))
-                     (lambda (path)
-                       (directory-files
-                        path t (regexp-quote ycmd-default-tags-file-name)))))
-         (tags-file (and directory
-                         (expand-file-name ycmd-default-tags-file-name directory))))
-    tags-file))
+  (-when-let* ((file (buffer-file-name buffer))
+               (dir (and file
+                         (locate-dominating-file
+                          file ycmd-default-tags-file-name))))
+    (expand-file-name ycmd-default-tags-file-name dir)))
 
 (defun ycmd--get-tag-files (buffer)
   "Get tag files list for current BUFFER or nil."
