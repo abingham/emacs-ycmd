@@ -434,16 +434,20 @@ structure looks like this:
 To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
   (with-current-buffer buffer
-      (goto-char pos)
+    (goto-char pos)
 
-      (when (ycmd-parsing-in-progress-p)
-        (message "Ycmd completion unavailable while parsing is in progress."))
+    (when (ycmd-parsing-in-progress-p)
+      (message "Ycmd completion unavailable while parsing is in progress."))
 
-      (when ycmd-mode
+    (when ycmd-mode
+      (let* ((extra-content (and ycmd-force-semantic-completion
+                                 'force-semantic))
+             (content (ycmd--standard-content-with-extras
+                       buffer extra-content)))
         (ycmd--request
          "/completions"
-         (ycmd--standard-content-with-extras buffer t)
-         :parser 'json-read))))
+         content
+         :parser 'json-read)))))
 
 (defun ycmd--handle-exception (results &optional default-handler)
   (cond ((string-equal (assoc-default 'TYPE (assoc-default 'exception results))
@@ -682,8 +686,10 @@ functions in `ycmd-file-parse-result-hook'.
 "
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let* ((buff (current-buffer))
+           (extra-content (and ycmd-tag-files 'tags))
            (content (cons '("event_name" . "FileReadyToParse")
-                          (ycmd--standard-content-with-extras buff nil t))))
+                          (ycmd--standard-content-with-extras
+                           buff extra-content))))
 
       ;; Record that the buffer is being parsed
       (ycmd--report-status 'parsing)
@@ -891,14 +897,14 @@ nil, this uses the current buffer.
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
 
-(defun ycmd--standard-content-with-extras (buffer &optional force-semantic use-tags)
-  "Generate 'standard' content for BUFFER with extras."
-  (append (ycmd--standard-content buffer)
-          (when (and force-semantic ycmd-force-semantic-completion)
-            '(("force_semantic" . "true")))
-          (when (and use-tags ycmd-tag-files)
-            (-when-let (tag-files (ycmd--get-tag-files buffer))
-              `(("tag_files" . ,tag-files))))))
+(defun ycmd--standard-content-with-extras (buffer &optional extra)
+  "Generate 'standard' content for BUFFER with EXTRA-CONTENT."
+  (let ((standard-content (ycmd--standard-content buffer))
+        (extra-content (pcase extra
+                         (`force-semantic '(("force_semantic" . "true")))
+                         (`tags (-when-let (tag-files (ycmd--get-tag-files buffer))
+                                  `(("tag_files" . ,tag-files)))))))
+    (append standard-content extra-content)))
 
 
 (defvar ycmd--log-enabled nil
