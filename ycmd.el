@@ -494,24 +494,22 @@ useful in case compile-time is considerable."
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request type."
   (when ycmd-mode
-    (let ((content (cons (list "command_arguments" type)
-                         (ycmd--standard-content))))
-      (deferred:$
-        
-        (ycmd--send-goto-request type (current-buffer) (point))
+    (deferred:$
 
-        (deferred:nextc it
-          (lambda (location)
-            (when location
-              (if (assoc-default 'exception location)
-                  (ycmd--handle-exception location #'ycmd--handle-goto-exception)
-                (ycmd--handle-goto-success location)))))))))
+      (ycmd--send-goto-request type (current-buffer) (point))
+
+      (deferred:nextc it
+        (lambda (location)
+          (when location
+            (if (assoc-default 'exception location)
+                (ycmd--handle-exception location #'ycmd--handle-goto-exception)
+              (ycmd--handle-goto-success location))))))))
 
 (defun ycmd--send-goto-request (type buffer pos)
   (with-current-buffer buffer
     (goto-char pos)
     (let ((content (cons (list "command_arguments" type)
-                         (ycmd--standard-content))))
+                         (ycmd--standard-content buffer))))
       (ycmd--request
        "/run_completer_command"
        content
