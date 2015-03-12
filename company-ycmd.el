@@ -119,7 +119,7 @@ candidates list."
         (when (or company-ycmd-enable-fuzzy-matching
                   (company-ycmd--prefix-candidate-p candidate prefix))
           (if function-signatures
-              (dolist (meta function-signatures)
+              (dolist (meta (delete-dups function-signatures))
                 (push (company-ycmd--construct-candidate candidate meta)
                       candidates))
             (push (company-ycmd--construct-candidate candidate)
