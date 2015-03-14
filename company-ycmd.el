@@ -236,9 +236,8 @@ string as text-properties, and returns the string."
 
 (defun company-ycmd--get-return-type (candidate)
   "Get return type of CANDIDATE."
-  (s-present?
-   (or (get-text-property 0 'return_type candidate)
-       (get-text-property 0 'extra_menu_info candidate))))
+  (or (get-text-property 0 'return_type candidate)
+      (get-text-property 0 'extra_menu_info candidate)))
 
 (defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a CANDIDATE string."
@@ -246,7 +245,8 @@ string as text-properties, and returns the string."
                    (company-ycmd--get-kind candidate)))
         (return-type (company-ycmd--get-return-type candidate)))
     (concat (company-ycmd--params candidate)
-            (when return-type (concat " -> " return-type))
+            (when (s-present? return-type)
+              (concat " -> " return-type))
             (when kind (format " [%s]" kind)))))
 
 (defconst company-ycmd--include-declaration
