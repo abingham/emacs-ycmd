@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0") (s "1.0.0"))
+;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0") (s "1.0.0") (dash "1.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -61,6 +61,7 @@
 (require 'deferred)
 (require 'ycmd)
 (require 's)
+(require 'dash)
 (require 'rx)
 
 (defgroup company-ycmd nil
@@ -85,6 +86,11 @@ Only supported by modes in `company-ycmd--extended-features-modes'"
 
 Setting this to nil enables the `company-mode' internal cache
 feature."
+  :type 'boolean
+  :group 'company-ycmd)
+
+(defcustom company-ycmd-show-completion-kind t
+  "Show kind of completion entry."
   :type 'boolean
   :group 'company-ycmd)
 
@@ -213,18 +219,35 @@ string as text-properties, and returns the string."
      ((string-match "\\((.*)[ a-z]*\\'\\)" params)
       (match-string 1 params)))))
 
+(defun company-ycmd--get-kind (candidate)
+  "Get information about completion kind from CANDIDATE."
+  (-when-let (kind (get-text-property 0 'kind candidate))
+    (pcase kind
+      ("STRUCT" "struct")
+      ("CLASS" "class")
+      ("ENUM" "enum")
+      ("TYPE" "type")
+      ("MEMBER" "member")
+      ("FUNCTION" "fn")
+      ("VARIABLE" "var")
+      ("MACRO" "macro")
+      ("PARAMETER" "parameter")
+      ("NAMESPACE" "namespace"))))
+
+(defun company-ycmd--get-return-type (candidate)
+  "Get return type of CANDIDATE."
+  (s-present?
+   (or (get-text-property 0 'return_type candidate)
+       (get-text-property 0 'extra_menu_info candidate))))
+
 (defun company-ycmd--annotation (candidate)
-  "Fetch the annotation text-property from a candidate string."
-  (let ((kind (get-text-property 0 'kind candidate))
-        (return-type (or (get-text-property
-                          0 'return_type candidate)
-                         (get-text-property
-                          0 'extra_menu_info candidate))))
+  "Fetch the annotation text-property from a CANDIDATE string."
+  (let ((kind (and company-ycmd-show-completion-kind
+                   (company-ycmd--get-kind candidate)))
+        (return-type (company-ycmd--get-return-type candidate)))
     (concat (company-ycmd--params candidate)
-            (unless (zerop (length return-type))
-              (concat " -> " return-type))
-            (unless (zerop (length kind))
-              (format " [%s]" (downcase (substring kind 0 1)))))))
+            (when return-type (concat " -> " return-type))
+            (when kind (format " [%s]" kind)))))
 
 (defconst company-ycmd--include-declaration
   (rx line-start "#" (zero-or-more blank) (or "include" "import")
