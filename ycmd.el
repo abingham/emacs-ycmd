@@ -105,8 +105,8 @@
 (require 'dash)
 (require 'deferred)
 (require 'f)
+(require 'hex-util)
 (require 'hmac-def)
-(require 'hmac-md5) ; provides encode-hex-string
 (require 'json)
 (require 'popup)
 ;; (require 'request)
