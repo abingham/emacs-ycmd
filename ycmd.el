@@ -271,6 +271,7 @@ list
   '((c++-mode . ("cpp"))
     (c-mode . ("cpp"))
     (caml-mode . ("ocaml"))
+    (csharp-mode . ("cs"))
     (d-mode . ("d"))
     (erlang-mode . ("erlang"))
     (go-mode . ("go"))
