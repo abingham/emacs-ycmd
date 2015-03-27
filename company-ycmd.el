@@ -108,8 +108,14 @@ feature."
         (case-fold-search t))
     (equal (string-match (regexp-quote prefix) insertion-text) 0)))
 
-(defun company-ycmd--construct-candidates (completion-vector prefix)
+(defun company-ycmd--construct-candidates (start-col
+					   completion-vector
+					   prefix)
   "Contruct candidates list from COMPLETION-VECTOR.
+
+PREFIX is the prefix we calculated for doing the completion, and
+START-COL is the column on which ycmd indicates we should place
+the completion candidates.
 
 When `company-ycmd-enable-fuzzy-matching' is nil, check if
 candidate starts with PREFIX, whether to include candidate in
@@ -126,12 +132,12 @@ candidates list."
                   (company-ycmd--prefix-candidate-p candidate prefix))
           (if function-signatures
               (dolist (meta (delete-dups function-signatures))
-                (push (company-ycmd--construct-candidate candidate meta)
+                (push (company-ycmd--construct-candidate candidate prefix start-col meta)
                       candidates))
-            (push (company-ycmd--construct-candidate candidate)
+            (push (company-ycmd--construct-candidate candidate prefix start-col)
                   candidates)))))))
 
-(defun company-ycmd--construct-candidate (src &optional meta)
+(defun company-ycmd--construct-candidate (src prefix start-col &optional meta)
   "Convert a ycmd completion structure SRC to a candidate string.
 
 META is a string containig the function signature and is used to
@@ -140,9 +146,11 @@ generate content for meta and annotation functions.
 Takes a ycmd completion structure SRC,
 extracts the 'insertion_text', attaches other properties to that
 string as text-properties, and returns the string."
-  (let ((candidate (substring-no-properties
-                    (assoc-default 'insertion_text src))))
-
+  (let* ((prefix-start-col (or (get-text-property 0 'start-col prefix) (+ 1 (current-column))))
+         (prefix-size (- start-col prefix-start-col))
+	 (candidate (concat (substring-no-properties prefix 0 prefix-size)
+			    (substring-no-properties
+			     (assoc-default 'insertion_text src)))))
     (put-text-property 0 1 'meta meta candidate)
     (when (and meta
                (string-match
@@ -174,7 +182,9 @@ string as text-properties, and returns the string."
           (funcall
            cb
            (company-ycmd--construct-candidates
-            (assoc-default 'completions c) prefix)))))))
+	    (assoc-default 'completion_start_column c)
+            (assoc-default 'completions c)
+	    prefix)))))))
 
 (cl-defun company-ycmd--fontify-code (code &optional (mode major-mode))
   "Fontify CODE."
@@ -260,6 +270,19 @@ string as text-properties, and returns the string."
   (looking-back company-ycmd--include-declaration
                 (line-beginning-position)))
 
+(defun company-ycmd--add-start-col (prefix)
+  "Add a start-column property to a prefix string PREFIX.
+
+This just looks at the current position and subtracts the length
+of PREFIX."
+  (when (not (s-blank? prefix))
+    (put-text-property
+     0 1
+     'start-col
+     (- (+ 1 (current-column)) (length prefix))
+     prefix))
+  prefix)
+
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
   (when (ycmd-parsing-in-progress-p)
@@ -272,6 +295,7 @@ string as text-properties, and returns the string."
            (company-ycmd--in-include))
        (or (and (not (ycmd-parsing-in-progress-p))
                 (company-grab-symbol-cons "\\.\\|->\\|::" 2))
+
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
