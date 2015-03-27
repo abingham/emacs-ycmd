@@ -132,10 +132,10 @@ candidates list."
                   candidates)))))))
 
 (defun company-ycmd--construct-candidate (src &optional meta)
-  "Converts a ycmd completion structure SRC to a candidate string.
+  "Convert a ycmd completion structure SRC to a candidate string.
 
 META is a string containig the function signature and is used to
-generate cotent for meta and annotation functions.
+generate content for meta and annotation functions.
 
 Takes a ycmd completion structure SRC,
 extracts the 'insertion_text', attaches other properties to that
