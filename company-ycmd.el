@@ -146,7 +146,7 @@ generate content for meta and annotation functions.
 Takes a ycmd completion structure SRC,
 extracts the 'insertion_text', attaches other properties to that
 string as text-properties, and returns the string."
-  (let* ((prefix-start-col (or (get-text-property 0 'start-col prefix) (+ 1 (current-column))))
+  (let* ((prefix-start-col (- (+ 1  (current-column)) (length prefix)))
          (prefix-size (- start-col prefix-start-col))
 	 (candidate (concat (substring-no-properties prefix 0 prefix-size)
 			    (substring-no-properties
@@ -270,19 +270,6 @@ string as text-properties, and returns the string."
   (looking-back company-ycmd--include-declaration
                 (line-beginning-position)))
 
-(defun company-ycmd--add-start-col (prefix)
-  "Add a start-column property to a prefix string PREFIX.
-
-This just looks at the current position and subtracts the length
-of PREFIX."
-  (when (not (s-blank? prefix))
-    (put-text-property
-     0 1
-     'start-col
-     (- (+ 1 (current-column)) (length prefix))
-     prefix))
-  prefix)
-
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
   (when (ycmd-parsing-in-progress-p)
@@ -295,7 +282,6 @@ of PREFIX."
            (company-ycmd--in-include))
        (or (and (not (ycmd-parsing-in-progress-p))
                 (company-grab-symbol-cons "\\.\\|->\\|::" 2))
-
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
