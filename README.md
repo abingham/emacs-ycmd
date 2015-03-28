@@ -147,6 +147,22 @@ With this, the ycmd checker will be ignored in `python-mode`. Since
 `flycheck-disabled-checkers` is buffer-local, the ycmd-based checker
 will still be available for other modes.
 
+### Making flycheck and company work together
+In some cases you may see that `company` and `flycheck` interfere with one another. You can end up with strange completion artifacts in your buffers. This mostly seems to happen when you run emacs in "terminal mode", i.e. with `emacs -nw`.
+
+The short answer for how to deal with this is:
+```
+(setq flycheck-indication-mode nil)
+```
+
+The slightly longer and probably better answer is:
+```
+(when (not (display-graphic-p))
+  (setq flycheck-indication-mode nil))
+```
+
+For a full explanation see [the `emacs-ycmd` defect related to this](https://github.com/abingham/emacs-ycmd/issues/144) as well as [the root `flycheck` issue](https://github.com/flycheck/flycheck/issues/526).
+
 `next-error` integration
 ----------------------------
 emacs-ycmd reports found errors through emacs buttons; to integrate those with
