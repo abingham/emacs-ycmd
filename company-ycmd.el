@@ -271,10 +271,7 @@ string as text-properties, and returns the string."
        (or (not (company-in-string-or-comment))
            (company-ycmd--in-include))
        (or (and (not (ycmd-parsing-in-progress-p))
-                (let ((triggers-re "\\.\\|->\\|::"))
-                  (if (looking-back triggers-re)
-                      (company-grab-symbol-cons triggers-re 2)
-                    (company-grab-symbol))))
+                (company-grab-symbol-cons "\\.\\|->\\|::" 2))
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
