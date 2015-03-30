@@ -944,11 +944,11 @@ anything like that.)
 "
   (unless (ycmd-running?) (ycmd-open))
 
-  (lexical-let* ((ycmd-request-backend 'url-retrieve)
-                 (content (json-encode content))
-                 (hmac (ycmd--hmac-function content ycmd--hmac-secret))
-                 (hex-hmac (encode-hex-string hmac))
-                 (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
+  (let* ((ycmd-request-backend 'url-retrieve)
+         (content (json-encode content))
+         (hmac (ycmd--hmac-function content ycmd--hmac-secret))
+         (hex-hmac (encode-hex-string hmac))
+         (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
     (deferred:$
