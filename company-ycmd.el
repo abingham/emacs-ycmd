@@ -111,7 +111,7 @@ feature."
 (defun company-ycmd--construct-candidates (start-col
 					   completion-vector
 					   prefix)
-  "Contruct candidates list from COMPLETION-VECTOR.
+  "Construct candidates list from COMPLETION-VECTOR.
 
 PREFIX is the prefix we calculated for doing the completion, and
 START-COL is the column on which ycmd indicates we should place
