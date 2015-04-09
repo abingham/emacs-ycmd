@@ -876,6 +876,11 @@ the name of the newly created file."
                 (set-window-buffer nil proc-buff)
                 (error "Server timeout."))))))))))
 
+(defun ycmd--column-in-bytes ()
+  "Calculate column offset in bytes for the current position and buffer."
+  (- (position-bytes (point))
+     (position-bytes (line-beginning-position))))
+
 (defun ycmd--standard-content (&optional buffer)
   "Generate the 'standard' content for ycmd posts.
 
@@ -883,7 +888,7 @@ This extracts a bunch of information from BUFFER. If BUFFER is
 nil, this uses the current buffer.
 "
   (with-current-buffer (or buffer (current-buffer))
-    (let* ((column-num (+ 1 (save-excursion (goto-char (point)) (current-column))))
+    (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
            (line-num (line-number-at-pos (point)))
            (full-path (or (buffer-file-name) ""))
            (file-contents (buffer-substring-no-properties (point-min) (point-max)))
