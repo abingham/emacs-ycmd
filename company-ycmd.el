@@ -146,7 +146,7 @@ generate content for meta and annotation functions.
 Takes a ycmd completion structure SRC,
 extracts the 'insertion_text', attaches other properties to that
 string as text-properties, and returns the string."
-  (let* ((prefix-start-col (- (+ 1  (current-column)) (length prefix)))
+  (let* ((prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
          (prefix-size (- start-col prefix-start-col))
 	 (candidate (concat (substring-no-properties prefix 0 prefix-size)
 			    (substring-no-properties
