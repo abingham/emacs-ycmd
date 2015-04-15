@@ -293,6 +293,11 @@ describe them to ycmd."
   :group 'ycmd
   :type '(alist :key-type symbol :value-type (repeat string)))
 
+(defcustom ycmd-max-num-identifier-candidates 10
+  "The maximum number of identifier completion results."
+  :group 'ycmd
+  :type 'integer)
+
 (defconst ycmd--diagnostic-file-types
   '("c"
     "cpp"
@@ -811,7 +816,8 @@ instance. This function effectively produces the contents of that
 file."
   (let ((hmac-secret (base64-encode-string hmac-secret))
         (global-config (or ycmd-global-config ""))
-        (extra-conf-whitelist (or ycmd-extra-conf-whitelist [])))
+        (extra-conf-whitelist (or ycmd-extra-conf-whitelist []))
+        (max-num-identifier-candidates ycmd-max-num-identifier-candidates))
     `((filetype_blacklist (vimwiki . 1) (mail . 1) (qf . 1) (tagbar . 1) (unite . 1) (infolog . 1) (notes . 1) (text . 1) (pandoc . 1) (markdown . 1))
       (auto_start_csharp_server . 1)
       (filetype_whitelist (* . 1))
@@ -820,6 +826,7 @@ file."
       (auto_stop_csharp_server . 1)
       (max_diagnostics_to_display . 30)
       (min_num_identifier_candidate_chars . 0)
+      (max_num_identifier_candidates . ,max-num-identifier-candidates)
       (use_ultisnips_completer . 1)
       (complete_in_strings . 1)
       (complete_in_comments . 0)
