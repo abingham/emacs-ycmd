@@ -314,7 +314,7 @@ is empty, then ycmd doesn't support semantic completion (or
 diagnostics) for MODE."
   (-intersection
    ycmd--diagnostic-file-types
-   (ycmd--major-mode-to-file-types mode)))
+   (ycmd-major-mode-to-file-types mode)))
 
 (defun ycmd-open ()
   "Start a new ycmd server.
@@ -581,6 +581,8 @@ When clicked, this will popup MESSAGE."
     (point)))
 
 (defmacro ycmd--with-destructured-parse-result (result body)
+  "Destructure parse RESULT and evaluate BODY."
+  (declare (indent 1) (debug t))
   `(let* ((location_extent  (assoc-default 'location_extent ,result))
           (le_end           (assoc-default 'end location_extent))
           (end-line-num     (assoc-default 'line_num le_end))
@@ -759,8 +761,8 @@ This is primarily a debug/developer tool."
 (defconst ycmd--server-buffer-name "*ycmd-server*"
   "Name of the ycmd server buffer.")
 
-(defun ycmd--major-mode-to-file-types (mode)
-  "Map a major mode MODE to a list of file-types suitable for ycmd. 
+(defun ycmd-major-mode-to-file-types (mode)
+  "Map a major mode MODE to a list of file-types suitable for ycmd.
 
 If there is no established mapping, return nil."
   (cdr (assoc mode ycmd-file-type-map)))
@@ -899,7 +901,7 @@ nil, this uses the current buffer.
            (line-num (line-number-at-pos (point)))
            (full-path (or (buffer-file-name) ""))
            (file-contents (buffer-substring-no-properties (point-min) (point-max)))
-           (file-types (or (ycmd--major-mode-to-file-types major-mode)
+           (file-types (or (ycmd-major-mode-to-file-types major-mode)
                            '("generic"))))
       `(("file_data" .
          ((,full-path . (("contents" . ,file-contents)
