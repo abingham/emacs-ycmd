@@ -298,6 +298,11 @@ describe them to ycmd."
   :group 'ycmd
   :type 'integer)
 
+(defcustom ycmd-gocode-binary-path (executable-find "gocode")
+  "Gocode binary path."
+  :group 'ycmd
+  :type 'string)
+
 (defconst ycmd--diagnostic-file-types
   '("c"
     "cpp"
@@ -806,11 +811,6 @@ values. This produces output for empty alists that ycmd expects."
 (define-hmac-function ycmd--hmac-function
   (lambda (x) (secure-hash 'sha256 x nil nil 1))
   64 64)
-
-(defcustom ycmd-gocode-binary-path (executable-find "gocode")
-  "Gocode binary path."
-  :group 'ycmd
-  :type 'stringp)
 
 (defun ycmd--options-contents (hmac-secret)
   "Return a struct which can be JSON encoded into a file to
