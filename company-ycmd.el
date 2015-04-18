@@ -111,7 +111,7 @@ feature."
 (defmacro company-ycmd--with-destructured-candidate (candidate prefix start-col body)
   "Destructure CANDIDATE and evalueate BODY.
 
-PREFIX and START-COL are passed to `company-ycmd--get-insertion-text'."
+PREFIX and START-COL are used to calculate the insertion text."
   (declare (indent 3) (debug t))
   `(let* ((insertion-text (assoc-default 'insertion_text candidate))
           (detailed-info (assoc-default 'detailed_info candidate))
