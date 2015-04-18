@@ -165,13 +165,13 @@ string as text-properties, and returns the string."
 (defun company-ycmd--get-candidates (cb prefix)
   "Call CB with completion candidates for PREFIX at the current point."
   (deferred:$
-    
+
     (deferred:try
       (deferred:$
         (if (ycmd-running?)
             (ycmd-get-completions (current-buffer) (point))))
       :catch (lambda (err) nil))
-    
+
     (deferred:nextc it
       (lambda (c)
         (if (assoc-default 'exception c)
@@ -179,11 +179,11 @@ string as text-properties, and returns the string."
             (let ((msg (assoc-default 'message c nil "unknown error")))
               (message "Exception while fetching candidates: %s" msg)
               '())
-          
+
           (funcall
            cb
            (company-ycmd--construct-candidates
-	    (assoc-default 'completion_start_column c)
+            (assoc-default 'completion_start_column c)
             (assoc-default 'completions c)
 	    prefix)))))))
 
@@ -328,3 +328,7 @@ string as text-properties, and returns the string."
 (provide 'company-ycmd)
 
 ;;; company-ycmd.el ends here
+
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:

@@ -151,8 +151,8 @@ Options are:
 "
   :group 'ycmd
   :type '(set (const :tag "Load unknown extra confs" load)
-	      (const :tag "Ignore unknown extra confs" ignore)
-	      (const :tag "Ask the user" ask))
+              (const :tag "Ignore unknown extra confs" ignore)
+              (const :tag "Ask the user" ask))
   :risky t)
 
 (defcustom ycmd-host "127.0.0.1"
@@ -286,7 +286,7 @@ list
     (ruby-mode . ("ruby"))
     (scala-mode . ("scala"))
     (tuareg-mode . ("ocaml")))
-  "Mapping from major modes to ycmd file-type strings. 
+  "Mapping from major modes to ycmd file-type strings.
 
 Used to determine a) which major modes we support and b) how to
 describe them to ycmd."
@@ -339,7 +339,7 @@ This does nothing if no server is running."
 
   (unwind-protect
       (when (ycmd-running?)
-	(delete-process ycmd--server-process)))
+        (delete-process ycmd--server-process)))
 
   (ycmd--kill-notification-timer))
 
@@ -538,7 +538,7 @@ case this function returns 0.
 "
   (let ((buff (or buff (current-buffer))))
     (if (= col 0)
-	0
+        0
       (with-current-buffer buff
         (goto-line line)
         (forward-char (- col 1))
@@ -605,17 +605,17 @@ When clicked, this will popup MESSAGE."
 This is a fairly crude form of decoration, but it does give
 reasonable visual feedback on the problems found by ycmd."
   (ycmd--with-destructured-parse-result r
-   (--when-let (find-buffer-visiting filepath)
-     (with-current-buffer it
-       (let* ((start-pos (ycmd--line-start-position line-num))
-              (end-pos (ycmd--line-end-position line-num))
-              (btype (assoc-default kind ycmd--file-ready-buttons)))
-         (when btype
-           (with-silent-modifications
-             (ycmd--make-button
-              start-pos end-pos
-              btype
-              (concat kind ": " text)))))))))
+    (--when-let (find-buffer-visiting filepath)
+      (with-current-buffer it
+        (let* ((start-pos (ycmd--line-start-position line-num))
+               (end-pos (ycmd--line-end-position line-num))
+               (btype (assoc-default kind ycmd--file-ready-buttons)))
+          (when btype
+            (with-silent-modifications
+              (ycmd--make-button
+               start-pos end-pos
+               btype
+               (concat kind ": " text)))))))))
 
 (defun ycmd--display-error (msg)
   (message "ERROR: %s" msg))
@@ -699,29 +699,29 @@ functions in `ycmd-file-parse-result-hook'.
       (ycmd--report-status 'parsing)
 
       (deferred:$
-	;; try
-	(deferred:$
-	  ;; Make the request.
-	  (ycmd--request "/event_notification"
-			 content
-			 :parser 'json-read)
+        ;; try
+        (deferred:$
+          ;; Make the request.
+          (ycmd--request "/event_notification"
+                         content
+                         :parser 'json-read)
 
-	  (deferred:nextc it
-	    (lambda (results)
-	      (with-current-buffer buff
-		(ycmd--handle-notify-response results)))))
+          (deferred:nextc it
+            (lambda (results)
+              (with-current-buffer buff
+                (ycmd--handle-notify-response results)))))
 
-	;; catch
-	(deferred:error it
-	  (lambda (err)
-	    (message "Error sending notification request: %s" err)))
+        ;; catch
+        (deferred:error it
+          (lambda (err)
+            (message "Error sending notification request: %s" err)))
 
-	;; finally. As I understand it, this should always be
-	;; executed.
-    (deferred:nextc it
-      (lambda ()
-        (with-current-buffer buff
-          (ycmd--report-status 'parsed))))))))
+        ;; finally. As I understand it, this should always be
+        ;; executed.
+        (deferred:nextc it
+          (lambda ()
+            (with-current-buffer buff
+              (ycmd--report-status 'parsed))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -967,19 +967,19 @@ anything like that.)
 
     (deferred:$
 
-     (ycmd-request-deferred
-      (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
-      :headers `(("Content-Type" . "application/json")
-                 ("X-Ycm-Hmac" . ,encoded-hex-hmac))
-      :parser parser
-      :data content
-      :type type)
+      (ycmd-request-deferred
+       (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
+       :headers `(("Content-Type" . "application/json")
+                  ("X-Ycm-Hmac" . ,encoded-hex-hmac))
+       :parser parser
+       :data content
+       :type type)
 
-     (deferred:nextc it
-       (lambda (req)
-         (let ((content (ycmd-request-response-data req)))
-           (ycmd--log-content "HTTP RESPONSE CONTENT" content)
-           content))))))
+      (deferred:nextc it
+        (lambda (req)
+          (let ((content (ycmd-request-response-data req)))
+            (ycmd--log-content "HTTP RESPONSE CONTENT" content)
+            content))))))
 
 (defun ycmd--conditional-parse (&optional condition)
   "Reparse the buffer if CONDITION is in `ycmd-parse-conditions'
@@ -1089,3 +1089,7 @@ Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
 (provide 'ycmd)
 
 ;;; ycmd.el ends here
+
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
