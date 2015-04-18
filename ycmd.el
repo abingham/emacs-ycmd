@@ -940,6 +940,18 @@ nil, this uses the current buffer.
           (insert (format "\n%s\n\n" header))
           (insert (pp-to-string content)))))))
 
+(defun ycmd--get-request-hmac (method path body)
+  "Generate HMAC for request from METHOD, PATH and BODY."
+  (let* ((method (encode-coding-string method 'utf-8 t))
+         (path (encode-coding-string path'utf-8 t))
+         (body (or (and body (encode-coding-string body 'utf-8 t)) ""))
+         (secret (encode-coding-string ycmd--hmac-secret 'utf-8 t))
+         (method-hmac (ycmd--hmac-function method secret))
+         (path-hmac (ycmd--hmac-function path secret))
+         (body-hmac (ycmd--hmac-function body secret))
+         (joined-hmac-input (concat method-hmac path-hmac body-hmac)))
+    (ycmd--hmac-function joined-hmac-input secret)))
+
 (defun* ycmd--request (location
                        content
                        &key (parser 'buffer-string) (type "POST"))
@@ -967,11 +979,8 @@ anything like that.)
 
   (let* ((ycmd-request-backend 'url-retrieve)
          (content (json-encode content))
-         (unibyte-content (encode-coding-string content 'utf-8 t))
-         (unibyte-hmac-secret (encode-coding-string ycmd--hmac-secret 'utf-8 t))
-         (hmac (ycmd--hmac-function unibyte-content unibyte-hmac-secret))
-         (hex-hmac (encode-hex-string hmac))
-         (encoded-hex-hmac (base64-encode-string hex-hmac 't)))
+         (hmac (ycmd--get-request-hmac type location content))
+         (encoded-hmac (base64-encode-string hmac 't)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
     (deferred:$
@@ -979,7 +988,7 @@ anything like that.)
       (ycmd-request-deferred
        (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
        :headers `(("Content-Type" . "application/json")
-                  ("X-Ycm-Hmac" . ,encoded-hex-hmac))
+                  ("X-Ycm-Hmac" . ,encoded-hmac))
        :parser parser
        :data content
        :type type)
