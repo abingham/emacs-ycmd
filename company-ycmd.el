@@ -95,7 +95,7 @@ feature."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode python-mode)
+  '(c++-mode c-mode python-mode go-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -166,6 +166,31 @@ functions."
                             'meta meta 'kind kind 'doc doc 'params cand)
                 candidates))))))
 
+(defun company-ycmd--construct-candidate-go (candidate prefix start-col)
+  "Construct completion string from a CANDIDATE for go file-types.
+
+PREFIX and START-COL are used to generate insertion text."
+  (company-ycmd--with-destructured-candidate candidate prefix start-col
+    (let* ((is-func (and extra-menu-info
+                         (string-prefix-p "func" extra-menu-info)))
+           (meta (and kind menu-text extra-menu-info
+                      (concat kind " " menu-text
+                              (if is-func
+                                  (substring extra-menu-info 4 nil)
+                                (concat " " extra-menu-info)))))
+           (return-type (and extra-menu-info
+                             (string-match "^func(.*) \\(.*\\)" extra-menu-info)
+                             (match-string 1 extra-menu-info)))
+           (params (and extra-menu-info
+                        (or (string-match "^func\\((.*)\\) .*" extra-menu-info)
+                            (string-match "^func\\((.*)\\)\\'" extra-menu-info))
+                        (match-string 1 extra-menu-info)))
+           (kind (if (and extra-menu-info (not is-func))
+                     (concat kind ": " extra-menu-info)
+                   kind)))
+      (propertize item 'return_type return-type
+                  'meta meta 'kind kind 'params params))))
+
 (defun company-ycmd--construct-candidate-python (candidate prefix start-col)
   "Construct completion string from a CANDIDATE for python file-types.
 
@@ -212,6 +237,7 @@ candidates list."
   "Return function to construct candidate(s) for current `major-mode'."
   (pcase (ycmd-major-mode-to-file-types major-mode)
     (`("cpp") 'company-ycmd--construct-candidate-cpp)
+    (`("go") 'company-ycmd--construct-candidate-go)
     (`("python") 'company-ycmd--construct-candidate-python)
     (_ 'company-ycmd--construct-candidate-generic)))
 

@@ -807,6 +807,11 @@ values. This produces output for empty alists that ycmd expects."
   (lambda (x) (secure-hash 'sha256 x nil nil 1))
   64 64)
 
+(defcustom ycmd-gocode-binary-path (executable-find "gocode")
+  "Gocode binary path."
+  :group 'ycmd
+  :type 'stringp)
+
 (defun ycmd--options-contents (hmac-secret)
   "Return a struct which can be JSON encoded into a file to
 create a ycmd options file.
@@ -819,7 +824,8 @@ file."
   (let ((hmac-secret (base64-encode-string hmac-secret))
         (global-config (or ycmd-global-config ""))
         (extra-conf-whitelist (or ycmd-extra-conf-whitelist []))
-        (max-num-identifier-candidates ycmd-max-num-identifier-candidates))
+        (max-num-identifier-candidates ycmd-max-num-identifier-candidates)
+        (gocode-binary-path (or ycmd-gocode-binary-path "")))
     `((filetype_blacklist (vimwiki . 1) (mail . 1) (qf . 1) (tagbar . 1) (unite . 1) (infolog . 1) (notes . 1) (text . 1) (pandoc . 1) (markdown . 1))
       (auto_start_csharp_server . 1)
       (filetype_whitelist (* . 1))
@@ -843,7 +849,8 @@ file."
       (min_num_of_chars_for_completion . 2)
       (filepath_completion_use_working_dir . 0)
       (semantic_triggers . ())
-      (auto_trigger . 1))))
+      (auto_trigger . 1)
+      (gocode_binary_path . ,gocode-binary-path))))
 
 (defun ycmd--create-options-file (hmac-secret)
   "This creates a new options file for a ycmd server.
