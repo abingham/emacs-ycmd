@@ -95,7 +95,7 @@ feature."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode)
+  '(c++-mode c-mode python-mode go-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -108,9 +108,111 @@ feature."
         (case-fold-search t))
     (equal (string-match (regexp-quote prefix) insertion-text) 0)))
 
+(defmacro company-ycmd--with-destructured-candidate (candidate prefix start-col body)
+  "Destructure CANDIDATE and evalueate BODY.
+
+PREFIX and START-COL are passed to `company-ycmd--get-insertion-text'."
+  (declare (indent 3) (debug t))
+  `(let* ((insertion-text (assoc-default 'insertion_text candidate))
+          (detailed-info (assoc-default 'detailed_info candidate))
+          (kind (assoc-default 'kind candidate))
+          (extra-menu-info (assoc-default 'extra_menu_info candidate))
+          (menu-text (assoc-default 'menu_text candidate))
+          (extra-data (assoc-default 'extra_data candidate))
+          (prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
+          (prefix-size (- start-col prefix-start-col))
+          (item (concat (substring-no-properties prefix 0 prefix-size)
+                        (substring-no-properties
+                         (s-chop-suffix "()" insertion-text)))))
+     ,body))
+
+(defun company-ycmd--convert-kind-cpp (kind)
+  "Convert KIND string for display."
+  (pcase kind
+    ("STRUCT" "struct")
+    ("CLASS" "class")
+    ("ENUM" "enum")
+    ("TYPE" "type")
+    ("MEMBER" "member")
+    ("FUNCTION" "fn")
+    ("VARIABLE" "var")
+    ("MACRO" "macro")
+    ("PARAMETER" "parameter")
+    ("NAMESPACE" "namespace")))
+
+(defun company-ycmd--construct-candidate-cpp (candidate prefix start-col)
+  "Construct a completion string(s) from a CANDIDATE for cpp file-types.
+
+PREFIX and START-COL are used to generate insertion text. Returns
+a list with one candidate or multiple candidates for overloaded
+functions."
+  (company-ycmd--with-destructured-candidate candidate prefix start-col
+    (let* ((overloaded-functions (and (company-ycmd--extended-features-p)
+                                      company-ycmd-insert-arguments
+                                      (stringp detailed-info)
+                                      (s-split "\n" detailed-info t)))
+           (entries (or overloaded-functions (list menu-text)))
+           (candidates '()))
+      (dolist (cand (delete-dups entries) candidates)
+        (let* ((return-type (or (and overloaded-functions
+                                     (string-match
+                                      (concat "\\(.*\\) " (regexp-quote item)) cand)
+                                     (match-string 1 cand))
+                                extra-menu-info))
+               (meta (if overloaded-functions cand detailed-info))
+               (doc (cdr (assoc 'doc_string extra-data)))
+               (kind (company-ycmd--convert-kind-cpp kind)))
+          (push (propertize item 'return_type return-type
+                            'meta meta 'kind kind 'doc doc 'params cand)
+                candidates))))))
+
+(defun company-ycmd--construct-candidate-go (candidate prefix start-col)
+  "Construct completion string from a CANDIDATE for go file-types.
+
+PREFIX and START-COL are used to generate insertion text."
+  (company-ycmd--with-destructured-candidate candidate prefix start-col
+    (let* ((is-func (and extra-menu-info
+                         (string-prefix-p "func" extra-menu-info)))
+           (meta (and kind menu-text extra-menu-info
+                      (concat kind " " menu-text
+                              (if is-func
+                                  (substring extra-menu-info 4 nil)
+                                (concat " " extra-menu-info)))))
+           (return-type (and extra-menu-info
+                             (string-match "^func(.*) \\(.*\\)" extra-menu-info)
+                             (match-string 1 extra-menu-info)))
+           (params (and extra-menu-info
+                        (or (string-match "^func\\((.*)\\) .*" extra-menu-info)
+                            (string-match "^func\\((.*)\\)\\'" extra-menu-info))
+                        (match-string 1 extra-menu-info)))
+           (kind (if (and extra-menu-info (not is-func))
+                     (concat kind ": " extra-menu-info)
+                   kind)))
+      (propertize item 'return_type return-type
+                  'meta meta 'kind kind 'params params))))
+
+(defun company-ycmd--construct-candidate-python (candidate prefix start-col)
+  "Construct completion string from a CANDIDATE for python file-types.
+
+PREFIX and START-COL are used to generate insertion text."
+  (company-ycmd--with-destructured-candidate candidate prefix start-col
+    (let ((params (and detailed-info
+                       (car (s-split-up-to "\n" detailed-info 1)))))
+      (propertize item 'meta detailed-info
+                  'kind extra-menu-info 'params params))))
+
+(defun company-ycmd--construct-candidate-generic (candidate prefix start-col)
+  "Generic function to construct completion string from a CANDIDATE.
+
+PREFIX and START-COL are used to generate insertion text."
+  (company-ycmd--with-destructured-candidate candidate prefix start-col
+    (propertize item 'return_type extra-menu-info
+                'meta detailed-info 'kind kind 'params menu-text)))
+
 (defun company-ycmd--construct-candidates (start-col
-					   completion-vector
-					   prefix)
+                                           completion-vector
+                                           prefix
+                                           construct-candidate-fn)
   "Construct candidates list from COMPLETION-VECTOR.
 
 PREFIX is the prefix we calculated for doing the completion, and
@@ -123,55 +225,32 @@ candidates list."
   (let ((completion-list (append completion-vector nil))
         (candidates '()))
     (dolist (candidate completion-list (nreverse candidates))
-      (let* ((detailed-info (assoc-default 'detailed_info candidate))
-             (function-signatures (and (company-ycmd--extended-features-p)
-                                        company-ycmd-insert-arguments
-                                       (stringp detailed-info)
-                                       (s-split "\n" detailed-info t))))
-        (when (or company-ycmd-enable-fuzzy-matching
-                  (company-ycmd--prefix-candidate-p candidate prefix))
-          (if function-signatures
-              (dolist (meta (delete-dups function-signatures))
-                (push (company-ycmd--construct-candidate candidate prefix start-col meta)
-                      candidates))
-            (push (company-ycmd--construct-candidate candidate prefix start-col)
-                  candidates)))))))
+      (when (or company-ycmd-enable-fuzzy-matching
+                (company-ycmd--prefix-candidate-p candidate prefix))
+        (let ((result (funcall construct-candidate-fn
+                               candidate prefix start-col)))
+          (if (listp result)
+              (setq candidates (append result candidates))
+            (push result candidates)))))))
 
-(defun company-ycmd--construct-candidate (src prefix start-col &optional meta)
-  "Convert a ycmd completion structure SRC to a candidate string.
-
-META is a string containig the function signature and is used to
-generate content for meta and annotation functions.
-
-Takes a ycmd completion structure SRC,
-extracts the 'insertion_text', attaches other properties to that
-string as text-properties, and returns the string."
-  (let* ((prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
-         (prefix-size (- start-col prefix-start-col))
-         (insertion-text (assoc-default 'insertion_text src))
-         (candidate (concat (substring-no-properties prefix 0 prefix-size)
-                            (substring-no-properties
-                             (s-chop-suffix "()" insertion-text)))))
-    (put-text-property 0 1 'meta meta candidate)
-    (when (and meta
-               (string-match
-                (concat "\\(.*\\) " (regexp-quote candidate)) meta))
-      (put-text-property
-       0 1 'return_type (match-string 1 meta) candidate))
-
-    (dolist (prop company-ycmd-completion-properties candidate)
-      (put-text-property 0 1 prop (assoc-default prop src) candidate))))
+(defun company-ycmd--get-construct-candidate-fn ()
+  "Return function to construct candidate(s) for current `major-mode'."
+  (pcase (ycmd-major-mode-to-file-types major-mode)
+    (`("cpp") 'company-ycmd--construct-candidate-cpp)
+    (`("go") 'company-ycmd--construct-candidate-go)
+    (`("python") 'company-ycmd--construct-candidate-python)
+    (_ 'company-ycmd--construct-candidate-generic)))
 
 (defun company-ycmd--get-candidates (cb prefix)
   "Call CB with completion candidates for PREFIX at the current point."
   (deferred:$
-    
+
     (deferred:try
       (deferred:$
         (if (ycmd-running?)
             (ycmd-get-completions (current-buffer) (point))))
       :catch (lambda (err) nil))
-    
+
     (deferred:nextc it
       (lambda (c)
         (if (assoc-default 'exception c)
@@ -179,13 +258,14 @@ string as text-properties, and returns the string."
             (let ((msg (assoc-default 'message c nil "unknown error")))
               (message "Exception while fetching candidates: %s" msg)
               '())
-          
+
           (funcall
            cb
            (company-ycmd--construct-candidates
-	    (assoc-default 'completion_start_column c)
+            (assoc-default 'completion_start_column c)
             (assoc-default 'completions c)
-	    prefix)))))))
+            prefix
+            (company-ycmd--get-construct-candidate-fn))))))))
 
 (cl-defun company-ycmd--fontify-code (code &optional (mode major-mode))
   "Fontify CODE."
@@ -203,15 +283,9 @@ string as text-properties, and returns the string."
          (point-min) (point-max) nil))
       (buffer-string))))
 
-(defun company-ycmd--get-meta-or-fallback (candidate fallback)
-  "Return a CANDIDATE's meta property or a FALLBACK property."
-  (or (get-text-property 0 'meta candidate)
-      (get-text-property 0 fallback candidate)))
-
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
-  (let ((meta (company-ycmd--get-meta-or-fallback
-               candidate 'detailed_info)))
+  (let ((meta (get-text-property 0 'meta candidate)))
     (if (stringp meta)
         (let ((meta-trimmed (s-trim meta)))
           (if (company-ycmd--extended-features-p)
@@ -221,8 +295,7 @@ string as text-properties, and returns the string."
 
 (defun company-ycmd--params (candidate)
   "Fetch function parameters from a CANDIDATE string if possible."
-  (let ((params (company-ycmd--get-meta-or-fallback
-                 candidate 'menu_text)))
+  (let ((params (get-text-property 0 'params candidate)))
     (cond
      ((null params) nil)
      ((string-match "[^:]:[^:]" params)
@@ -230,31 +303,11 @@ string as text-properties, and returns the string."
      ((string-match "\\((.*)[ a-z]*\\'\\)" params)
       (match-string 1 params)))))
 
-(defun company-ycmd--get-kind (candidate)
-  "Get information about completion kind from CANDIDATE."
-  (-when-let (kind (get-text-property 0 'kind candidate))
-    (pcase kind
-      ("STRUCT" "struct")
-      ("CLASS" "class")
-      ("ENUM" "enum")
-      ("TYPE" "type")
-      ("MEMBER" "member")
-      ("FUNCTION" "fn")
-      ("VARIABLE" "var")
-      ("MACRO" "macro")
-      ("PARAMETER" "parameter")
-      ("NAMESPACE" "namespace"))))
-
-(defun company-ycmd--get-return-type (candidate)
-  "Get return type of CANDIDATE."
-  (or (get-text-property 0 'return_type candidate)
-      (get-text-property 0 'extra_menu_info candidate)))
-
 (defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a CANDIDATE string."
   (let ((kind (and company-ycmd-show-completion-kind
-                   (company-ycmd--get-kind candidate)))
-        (return-type (company-ycmd--get-return-type candidate)))
+                   (get-text-property 0 'kind candidate)))
+        (return-type (get-text-property 0 'return_type candidate)))
     (concat (company-ycmd--params candidate)
             (when (s-present? return-type)
               (concat " -> " return-type))
@@ -301,8 +354,7 @@ string as text-properties, and returns the string."
 
 (defun company-ycmd--doc-buffer (candidate)
   "Return buffer with docstring for CANDIDATE if it is available."
-  (let* ((extra-data (get-text-property 0 'extra_data candidate))
-         (doc (cdr (assoc 'doc_string extra-data))))
+  (let ((doc (get-text-property 0 'doc candidate)))
     (when (s-present? doc)
       (company-doc-buffer doc))))
 
@@ -328,3 +380,7 @@ string as text-properties, and returns the string."
 (provide 'company-ycmd)
 
 ;;; company-ycmd.el ends here
+
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
