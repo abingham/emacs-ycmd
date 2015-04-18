@@ -95,7 +95,7 @@ feature."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode)
+  '(c++-mode c-mode python-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -166,6 +166,16 @@ functions."
                             'meta meta 'kind kind 'doc doc 'params cand)
                 candidates))))))
 
+(defun company-ycmd--construct-candidate-python (candidate prefix start-col)
+  "Construct completion string from a CANDIDATE for python file-types.
+
+PREFIX and START-COL are used to generate insertion text."
+  (company-ycmd--with-destructured-candidate candidate prefix start-col
+    (let ((params (and detailed-info
+                       (car (s-split-up-to "\n" detailed-info 1)))))
+      (propertize item 'meta detailed-info
+                  'kind extra-menu-info 'params params))))
+
 (defun company-ycmd--construct-candidate-generic (candidate prefix start-col)
   "Generic function to construct completion string from a CANDIDATE.
 
@@ -202,6 +212,7 @@ candidates list."
   "Return function to construct candidate(s) for current `major-mode'."
   (pcase (ycmd-major-mode-to-file-types major-mode)
     (`("cpp") 'company-ycmd--construct-candidate-cpp)
+    (`("python") 'company-ycmd--construct-candidate-python)
     (_ 'company-ycmd--construct-candidate-generic)))
 
 (defun company-ycmd--get-candidates (cb prefix)
