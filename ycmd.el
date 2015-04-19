@@ -942,15 +942,15 @@ nil, this uses the current buffer.
 
 (defun ycmd--get-request-hmac (method path body)
   "Generate HMAC for request from METHOD, PATH and BODY."
-  (let* ((method (encode-coding-string method 'utf-8 t))
-         (path (encode-coding-string path'utf-8 t))
-         (body (or (and body (encode-coding-string body 'utf-8 t)) ""))
-         (secret (encode-coding-string ycmd--hmac-secret 'utf-8 t))
-         (method-hmac (ycmd--hmac-function method secret))
-         (path-hmac (ycmd--hmac-function path secret))
-         (body-hmac (ycmd--hmac-function body secret))
-         (joined-hmac-input (concat method-hmac path-hmac body-hmac)))
-    (ycmd--hmac-function joined-hmac-input secret)))
+  (let* ((hmac-secret (encode-coding-string
+                       ycmd--hmac-secret 'utf-8 t))
+         (joined-hmac-input
+          (mapconcat
+           (lambda (val) (ycmd--hmac-function
+                          (encode-coding-string val 'utf-8 t)
+                          hmac-secret))
+           `(,method ,path ,(or body "")) "")))
+    (ycmd--hmac-function joined-hmac-input hmac-secret)))
 
 (defun* ycmd--request (location
                        content
