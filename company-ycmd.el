@@ -95,7 +95,7 @@ feature."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode python-mode go-mode)
+  '(c++-mode c-mode go-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
