@@ -105,7 +105,6 @@
 (require 'dash)
 (require 'deferred)
 (require 'f)
-(require 'hex-util)
 (require 'hmac-def)
 (require 'json)
 (require 'popup)
