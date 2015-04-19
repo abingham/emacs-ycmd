@@ -104,26 +104,20 @@ feature."
 
 (defun company-ycmd--prefix-candidate-p (candidate prefix)
   "Return t if CANDIDATE string begins with PREFIX."
-  (let ((insertion-text (assoc-default 'insertion_text candidate))
-        (case-fold-search t))
-    (equal (string-match (regexp-quote prefix) insertion-text) 0)))
+  (let ((insertion-text (assoc-default 'insertion_text candidate)))
+    (s-starts-with? prefix insertion-text t)))
 
-(defmacro company-ycmd--with-destructured-candidate (candidate prefix start-col body)
-  "Destructure CANDIDATE and evalueate BODY.
-
-PREFIX and START-COL are used to calculate the insertion text."
-  (declare (indent 3) (debug t))
-  `(let* ((insertion-text (assoc-default 'insertion_text candidate))
-          (detailed-info (assoc-default 'detailed_info candidate))
-          (kind (assoc-default 'kind candidate))
-          (extra-menu-info (assoc-default 'extra_menu_info candidate))
-          (menu-text (assoc-default 'menu_text candidate))
-          (extra-data (assoc-default 'extra_data candidate))
-          (prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
-          (prefix-size (- start-col prefix-start-col))
-          (item (concat (substring-no-properties prefix 0 prefix-size)
-                        (substring-no-properties
-                         (s-chop-suffix "()" insertion-text)))))
+(defmacro company-ycmd--with-destructured-candidate (candidate body)
+  "Destructure CANDIDATE and evaluate BODY."
+  (declare (indent 1) (debug t))
+  `(let ((insertion-text
+          (s-chop-suffix
+           "()" (assoc-default 'insertion_text candidate)))
+         (detailed-info (assoc-default 'detailed_info candidate))
+         (kind (assoc-default 'kind candidate))
+         (extra-menu-info (assoc-default 'extra_menu_info candidate))
+         (menu-text (assoc-default 'menu_text candidate))
+         (extra-data (assoc-default 'extra_data candidate)))
      ,body))
 
 (defun company-ycmd--convert-kind-cpp (kind)
@@ -140,37 +134,37 @@ PREFIX and START-COL are used to calculate the insertion text."
     ("PARAMETER" "parameter")
     ("NAMESPACE" "namespace")))
 
-(defun company-ycmd--construct-candidate-cpp (candidate prefix start-col)
+(defun company-ycmd--construct-candidate-cpp (candidate)
   "Construct a completion string(s) from a CANDIDATE for cpp file-types.
 
-PREFIX and START-COL are used to generate insertion text. Returns
-a list with one candidate or multiple candidates for overloaded
-functions."
-  (company-ycmd--with-destructured-candidate candidate prefix start-col
+Returns a list with one candidate or multiple candidates for
+overloaded functions."
+  (company-ycmd--with-destructured-candidate candidate
     (let* ((overloaded-functions (and (company-ycmd--extended-features-p)
                                       company-ycmd-insert-arguments
                                       (stringp detailed-info)
                                       (s-split "\n" detailed-info t)))
            (entries (or overloaded-functions (list menu-text)))
-           (candidates '()))
+           candidates)
       (dolist (cand (delete-dups entries) candidates)
         (let* ((return-type (or (and overloaded-functions
                                      (string-match
-                                      (concat "\\(.*\\) " (regexp-quote item)) cand)
+                                      (concat "\\(.*\\) "
+                                              (regexp-quote insertion-text))
+                                      cand)
                                      (match-string 1 cand))
                                 extra-menu-info))
                (meta (if overloaded-functions cand detailed-info))
                (doc (cdr (assoc 'doc_string extra-data)))
                (kind (company-ycmd--convert-kind-cpp kind)))
-          (push (propertize item 'return_type return-type
-                            'meta meta 'kind kind 'doc doc 'params cand)
-                candidates))))))
+          (setq candidates
+                (cons (propertize insertion-text 'return_type return-type
+                                  'meta meta 'kind kind 'doc doc 'params cand)
+                      candidates)))))))
 
-(defun company-ycmd--construct-candidate-go (candidate prefix start-col)
-  "Construct completion string from a CANDIDATE for go file-types.
-
-PREFIX and START-COL are used to generate insertion text."
-  (company-ycmd--with-destructured-candidate candidate prefix start-col
+(defun company-ycmd--construct-candidate-go (candidate)
+  "Construct completion string from a CANDIDATE for go file-types."
+  (company-ycmd--with-destructured-candidate candidate
     (let* ((is-func (and extra-menu-info
                          (string-prefix-p "func" extra-menu-info)))
            (meta (and kind menu-text extra-menu-info
@@ -188,25 +182,21 @@ PREFIX and START-COL are used to generate insertion text."
            (kind (if (and extra-menu-info (not is-func))
                      (concat kind ": " extra-menu-info)
                    kind)))
-      (propertize item 'return_type return-type
+      (propertize insertion-text 'return_type return-type
                   'meta meta 'kind kind 'params params))))
 
-(defun company-ycmd--construct-candidate-python (candidate prefix start-col)
-  "Construct completion string from a CANDIDATE for python file-types.
-
-PREFIX and START-COL are used to generate insertion text."
-  (company-ycmd--with-destructured-candidate candidate prefix start-col
+(defun company-ycmd--construct-candidate-python (candidate)
+  "Construct completion string from a CANDIDATE for python file-types."
+  (company-ycmd--with-destructured-candidate candidate
     (let ((params (and detailed-info
                        (car (s-split-up-to "\n" detailed-info 1)))))
-      (propertize item 'meta detailed-info
+      (propertize insertion-text 'meta detailed-info
                   'kind extra-menu-info 'params params))))
 
-(defun company-ycmd--construct-candidate-generic (candidate prefix start-col)
-  "Generic function to construct completion string from a CANDIDATE.
-
-PREFIX and START-COL are used to generate insertion text."
-  (company-ycmd--with-destructured-candidate candidate prefix start-col
-    (propertize item 'return_type extra-menu-info
+(defun company-ycmd--construct-candidate-generic (candidate)
+  "Generic function to construct completion string from a CANDIDATE."
+  (company-ycmd--with-destructured-candidate candidate
+    (propertize insertion-text 'return_type extra-menu-info
                 'meta detailed-info 'kind kind 'params menu-text)))
 
 (defun company-ycmd--construct-candidates (start-col
@@ -222,16 +212,21 @@ the completion candidates.
 When `company-ycmd-enable-fuzzy-matching' is nil, check if
 candidate starts with PREFIX, whether to include candidate in
 candidates list."
-  (let ((completion-list (append completion-vector nil))
-        (candidates '()))
-    (dolist (candidate completion-list (nreverse candidates))
-      (when (or company-ycmd-enable-fuzzy-matching
-                (company-ycmd--prefix-candidate-p candidate prefix))
-        (let ((result (funcall construct-candidate-fn
-                               candidate prefix start-col)))
-          (if (listp result)
-              (setq candidates (append result candidates))
-            (push result candidates)))))))
+  (let* ((prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
+         (prefix-size (- start-col prefix-start-col))
+         (prefix-str (substring-no-properties prefix 0 prefix-size))
+         candidates)
+    (dolist (candidate (append completion-vector nil) (nreverse candidates))
+      (let ((item (assoc 'insertion_text candidate)))
+        (when (s-present? prefix-str)
+          (setcdr item (concat prefix-str
+                               (substring-no-properties (cdr item)))))
+        (when (or company-ycmd-enable-fuzzy-matching
+                  (company-ycmd--prefix-candidate-p candidate prefix))
+          (let ((result (funcall construct-candidate-fn candidate)))
+            (if (listp result)
+                (setq candidates (append result candidates))
+              (setq candidates (cons result candidates)))))))))
 
 (defun company-ycmd--get-construct-candidate-fn ()
   "Return function to construct candidate(s) for current `major-mode'."
@@ -343,14 +338,14 @@ candidates list."
   (cons :async (lambda (cb)
                  (company-ycmd--get-candidates cb prefix))))
 
-(defun company-ycmd--post-completion (arg)
-  (when (and (company-ycmd--extended-features-p)
-             company-ycmd-insert-arguments)
-    (let ((params (company-ycmd--params arg)))
-      (when params
-        (insert params)
-        (company-template-c-like-templatify
-         (concat arg params))))))
+(defun company-ycmd--post-completion (candidate)
+  "Insert function arguments after completion for CANDIDATE."
+  (--when-let (and (company-ycmd--extended-features-p)
+                   company-ycmd-insert-arguments
+                   (company-ycmd--params candidate))
+    (insert it)
+    (company-template-c-like-templatify
+     (concat candidate it))))
 
 (defun company-ycmd--doc-buffer (candidate)
   "Return buffer with docstring for CANDIDATE if it is available."
