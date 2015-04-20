@@ -1,5 +1,4 @@
-emacs-ycmd
-==========
+# emacs-ycmd
 
 emacs-ycmd is a client for [ycmd](https://github.com/Valloric/ycmd),
 the code completion system. It takes care of managing a ycmd server
@@ -15,8 +14,7 @@ ycmd itself, so if you feel lost you might read
 [the ycmd documentation](https://github.com/Valloric/ycmd) and/or the
 [the original YouCompleteMe documentation](https://github.com/Valloric/YouCompleteMe).
 
-Quickstart
-----------
+## Quickstart
 
 First make sure that `ycmd` is installed on your system. See [the ycmd instructions](https://github.com/Valloric/ycmd#building) for more details.
 
@@ -98,8 +96,7 @@ In any event, if you are facing problems with ycmd not starting and/or hanging E
 (set-variable 'ycmd-server-command '("c:/path/to/python.exe" "-u" "c:/path/to/ycmd"))
 ```
 
-`flycheck` integration
-----------------------
+## `flycheck` integration
 
 `flycheck-ycmd.el` allows you to use `ycmd` as a backend for
 `flycheck`. With this enabled, whenever `ycmd` parses a file the
@@ -148,6 +145,7 @@ With this, the ycmd checker will be ignored in `python-mode`. Since
 will still be available for other modes.
 
 ### Making flycheck and company work together
+
 In some cases you may see that `company` and `flycheck` interfere with one another. You can end up with strange completion artifacts in your buffers. This mostly seems to happen when you run emacs in "terminal mode", i.e. with `emacs -nw`.
 
 The short answer for how to deal with this is:
@@ -163,15 +161,14 @@ The slightly longer and probably better answer is:
 
 For a full explanation see [the `emacs-ycmd` defect related to this](https://github.com/abingham/emacs-ycmd/issues/144) as well as [the root `flycheck` issue](https://github.com/flycheck/flycheck/issues/526).
 
-`next-error` integration
-----------------------------
+## `next-error` integration
+
 emacs-ycmd reports found errors through emacs buttons; to integrate those with
 `next-error` prepend something like
 `(require 'ycmd-next-error)` before require'ing ycmd (after adding the
 `contrib` directory to your `load-path`).
 
-Running tests
--------------
+## Running tests
 
 `emacs-ycmd` comes with a number of tests that you can. This is mostly
 useful for developers. They are built with `ert`, so you can run them
