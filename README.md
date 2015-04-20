@@ -104,7 +104,7 @@ In any event, if you are facing problems with ycmd not starting and/or hanging E
 `flycheck-ycmd.el` allows you to use `ycmd` as a backend for
 `flycheck`. With this enabled, whenever `ycmd` parses a file the
 results will be passed to `flycheck` for display. This is a really
-nice way to quick feedback on problems in your code.
+nice way to get quick feedback on problems in your code.
 
 The simple way to enable `flycheck` integration is to use `flycheck-ycmd-setup`:
 
