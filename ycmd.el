@@ -939,6 +939,37 @@ nil, this uses the current buffer.
           (insert (format "\n%s\n\n" header))
           (insert (pp-to-string content)))))))
 
+(defun ycmd-show-debug-info ()
+  "Show debug information."
+  (interactive)
+  (when ycmd-mode
+    (let ((buffer (current-buffer)))
+
+      (deferred:$
+        (let ((content (ycmd--standard-content buffer)))
+          (ycmd--request
+           "/debug_info"
+           content
+           :parser 'json-read))
+
+        (deferred:nextc it
+          (lambda (res)
+            (when res
+              (with-help-window (get-buffer-create " *ycmd-debug-info*")
+                (with-current-buffer standard-output
+                  (princ "ycmd debug information for buffer ")
+                  (insert (propertize (buffer-name buffer) 'face 'bold))
+                  (princ " in ")
+                  (let ((mode (buffer-local-value 'major-mode buffer)))
+                    (insert-button (symbol-name mode)
+                                   'type 'help-function
+                                   'help-args (list mode)))
+                  (princ ":\n\n")
+                  (insert res)
+                  (princ "\n\n")
+                  (insert (format "Server running at: %s:%d"
+                                  ycmd-host ycmd--server-actual-port)))))))))))
+
 (defun ycmd--get-request-hmac (method path body)
   "Generate HMAC for request from METHOD, PATH and BODY."
   (let* ((hmac-secret (encode-coding-string
@@ -1044,6 +1075,7 @@ or is nil."
     (define-key map (kbd "C-c Y i") 'ycmd-goto-implementation)
     (define-key map (kbd "C-c Y I") 'ycmd-goto-imprecise)
     (define-key map (kbd "C-c Y s") 'ycmd-toggle-force-semantic-completion)
+    (define-key map (kbd "C-c Y v") 'ycmd-show-debug-info)
     map)
   "Keymap for `ycmd-mode'.")
 
