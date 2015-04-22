@@ -923,7 +923,7 @@ nil, this uses the current buffer.
                          (`force-semantic '(("force_semantic" . "true")))
                          (`tags (-when-let (tag-files (ycmd--get-tag-files buffer))
                                   `(("tag_files" . ,tag-files)))))))
-    (append standard-content extra-content)))
+    (append extra-content standard-content)))
 
 
 (defvar ycmd--log-enabled nil
