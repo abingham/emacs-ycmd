@@ -199,34 +199,38 @@ overloaded functions."
     (propertize insertion-text 'return_type extra-menu-info
                 'meta detailed-info 'kind kind 'params menu-text)))
 
-(defun company-ycmd--construct-candidates (start-col
-                                           completion-vector
+(defun company-ycmd--construct-candidates (completion-vector
                                            prefix
+                                           start-col
                                            construct-candidate-fn)
   "Construct candidates list from COMPLETION-VECTOR.
 
 PREFIX is the prefix we calculated for doing the completion, and
 START-COL is the column on which ycmd indicates we should place
-the completion candidates.
+the completion candidates.  If START-COL differs from start column
+offset of PREFIX, we need to calculate the substring from PREFIX
+for that difference and prepend it to the insertion-text.
+CONSTRUCT-CANDIDATE-FN is a function to construct a completion
+candidate.  See `company-ycmd--get-construct-candidate-fn'.
 
 When `company-ycmd-enable-fuzzy-matching' is nil, check if
 candidate starts with PREFIX, whether to include candidate in
 candidates list."
   (let* ((prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
          (prefix-size (- start-col prefix-start-col))
-         (prefix-str (substring-no-properties prefix 0 prefix-size))
+         (prefix-diff (substring-no-properties prefix 0 prefix-size))
          candidates)
     (dolist (candidate (append completion-vector nil) (nreverse candidates))
-      (let ((item (assoc 'insertion_text candidate)))
-        (when (s-present? prefix-str)
-          (setcdr item (concat prefix-str
-                               (substring-no-properties (cdr item)))))
-        (when (or company-ycmd-enable-fuzzy-matching
-                  (company-ycmd--prefix-candidate-p candidate prefix))
-          (let ((result (funcall construct-candidate-fn candidate)))
-            (if (listp result)
-                (setq candidates (append result candidates))
-              (setq candidates (cons result candidates)))))))))
+      (when (s-present? prefix-diff)
+        (let ((it (assoc 'insertion_text candidate)))
+          (setcdr it (concat prefix-diff
+                             (substring-no-properties (cdr it))))))
+      (when (or company-ycmd-enable-fuzzy-matching
+                (company-ycmd--prefix-candidate-p candidate prefix))
+        (let ((result (funcall construct-candidate-fn candidate)))
+          (if (listp result)
+              (setq candidates (append result candidates))
+            (setq candidates (cons result candidates))))))))
 
 (defun company-ycmd--get-construct-candidate-fn ()
   "Return function to construct candidate(s) for current `major-mode'."
@@ -257,9 +261,9 @@ candidates list."
           (funcall
            cb
            (company-ycmd--construct-candidates
-            (assoc-default 'completion_start_column c)
             (assoc-default 'completions c)
             prefix
+            (assoc-default 'completion_start_column c)
             (company-ycmd--get-construct-candidate-fn))))))))
 
 (cl-defun company-ycmd--fontify-code (code &optional (mode major-mode))
