@@ -189,7 +189,9 @@ overloaded functions."
   "Construct completion string from a CANDIDATE for python file-types."
   (company-ycmd--with-destructured-candidate candidate
     (let ((params (and detailed-info
-                       (car (s-split-up-to "\n" detailed-info 1)))))
+                       (or (and (string-match "\n" detailed-info)
+                                (substring detailed-info 0 (match-beginning 0)))
+                           detailed-info))))
       (propertize insertion-text 'meta detailed-info
                   'kind extra-menu-info 'params params))))
 
