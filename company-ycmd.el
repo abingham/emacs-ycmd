@@ -110,9 +110,7 @@ feature."
 (defmacro company-ycmd--with-destructured-candidate (candidate body)
   "Destructure CANDIDATE and evaluate BODY."
   (declare (indent 1) (debug t))
-  `(let ((insertion-text
-          (s-chop-suffix
-           "()" (assoc-default 'insertion_text candidate)))
+  `(let ((insertion-text (assoc-default 'insertion_text candidate))
          (detailed-info (assoc-default 'detailed_info candidate))
          (kind (assoc-default 'kind candidate))
          (extra-menu-info (assoc-default 'extra_menu_info candidate))
