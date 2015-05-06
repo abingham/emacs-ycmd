@@ -22,7 +22,7 @@ To use `ycmd-mode` in all supported modes, add the following to your emacs confi
 
 ```emacs
 (require 'ycmd)
-(ycmd-setup)
+(add-hook 'after-init-hook #'global-ycmd-mode)
 ```
 
 Or add `ycmd-mode` to a specific supported mode:

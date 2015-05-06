@@ -3,7 +3,7 @@
 ;; Copyright (c) 2014 Austin Bingham
 ;;
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
-;; Version: 0.1
+;; Version: 0.9.1
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Package-Requires: ((emacs "24") (f "0.17.1") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0"))
 ;;
@@ -301,6 +301,25 @@ describe them to ycmd."
   "Gocode binary path."
   :group 'ycmd
   :type 'string)
+
+(defcustom ycmd-global-modes t
+  "Modes for which `ycmd-mode' is turned on by `global-ycmd-mode'.
+
+If t, ycmd mode is turned on for all major modes in
+`ycmd-file-type-map'.  If set to all, ycmd mode is turned of all
+major-modes.  If a list, ycmd mode is turned on for all
+`major-mode' symbols in that list.  If the `car' of the list is
+`not', ycmd mode is turned on for all `major-mode' symbols _not_
+in that list.  If nil, ycmd mode is never turned on by
+`global-ycmd-mode'."
+  :group 'ycmd
+  :type '(choice (const :tag "none" nil)
+                 (const :tag "member in `ycmd-file-type-map'" t)
+                 (const :tag "all" all)
+                 (set :menu-tag "mode specific" :tag "modes"
+                      :value (not)
+                      (const :tag "Except" not)
+                      (repeat :inline t (symbol :tag "mode")))))
 
 (defconst ycmd--diagnostic-file-types
   '("c"
@@ -1134,6 +1153,21 @@ Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
   (interactive)
   (dolist (it ycmd-file-type-map)
     (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
+(make-obsolete 'ycmd-setup 'global-ycmd-mode "0.9.1")
+
+(defun ycmd--maybe-enable-mode ()
+  "Enable `ycmd-mode' according `ycmd-global-modes'."
+  (when (pcase ycmd-global-modes
+          (`t (ycmd-major-mode-to-file-types major-mode))
+          (`all t)
+          (`(not . ,modes) (not (memq major-mode modes)))
+          (modes (memq major-mode modes)))
+    (ycmd-mode)))
+
+;;;###autoload
+(define-globalized-minor-mode global-ycmd-mode ycmd-mode
+  ycmd--maybe-enable-mode
+  :init-value nil)
 
 (provide 'ycmd)
 
