@@ -652,6 +652,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
 (defun ycmd-parse-buffer ()
   "Parse buffer."
   (interactive)
+  (ycmd--report-status 'unparsed)
   (ycmd--conditional-parse))
 
 (defun ycmd--handle-extra-conf-exception (result)
@@ -676,6 +677,14 @@ Handle configuration file according the value of
                             `((filepath . ,conf-file))))))
     (ycmd-notify-file-ready-to-parse)))
 
+(defun ycmd--handle-buffer-parsing-exception (results)
+  "Handle exeption for file already being parsed runtime error."
+  (when (and (string-equal (assoc-default 'TYPE (assoc-default 'exception results))
+                      "RuntimeError")
+             (string-equal (assoc-default 'message results)
+                           "File already being parsed."))
+    (ycmd--report-status 'parsing)))
+
 (defun ycmd--handle-notify-response (results)
   "If RESULTS is a vector or nil, the response is an acual parse result.
 Otherwise the response is probably an exception."
@@ -683,7 +692,8 @@ Otherwise the response is probably an exception."
           (vectorp results))
       (run-hook-with-args 'ycmd-file-parse-result-hook results)
     (when (assoc 'exception results)
-      (ycmd--handle-exception results))))
+      (ycmd--handle-exception
+       results #'ycmd--handle-buffer-parsing-exception))))
 
 (defun ycmd-notify-file-ready-to-parse ()
   "Send a notification to ycmd that the buffer is ready to be parsed.
