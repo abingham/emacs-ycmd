@@ -107,6 +107,10 @@ feature."
   (let ((insertion-text (assoc-default 'insertion_text candidate)))
     (s-starts-with? prefix insertion-text t)))
 
+(defun company-ycmd--filename-completer-p (extra-info)
+  "Check whether candidate's EXTRA-INFO indicates a filename completion."
+  (-contains? '("[File]" "[Dir]" "[File&Dir]") extra-info))
+
 (defmacro company-ycmd--with-destructured-candidate (candidate body)
   "Destructure CANDIDATE and evaluate BODY."
   (declare (indent 1) (debug t))
@@ -116,7 +120,17 @@ feature."
          (extra-menu-info (assoc-default 'extra_menu_info candidate))
          (menu-text (assoc-default 'menu_text candidate))
          (extra-data (assoc-default 'extra_data candidate)))
-     ,body))
+     (if (company-ycmd--filename-completer-p extra-menu-info)
+         (propertize insertion-text 'return_type extra-menu-info)
+       ,body)))
+
+(defun company-ycmd--extract-params-cpp (function-signature)
+  "Extract parameters from FUNCTION-SIGNATURE if possible."
+  (cond ((null function-signature) nil)
+   ((string-match "[^:]:[^:]" function-signature)
+    (substring function-signature (1+ (match-beginning 0))))
+   ((string-match "\\((.*)[ a-z]*\\'\\)" function-signature)
+    (match-string 1 function-signature))))
 
 (defun company-ycmd--convert-kind-cpp (kind)
   "Convert KIND string for display."
@@ -142,22 +156,23 @@ overloaded functions."
                                       company-ycmd-insert-arguments
                                       (stringp detailed-info)
                                       (s-split "\n" detailed-info t)))
-           (entries (or overloaded-functions (list menu-text)))
+           (items (or overloaded-functions (list menu-text)))
            candidates)
-      (dolist (cand (delete-dups entries) candidates)
-        (let* ((return-type (or (and overloaded-functions
+      (dolist (it (delete-dups items) candidates)
+        (let* ((meta (if overloaded-functions it detailed-info))
+               (params (company-ycmd--extract-params-cpp it))
+               (return-type (or (and overloaded-functions
                                      (string-match
                                       (concat "\\(.*\\) "
                                               (regexp-quote insertion-text))
-                                      cand)
-                                     (match-string 1 cand))
+                                      it)
+                                     (match-string 1 it))
                                 extra-menu-info))
-               (meta (if overloaded-functions cand detailed-info))
-               (doc (cdr (assoc 'doc_string extra-data)))
-               (kind (company-ycmd--convert-kind-cpp kind)))
+               (kind (company-ycmd--convert-kind-cpp kind))
+               (doc (cdr (assoc 'doc_string extra-data))))
           (setq candidates
                 (cons (propertize insertion-text 'return_type return-type
-                                  'meta meta 'kind kind 'doc doc 'params cand)
+                                  'meta meta 'kind kind 'doc doc 'params params)
                       candidates)))))))
 
 (defun company-ycmd--construct-candidate-go (candidate)
@@ -186,18 +201,17 @@ overloaded functions."
 (defun company-ycmd--construct-candidate-python (candidate)
   "Construct completion string from a CANDIDATE for python file-types."
   (company-ycmd--with-destructured-candidate candidate
-    (let ((params (and detailed-info
-                       (or (and (string-match "\n" detailed-info)
-                                (substring detailed-info 0 (match-beginning 0)))
-                           detailed-info))))
-      (propertize insertion-text 'meta detailed-info
-                  'kind extra-menu-info 'params params))))
+    (let ((kind (and extra-menu-info (substring extra-menu-info 0 1)))
+          (meta (and detailed-info extra-menu-info
+                     (string-prefix-p "function" extra-menu-info)
+                     (or (and (string-match "\n" detailed-info)
+                              (substring detailed-info 0 (match-beginning 0)))
+                         detailed-info))))
+      (propertize insertion-text 'meta meta 'doc detailed-info 'kind kind))))
 
 (defun company-ycmd--construct-candidate-generic (candidate)
   "Generic function to construct completion string from a CANDIDATE."
-  (company-ycmd--with-destructured-candidate candidate
-    (propertize insertion-text 'return_type extra-menu-info
-                'meta detailed-info 'kind kind 'params menu-text)))
+  (company-ycmd--with-destructured-candidate candidate insertion-text))
 
 (defun company-ycmd--construct-candidates (completion-vector
                                            prefix
@@ -292,25 +306,17 @@ candidates list."
             meta-trimmed))
       meta)))
 
-(defun company-ycmd--params (candidate)
-  "Fetch function parameters from a CANDIDATE string if possible."
-  (let ((params (get-text-property 0 'params candidate)))
-    (cond
-     ((null params) nil)
-     ((string-match "[^:]:[^:]" params)
-      (substring params (1+ (match-beginning 0))))
-     ((string-match "\\((.*)[ a-z]*\\'\\)" params)
-      (match-string 1 params)))))
-
 (defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a CANDIDATE string."
   (let ((kind (and company-ycmd-show-completion-kind
                    (get-text-property 0 'kind candidate)))
-        (return-type (get-text-property 0 'return_type candidate)))
-    (concat (company-ycmd--params candidate)
+        (return-type (get-text-property 0 'return_type candidate))
+        (params (get-text-property 0 'params candidate)))
+    (concat params
             (when (s-present? return-type)
-              (concat " -> " return-type))
-            (when kind (format " [%s]" kind)))))
+              (s-prepend " -> " return-type))
+            (when (s-present? kind)
+              (format " [%s]" kind)))))
 
 (defconst company-ycmd--include-declaration
   (rx line-start "#" (zero-or-more blank) (or "include" "import")
@@ -346,7 +352,7 @@ candidates list."
   "Insert function arguments after completion for CANDIDATE."
   (--when-let (and (company-ycmd--extended-features-p)
                    company-ycmd-insert-arguments
-                   (company-ycmd--params candidate))
+                   (get-text-property 0 'params candidate))
     (insert it)
     (company-template-c-like-templatify
      (concat candidate it))))
