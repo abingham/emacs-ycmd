@@ -306,8 +306,8 @@ describe them to ycmd."
   "Modes for which `ycmd-mode' is turned on by `global-ycmd-mode'.
 
 If t, ycmd mode is turned on for all major modes in
-`ycmd-file-type-map'.  If set to all, ycmd mode is turned of all
-major-modes.  If a list, ycmd mode is turned on for all
+`ycmd-file-type-map'.  If set to all, ycmd mode is turned on
+for all major-modes.  If a list, ycmd mode is turned on for all
 `major-mode' symbols in that list.  If the `car' of the list is
 `not', ycmd mode is turned on for all `major-mode' symbols _not_
 in that list.  If nil, ycmd mode is never turned on by
