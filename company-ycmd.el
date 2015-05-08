@@ -201,13 +201,17 @@ overloaded functions."
 (defun company-ycmd--construct-candidate-python (candidate)
   "Construct completion string from a CANDIDATE for python file-types."
   (company-ycmd--with-destructured-candidate candidate
-    (let ((kind (and extra-menu-info (substring extra-menu-info 0 1)))
-          (meta (and detailed-info extra-menu-info
-                     (string-prefix-p "function" extra-menu-info)
-                     (or (and (string-match "\n" detailed-info)
-                              (substring detailed-info 0 (match-beginning 0)))
-                         detailed-info))))
-      (propertize insertion-text 'meta meta 'doc detailed-info 'kind kind))))
+    (let* ((kind (and extra-menu-info (substring extra-menu-info 0 1)))
+           (meta (and detailed-info extra-menu-info
+                      (string-prefix-p "function" extra-menu-info)
+                      (or (and (string-match "\n" detailed-info)
+                               (substring detailed-info 0 (match-beginning 0)))
+                          detailed-info)))
+           (location (assoc-default 'location extra-data))
+           (filepath (assoc-default 'filepath location))
+           (line-num (assoc-default 'line_num location)))
+      (propertize insertion-text 'meta meta 'doc detailed-info 'kind kind
+                  'filepath filepath 'line_num line-num))))
 
 (defun company-ycmd--construct-candidate-generic (candidate)
   "Generic function to construct completion string from a CANDIDATE."
@@ -363,6 +367,12 @@ candidates list."
     (when (s-present? doc)
       (company-doc-buffer doc))))
 
+(defun company-ycmd--location (candidate)
+  "Return location for CANDIDATE."
+  (-when-let* ((filepath (get-text-property 0 'filepath candidate))
+               (line-num (get-text-property 0 'line_num candidate)))
+    (cons filepath line-num)))
+
 (defun company-ycmd (command &optional arg &rest ignored)
   "The company-backend command handler for ycmd."
   (interactive (list 'interactive))
@@ -375,7 +385,8 @@ candidates list."
     (no-cache        company-ycmd-enable-fuzzy-matching)
     (sorted          't)
     (post-completion (company-ycmd--post-completion arg))
-    (doc-buffer      (company-ycmd--doc-buffer arg))))
+    (doc-buffer      (company-ycmd--doc-buffer arg))
+    (location        (company-ycmd--location arg))))
 
 ;;;###autoload
 (defun company-ycmd-setup ()
