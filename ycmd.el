@@ -479,10 +479,11 @@ To see what the returned structure looks like, you can use
          :parser 'json-read)))))
 
 (defun ycmd--handle-exception (results &optional default-handler)
-  (cond ((string-equal (assoc-default 'TYPE (assoc-default 'exception results))
-                       "UnknownExtraConf")
-         (ycmd--handle-extra-conf-exception results))
-        (default-handler (funcall default-handler results))))
+  (let* ((exception (assoc-default 'exception results))
+         (exception-type (assoc-default 'TYPE exception)))
+    (cond ((string-equal exception-type "UnknownExtraConf")
+           (ycmd--handle-extra-conf-exception results))
+          (default-handler (funcall default-handler results)))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration (whichever is most
@@ -696,13 +697,14 @@ Handle configuration file according the value of
                             `((filepath . ,conf-file))))))
     (ycmd-notify-file-ready-to-parse)))
 
-(defun ycmd--handle-buffer-parsing-exception (results)
+(defun ycmd--handle-runtime-exception (results)
   "Handle exeption for file already being parsed runtime error."
-  (when (and (string-equal (assoc-default 'TYPE (assoc-default 'exception results))
-                      "RuntimeError")
-             (string-equal (assoc-default 'message results)
-                           "File already being parsed."))
-    (ycmd--report-status 'parsing)))
+  (let* ((exception (assoc-default 'exception results))
+         (exception-type (assoc-default 'TYPE exception))
+         (message (assoc-default 'message results)))
+    (cond ((and (string-equal exception-type "RuntimeError")
+                (string-equal message "File already being parsed."))
+           (setq ycmd--file-already-parsing-exception t)))))
 
 (defun ycmd--handle-notify-response (results)
   "If RESULTS is a vector or nil, the response is an acual parse result.
@@ -712,7 +714,14 @@ Otherwise the response is probably an exception."
       (run-hook-with-args 'ycmd-file-parse-result-hook results)
     (when (assoc 'exception results)
       (ycmd--handle-exception
-       results #'ycmd--handle-buffer-parsing-exception))))
+       results #'ycmd--handle-runtime-exception))))
+
+(defvar-local ycmd--file-already-parsing-exception nil)
+(defun ycmd--parsing-buffer-finished-p ()
+  "Return t if parsing has finished."
+  (if ycmd--file-already-parsing-exception
+      (setq ycmd--file-already-parsing-exception nil)
+    t))
 
 (defun ycmd-notify-file-ready-to-parse ()
   "Send a notification to ycmd that the buffer is ready to be parsed.
@@ -756,7 +765,8 @@ functions in `ycmd-file-parse-result-hook'.
         (deferred:nextc it
           (lambda ()
             (with-current-buffer buff
-              (ycmd--report-status 'parsed))))))))
+              (when (ycmd--parsing-buffer-finished-p)
+                (ycmd--report-status 'parsed)))))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
