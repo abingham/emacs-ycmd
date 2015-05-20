@@ -227,7 +227,7 @@ use `ycmd-parse-buffer'."
   :type '(set (const :tag "After the buffer was saved" save)
               (const :tag "After a new line was inserted" new-line)
               (const :tag "After a buffer was changed and idle" idle-change)
-              (const :tag "After a `ycmd-mode' was enabled." mode-enabled))
+              (const :tag "After a `ycmd-mode' was enabled" mode-enabled))
   :safe #'listp)
 
 (defcustom ycmd-default-tags-file-name "tags"
