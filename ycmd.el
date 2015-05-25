@@ -1103,18 +1103,45 @@ or is nil."
 
 (add-hook 'kill-emacs-hook 'ycmd-close)
 
+(defvar ycmd-command-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "p" 'ycmd-parse-buffer)
+    (define-key map "o" 'ycmd-open)
+    (define-key map "c" 'ycmd-close)
+    (define-key map "." 'ycmd-goto)
+    (define-key map "f" 'ycmd-goto-definition)
+    (define-key map "d" 'ycmd-goto-declaration)
+    (define-key map "i" 'ycmd-goto-implementation)
+    (define-key map "I" 'ycmd-goto-imprecise)
+    (define-key map "s" 'ycmd-toggle-force-semantic-completion)
+    (define-key map "v" 'ycmd-show-debug-info)
+    map)
+  "Keymap for `ycmd-mode' interactive commands.")
+
+(defcustom ycmd-keymap-prefix (kbd "C-c Y")
+  "Prefix for key bindings of `ycmd-mode'.
+
+Changing this variable outside Customize does not have any
+effect.  To change the keymap prefix from Lisp, you need to
+explicitly re-define the prefix key:
+
+    (define-key ycmd-mode-map ycmd-keymap-prefix nil)
+    (setq ycmd-keymap-prefix (kbd \"C-c ,\"))
+    (define-key ycmd-mode-map ycmd-keymap-prefix
+                ycmd-command-map)"
+  :group 'ycmd
+  :type 'string
+  :risky t
+  :set
+  (lambda (variable key)
+    (when (and (boundp variable) (boundp 'ycmd-mode-map))
+      (define-key ycmd-mode-map (symbol-value variable) nil)
+      (define-key ycmd-mode-map key ycmd-command-map))
+    (set-default variable key)))
+
 (defvar ycmd-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c Y p") 'ycmd-parse-buffer)
-    (define-key map (kbd "C-c Y o") 'ycmd-open)
-    (define-key map (kbd "C-c Y c") 'ycmd-close)
-    (define-key map (kbd "C-c Y .") 'ycmd-goto)
-    (define-key map (kbd "C-c Y f") 'ycmd-goto-definition)
-    (define-key map (kbd "C-c Y d") 'ycmd-goto-declaration)
-    (define-key map (kbd "C-c Y i") 'ycmd-goto-implementation)
-    (define-key map (kbd "C-c Y I") 'ycmd-goto-imprecise)
-    (define-key map (kbd "C-c Y s") 'ycmd-toggle-force-semantic-completion)
-    (define-key map (kbd "C-c Y v") 'ycmd-show-debug-info)
+    (define-key map ycmd-keymap-prefix ycmd-command-map)
     map)
   "Keymap for `ycmd-mode'.")
 
