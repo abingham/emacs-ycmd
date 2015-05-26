@@ -839,10 +839,7 @@ If there is no established mapping, return nil."
 (defun ycmd--json-encode (obj)
   "A version of json-encode that uses {} instead of null for nil
 values. This produces output for empty alists that ycmd expects."
-  (cl-flet ((json-encode-keyword (k) (cond ((eq k t)          "true")
-                                           ((eq k json-false) "false")
-                                           ((eq k json-null)  "{}"))))
-    (json-encode obj)))
+    (json-encode obj))
 
 ;; This defines 'ycmd--hmac-function which we use to combine an HMAC
 ;; key and message contents.
