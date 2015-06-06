@@ -221,13 +221,18 @@ buffer for new completion:
       Set buffer-needs-parse flag after `ycmd-mode' has been
       enabled.
 
+`buffer-focus'
+      Set buffer-needs-parse flag when an unparsed buffer gets
+      focus.
+
 If nil, never set buffer-needs-parse flag.  For a manual reparse,
 use `ycmd-parse-buffer'."
   :group 'ycmd
   :type '(set (const :tag "After the buffer was saved" save)
               (const :tag "After a new line was inserted" new-line)
               (const :tag "After a buffer was changed and idle" idle-change)
-              (const :tag "After a `ycmd-mode' was enabled" mode-enabled))
+              (const :tag "After a `ycmd-mode' was enabled" mode-enabled)
+              (const :tag "After an unparsed buffer gets focus" buffer-focus))
   :safe #'listp)
 
 (defcustom ycmd-default-tags-file-name "tags"
@@ -800,6 +805,9 @@ This is primarily a debug/developer tool."
 (defvar ycmd--keepalive-timer nil
   "Timer for sending keepalive messages to the server.")
 
+(defvar ycmd--on-focus-timer nil
+  "Timer for deferring ycmd server notification to parse a buffer.")
+
 (defconst ycmd--server-buffer-name "*ycmd-server*"
   "Name of the ycmd server buffer.")
 
@@ -1095,9 +1103,30 @@ or is nil."
               (run-at-time ycmd-idle-change-delay nil
                            #'ycmd--on-idle-change))))))
 
+(defun ycmd--kill-on-focus-timer ()
+  (when ycmd--on-focus-timer
+    (cancel-timer ycmd--on-focus-timer)
+    (setq ycmd--on-focus-timer nil)))
+
+(defun ycmd--on-unparsed-buffer-focus ()
+  "Function to run when an unparsed buffer gets focus."
+  (ycmd--kill-on-focus-timer)
+  (ycmd--conditional-parse 'buffer-focus))
+
+(defun ycmd--on-window-configuration-change ()
+  "Function to run by `window-configuration-change-hook'."
+  (when (and ycmd-mode
+             (eq ycmd--last-status-change 'unparsed)
+             (memq 'buffer-focus ycmd-parse-conditions))
+    (ycmd--kill-on-focus-timer)
+    (setq ycmd--on-focus-timer
+          (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
+
+
 (defconst ycmd-hooks-alist
-  '((after-save-hook        . ycmd--on-save)
-    (after-change-functions . ycmd--on-change))
+  '((after-save-hook                  . ycmd--on-save)
+    (after-change-functions           . ycmd--on-change)
+    (window-configuration-change-hook . ycmd--on-window-configuration-change))
   "Hooks which ycmd hooks in.")
 
 (add-hook 'kill-emacs-hook 'ycmd-close)
