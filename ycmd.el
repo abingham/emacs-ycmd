@@ -369,7 +369,7 @@ This does nothing if no server is running."
       (when (ycmd-running?)
         (delete-process ycmd--server-process)))
 
-  (ycmd--kill-notification-timer))
+  (ycmd--kill-timer ycmd--notification-timer))
 
 (defun ycmd-running? ()
   "Tells you if a ycmd server is already running."
@@ -817,24 +817,20 @@ This is primarily a debug/developer tool."
 If there is no established mapping, return nil."
   (cdr (assoc mode ycmd-file-type-map)))
 
-(defun ycmd--kill-notification-timer ()
-  (when ycmd--notification-timer
-    (cancel-timer ycmd--notification-timer)
-    (setq ycmd--notification-timer nil)))
+(defmacro ycmd--kill-timer (timer)
+  "Cancel TIMER."
+  `(when ,timer
+     (cancel-timer ,timer)
+     (setq ,timer nil)))
 
 (defun ycmd--start-keepalive-timer ()
   "Kill any existing keepalive timer and start a new one."
-  (ycmd--kill-keepalive-timer)
+  (ycmd--kill-timer ycmd--keepalive-timer)
   (setq ycmd--keepalive-timer
         (run-with-timer
          ycmd-keepalive-period
          ycmd-keepalive-period
          #'ycmd--keepalive)))
-
-(defun ycmd--kill-keepalive-timer ()
-  (when ycmd--keepalive-timer
-    (cancel-timer ycmd--keepalive-timer)
-    (setq ycmd--keepalive-timer nil)))
 
 (defun ycmd--generate-hmac-secret ()
   "Generate a new, random 16-byte HMAC secret key."
@@ -1089,28 +1085,23 @@ or is nil."
 
 (defun ycmd--on-idle-change ()
   "Function to run on idle-change."
-  (ycmd--kill-notification-timer)
+  (ycmd--kill-timer ycmd--notification-timer)
   (ycmd--conditional-parse 'idle-change))
 
 (defun ycmd--on-change (beg end _len)
   "Function to run when a buffer change between BEG and END."
   (save-match-data
     (when ycmd-mode
-      (ycmd--kill-notification-timer)
+      (ycmd--kill-timer ycmd--notification-timer)
       (if (string-match-p "\n" (buffer-substring beg end))
           (ycmd--conditional-parse 'new-line)
         (setq ycmd--notification-timer
               (run-at-time ycmd-idle-change-delay nil
                            #'ycmd--on-idle-change))))))
 
-(defun ycmd--kill-on-focus-timer ()
-  (when ycmd--on-focus-timer
-    (cancel-timer ycmd--on-focus-timer)
-    (setq ycmd--on-focus-timer nil)))
-
 (defun ycmd--on-unparsed-buffer-focus ()
   "Function to run when an unparsed buffer gets focus."
-  (ycmd--kill-on-focus-timer)
+  (ycmd--kill-timer ycmd--on-focus-timer)
   (ycmd--conditional-parse 'buffer-focus))
 
 (defun ycmd--on-window-configuration-change ()
@@ -1118,7 +1109,7 @@ or is nil."
   (when (and ycmd-mode
              (eq ycmd--last-status-change 'unparsed)
              (memq 'buffer-focus ycmd-parse-conditions))
-    (ycmd--kill-on-focus-timer)
+    (ycmd--kill-timer ycmd--on-focus-timer)
     (setq ycmd--on-focus-timer
           (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
 
