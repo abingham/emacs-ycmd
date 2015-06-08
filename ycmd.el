@@ -426,15 +426,14 @@ Returns the new value of `ycmd-force-semantic-completion`.
 
 (defun ycmd--get-tag-files (buffer)
   "Get tag files list for current BUFFER or nil."
-  (-when-let (tag-files (cond
-                         ((eq ycmd-tag-files 'auto)
-                          (ycmd--locate-default-tags-file buffer))
-                         ((or (stringp ycmd-tag-files)
-                              (ycmd--string-list-p ycmd-tag-files))
-                          ycmd-tag-files)))
-    (unless (listp tag-files)
-      (setq tag-files (list tag-files)))
-    (mapcar 'expand-file-name tag-files)))
+  (--when-let (cond ((eq ycmd-tag-files 'auto)
+                     (ycmd--locate-default-tags-file buffer))
+                    ((or (stringp ycmd-tag-files)
+                         (ycmd--string-list-p ycmd-tag-files))
+                     ycmd-tag-files))
+    (unless (listp it)
+      (setq it (list it)))
+    (mapcar 'expand-file-name it)))
 
 (defun ycmd-get-completions (buffer pos)
   "Get completions for position POS in BUFFER from the ycmd server.
@@ -960,8 +959,8 @@ nil, this uses the current buffer.
   (let ((standard-content (ycmd--standard-content buffer))
         (extra-content (pcase extra
                          (`force-semantic '(("force_semantic" . "true")))
-                         (`tags (-when-let (tag-files (ycmd--get-tag-files buffer))
-                                  `(("tag_files" . ,tag-files)))))))
+                         (`tags (--when-let (ycmd--get-tag-files buffer)
+                                  `(("tag_files" . ,it)))))))
     (append extra-content standard-content)))
 
 
