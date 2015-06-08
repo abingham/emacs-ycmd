@@ -822,7 +822,7 @@ If there is no established mapping, return nil."
         (run-with-timer
          ycmd-keepalive-period
          ycmd-keepalive-period
-         (lambda () (ycmd--keepalive)))))
+         #'ycmd--keepalive)))
 
 (defun ycmd--kill-keepalive-timer ()
   (when ycmd--keepalive-timer
