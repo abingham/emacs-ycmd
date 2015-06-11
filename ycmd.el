@@ -372,7 +372,8 @@ This does nothing if no server is running."
       (when (ycmd-running?)
         (delete-process ycmd--server-process)))
 
-  (ycmd--kill-timer ycmd--notification-timer))
+  (ycmd--kill-timer ycmd--keepalive-timer)
+  (ycmd--global-teardown))
 
 (defun ycmd-running? ()
   "Tells you if a ycmd server is already running."
@@ -1130,6 +1131,19 @@ _LEN is ununsed."
     (setq ycmd--on-focus-timer
           (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
 
+(defun ycmd--teardown ()
+  "Teardown ycmd in current buffer."
+  (ycmd--kill-timer ycmd--notification-timer)
+  (setq ycmd--last-status-change 'unparsed)
+  (setq ycmd--file-already-parsing-exception nil))
+
+(defun ycmd--global-teardown ()
+  "Teardown ycmd in all buffers."
+  (ycmd--kill-timer ycmd--on-focus-timer)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when ycmd-mode
+        (ycmd--teardown)))))
 
 (defconst ycmd-hooks-alist
   '((after-save-hook                  . ycmd--on-save)
@@ -1226,7 +1240,8 @@ Otherwise behave as if called interactively.
       (add-hook (car hook) (cdr hook) nil 'local)))
    (t
     (dolist (hook ycmd-hooks-alist)
-      (remove-hook (car hook) (cdr hook) 'local)))))
+      (remove-hook (car hook) (cdr hook) 'local))
+    (ycmd--teardown))))
 
 ;;;###autoload
 (defun ycmd-setup ()
