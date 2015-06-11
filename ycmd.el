@@ -200,6 +200,11 @@ re-parsing the contents."
   :group 'ycmd
   :type '(number))
 
+(defcustom ycmd-startup-timeout 3000
+  "Number of milliseconds to wait for the server to start."
+  :group 'ycmd
+  :type '(number))
+
 (defcustom ycmd-parse-conditions '(save new-line mode-enabled)
   "When ycmd should reparse the buffer.
 
@@ -929,7 +934,7 @@ the name of the newly created file."
                 (setq cont nil)))
              (t
               (incf cont)
-              (when (< 3000 cont) ; timeout after 3 seconds
+              (when (< ycmd-startup-timeout cont) ; timeout after specified period
                 (set-window-buffer nil proc-buff)
                 (error "Server timeout."))))))))))
 
