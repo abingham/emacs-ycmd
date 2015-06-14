@@ -129,8 +129,8 @@
   :group 'ycmd)
 
 (defcustom ycmd-extra-conf-whitelist nil
-  "List of glob expressions which match extra configs to load as
-  needed without confirmation."
+  "List of glob expressions which match extra configs.
+Whitelisted configs are loaded without confirmation."
   :type '(repeat string)
   :group 'ycmd)
 
@@ -146,8 +146,7 @@ Options are:
      Ignore unknown extra confs and do not load them.
 
 `ask'
-     Ask the user for each unknown extra conf.
-"
+     Ask the user for each unknown extra conf."
   :group 'ycmd
   :type '(set (const :tag "Load unknown extra confs" load)
               (const :tag "Ignore unknown extra confs" ignore)
@@ -164,9 +163,8 @@ Options are:
   "The ycmd server program command.
 
 Note that the default value for this variable is intentionally
-incorrect. You will almost certainly need to set it to match your
-system installation.
-"
+incorrect.  You will almost certainly need to set it to match your
+system installation."
   :type '(repeat string)
   :group 'ycmd)
 
@@ -182,7 +180,7 @@ system installation.
 
 Each function will be called with with the results returned from
 ycmd when it parses a file in response to
-/event_notification. See `ycmd--with-destructured-parse-result'
+/event_notification.  See `ycmd--with-destructured-parse-result'
 for some insight into what this structure is shaped like."
   :group 'ycmd
   :type 'hook
@@ -414,8 +412,7 @@ it might be interesting for some users."
 (defun ycmd-toggle-force-semantic-completion ()
   "Toggle whether to use always semantic completion.
 
-Returns the new value of `ycmd-force-semantic-completion`.
-"
+Returns the new value of `ycmd-force-semantic-completion'."
   (interactive)
   (let ((force (not ycmd-force-semantic-completion)))
     (message "ycmd: force semantic completion %s."
@@ -446,10 +443,10 @@ Returns the new value of `ycmd-force-semantic-completion`.
     (mapcar 'expand-file-name it)))
 
 (defun ycmd-get-completions (buffer pos)
-  "Get completions for position POS in BUFFER from the ycmd server.
+  "Get completions in BUFFER for position POS from the ycmd server.
 
 Returns a deferred object which yields the HTTP message
-content. If completions are available, the structure looks like
+content.  If completions are available, the structure looks like
 this:
 
    ((completion_start_column . 6)
@@ -488,6 +485,11 @@ To see what the returned structure looks like, you can use
          :parser 'json-read)))))
 
 (defun ycmd--handle-exception (results &optional default-handler)
+  "Handle exception in completion RESULTS.
+
+This function handles 'UnknownExtraConf' exceptions or exceptions
+handled by a DEFAULT-HANDLER, which must be a function that takes
+a results vector as argument."
   (let* ((exception (assoc-default 'exception results))
          (exception-type (assoc-default 'TYPE exception)))
     (cond ((string-equal exception-type "UnknownExtraConf")
@@ -495,8 +497,7 @@ To see what the returned structure looks like, you can use
           (default-handler (funcall default-handler results)))))
 
 (defun ycmd-goto ()
-  "Go to the definition or declaration (whichever is most
-sensible) of the symbol at the current position."
+  "Go to the definition or declaration of the symbol at current position."
   (interactive)
   (ycmd--goto "GoTo"))
 
@@ -516,22 +517,24 @@ sensible) of the symbol at the current position."
   (ycmd--goto "GoToImplementation"))
 
 (defun ycmd-goto-imprecise ()
-  "Fast implementation of Go To at the cost of precision,
-useful in case compile-time is considerable."
+  "Fast implementation of Go To at the cost of precision.
+Useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToImprecise"))
 
 (defun ycmd--handle-goto-exception (results)
+  "Handle a Go To exception in RESULTS."
   (let ((msg (assoc-default 'message results nil "UNKNOWN")))
     (warn (format "goto exception: %s" msg))))
 
 (defun ycmd--handle-goto-success (location)
+  "Handle a successfull Go To response for LOCATION."
   (push-mark)
   (ring-insert find-tag-marker-ring (point-marker))
   (ycmd--goto-location location))
 
 (defun ycmd--goto (type)
-  "Implementation of GoTo according to the request type."
+  "Implementation of GoTo according to the request TYPE."
   (when ycmd-mode
     (deferred:$
 
@@ -545,6 +548,7 @@ useful in case compile-time is considerable."
               (ycmd--handle-goto-success location))))))))
 
 (defun ycmd--send-goto-request (type buffer pos)
+  "Send Go To request of TYPE to BUFFER at POS."
   (with-current-buffer buffer
     (goto-char pos)
     (let ((content (cons (list "command_arguments" type)
@@ -555,21 +559,23 @@ useful in case compile-time is considerable."
        :parser 'json-read))))
 
 (defun ycmd--goto-location (location)
-  "Move cursor to LOCATION, a structure as returned from e.g. the
-various GoTo commands."
+  "Move cursor to LOCATION.
+
+LOCTION is a structure as returned from e.g. the various GoTo
+commands."
   (find-file (assoc-default 'filepath location))
   (goto-char (ycmd--col-line-to-position
               (assoc-default 'column_num location)
               (assoc-default 'line_num location))))
 
-(defun ycmd--col-line-to-position (col line &optional buff)
+(defun ycmd--col-line-to-position (col line &optional buffer)
   "Convert COL and LINE into a position in the current buffer.
 
 COL and LINE are expected to be as returned from ycmd, e.g. from
-notify-file-ready. Apparently COL can be 0 sometimes, in which
+notify-file-ready.  Apparently COL can be 0 sometimes, in which
 case this function returns 0.
-"
-  (let ((buff (or buff (current-buffer))))
+Use BUFFER if non-nil or `current-buffer'."
+  (let ((buff (or buffer (current-buffer))))
     (if (= col 0)
         0
       (with-current-buffer buff
@@ -586,7 +592,7 @@ case this function returns 0.
   'button 't)
 
 (defun ycmd--make-button (start end type message)
-  "Make a button of type TYPE from START to STOP in the current buffer.
+  "Make a button from START to END of TYPE in the current buffer.
 
 When clicked, this will popup MESSAGE."
   (make-text-button
@@ -653,24 +659,25 @@ reasonable visual feedback on the problems found by ycmd."
                (concat kind ": " text)))))))))
 
 (defun ycmd--display-error (msg)
+  "Display error message with MSG."
   (message "ERROR: %s" msg))
 
 (defun ycmd-decorate-with-parse-results (results)
-  "Decorates a buffer using the results of a file-ready parse
-list.
+  "Decorates a buffer using the RESULTS of a file-ready parse list.
 
-This is suitable as an entry in `ycmd-file-parse-result-hook`.
-"
+This is suitable as an entry in `ycmd-file-parse-result-hook'."
   (with-silent-modifications
     (set-text-properties (point-min) (point-max) nil))
   (mapcar 'ycmd--decorate-single-parse-result results)
   results)
 
-(defun ycmd--display-single-file-parse-result (r)
-  (ycmd--with-destructured-parse-result r
+(defun ycmd--display-single-file-parse-result (result)
+  "Insert a single file parse RESULT."
+  (ycmd--with-destructured-parse-result result
     (insert (format "%s:%s - %s - %s\n" filepath line-num kind text))))
 
 (defun ycmd-display-file-parse-results (results)
+  "Display parse RESULTS in a buffer."
   (let ((buffer "*ycmd-file-parse-results*"))
     (get-buffer-create buffer)
     (with-current-buffer buffer
@@ -685,7 +692,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook`.
   (ycmd--conditional-parse))
 
 (defun ycmd--handle-extra-conf-exception (result)
-  "Handle an exception of type `UnknownExtraConf'.
+  "Handle an exception of type `UnknownExtraConf' in RESULT.
 
 Handle configuration file according the value of
 `ycmd-extra-conf-handler'."
@@ -707,7 +714,7 @@ Handle configuration file according the value of
     (ycmd-notify-file-ready-to-parse)))
 
 (defun ycmd--handle-runtime-exception (results)
-  "Handle exeption for file already being parsed runtime error."
+  "Handle runtime exceptions in RESULTS."
   (let* ((exception (assoc-default 'exception results))
          (exception-type (assoc-default 'TYPE exception))
          (message (assoc-default 'message results)))
@@ -739,8 +746,7 @@ Only one active notification is allowed per buffer, and this
 function enforces that constraint.
 
 The results of the notification are passed to all of the
-functions in `ycmd-file-parse-result-hook'.
-"
+functions in `ycmd-file-parse-result-hook'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let* ((buff (current-buffer))
            (extra-content (and ycmd-tag-files 'tags))
@@ -791,18 +797,19 @@ This is primarily a debug/developer tool."
         (insert (pp-to-string content))))))
 
 (defvar ycmd--server-actual-port 0
-  "The actual port being used by the ycmd server. This is set
-  based on the output from the server itself.")
+  "The actual port being used by the ycmd server.
+This is set based on the output from the server itself.")
 
 (defvar ycmd--hmac-secret nil
-  "This is populated with the hmac secret of the current
-  connection. Users should never need to modify this, hence the
-  defconst. It is not, however, treated as a constant by this
-  code. This value gets set in ycmd-open.")
+  "This is populated with the hmac secret of the current connection.
+Users should never need to modify this, hence the defconst.  It is
+not, however, treated as a constant by this code.  This value
+gets set in ycmd-open.")
 
 (defconst ycmd--server-process "ycmd-server"
-  "The emacs name of the server process. This is used by
-  functions like start-process, get-process, and delete-process.")
+  "The Emacs name of the server process.
+This is used by functions like `start-process', `get-process'
+and `delete-process'.")
 
 (defvar-local ycmd--notification-timer nil
   "Timer for notifying ycmd server to do work, e.g. parsing files.")
@@ -845,8 +852,9 @@ If there is no established mapping, return nil."
     (apply 'concat result)))
 
 (defun ycmd--json-encode (obj)
-  "A version of json-encode that uses {} instead of null for nil
-values. This produces output for empty alists that ycmd expects."
+  "Encode a json object OBJ.
+A version of json-encode that uses {} instead of null for nil values.
+This produces output for empty alists that ycmd expects."
   (cl-flet ((json-encode-keyword (k) (cond ((eq k t)          "true")
                                            ((eq k json-false) "false")
                                            ((eq k json-null)  "{}"))))
@@ -859,13 +867,14 @@ values. This produces output for empty alists that ycmd expects."
   64 64)
 
 (defun ycmd--options-contents (hmac-secret)
-  "Return a struct which can be JSON encoded into a file to
-create a ycmd options file.
+  "Return a struct with ycmd options and the HMAC-SECRET applied.
+The struct can be json encoded into a file to create a ycmd
+options file.
 
-When we start a new ycmd server, it needs an options file. It
+When we start a new ycmd server, it needs an options file.  It
 reads this file and then deletes it since it contains a secret
-key. So we need to generate a new options file for each ycmd
-instance. This function effectively produces the contents of that
+key.  So we need to generate a new options file for each ycmd
+instance.  This function effectively produces the contents of that
 file."
   (let ((hmac-secret (base64-encode-string hmac-secret))
         (global-config (or ycmd-global-config ""))
@@ -899,9 +908,9 @@ file."
       (gocode_binary_path . ,gocode-binary-path))))
 
 (defun ycmd--create-options-file (hmac-secret)
-  "This creates a new options file for a ycmd server.
+  "Create a new options file for a ycmd server with HMAC-SECRET.
 
-This creates a new tempfile and fills it with options. Returns
+This creates a new tempfile and fills it with options.  Returns
 the name of the newly created file."
   (let ((options-file (make-temp-file "ycmd-options"))
         (options (ycmd--options-contents hmac-secret)))
@@ -910,7 +919,7 @@ the name of the newly created file."
     options-file))
 
 (defun ycmd--start-server (hmac-secret)
-  "This starts a new server using HMAC-SECRET as its HMAC secret."
+  "Start a new server using HMAC-SECRET as its hmac secret."
   (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
       (erase-buffer)
@@ -946,9 +955,8 @@ the name of the newly created file."
 (defun ycmd--standard-content (&optional buffer)
   "Generate the 'standard' content for ycmd posts.
 
-This extracts a bunch of information from BUFFER. If BUFFER is
-nil, this uses the current buffer.
-"
+This extracts a bunch of information from BUFFER.  If BUFFER is
+nil, this uses the current buffer."
   (with-current-buffer (or buffer (current-buffer))
     (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
            (line-num (line-number-at-pos (point)))
@@ -964,7 +972,7 @@ nil, this uses the current buffer.
         ("column_num" . ,column-num)))))
 
 (defun ycmd--standard-content-with-extras (buffer &optional extra)
-  "Generate 'standard' content for BUFFER with EXTRA-CONTENT."
+  "Generate 'standard' content for BUFFER with EXTRA content."
   (let ((standard-content (ycmd--standard-content buffer))
         (extra-content (pcase extra
                          (`force-semantic '(("force_semantic" . "true")))
@@ -974,10 +982,11 @@ nil, this uses the current buffer.
 
 
 (defvar ycmd--log-enabled nil
-  "Whether http content should be logged. This is useful for
-  debugging.")
+  "If non-nil, http content will be logged.
+This is useful for debugging.")
 
 (defun ycmd--log-content (header content)
+  "Insert log with HEADER and CONTENT in a buffer."
   (when ycmd--log-enabled
     (let ((buffer (get-buffer-create "*ycmd-content-log*")))
       (with-current-buffer buffer
@@ -1077,8 +1086,10 @@ anything like that.)
             content))))))
 
 (defun ycmd--conditional-parse (&optional condition)
-  "Reparse the buffer if CONDITION is in `ycmd-parse-conditions'
-or is nil."
+  "Reparse the buffer under CONDITION.
+
+If CONDITION is non-nil, determine whether a ready to parse
+notification should be sent according `ycmd-parse-conditions'."
   (when (and ycmd-mode
              (or (not condition)
                  (memq condition ycmd-parse-conditions)))
@@ -1094,7 +1105,8 @@ or is nil."
   (ycmd--conditional-parse 'idle-change))
 
 (defun ycmd--on-change (beg end _len)
-  "Function to run when a buffer change between BEG and END."
+  "Function to run when a buffer change between BEG and END.
+_LEN is ununsed."
   (save-match-data
     (when ycmd-mode
       (ycmd--kill-timer ycmd--notification-timer)
