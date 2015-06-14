@@ -372,7 +372,8 @@ This does nothing if no server is running."
       (when (ycmd-running?)
         (delete-process ycmd--server-process)))
 
-  (ycmd--kill-timer ycmd--notification-timer))
+  (ycmd--kill-timer ycmd--keepalive-timer)
+  (ycmd--global-teardown))
 
 (defun ycmd-running? ()
   "Tells you if a ycmd server is already running."
@@ -544,7 +545,8 @@ Useful in case compile-time is considerable."
         (lambda (location)
           (when location
             (if (assoc-default 'exception location)
-                (ycmd--handle-exception location #'ycmd--handle-goto-exception)
+                (ycmd--handle-exception
+                 location #'ycmd--handle-goto-exception)
               (ycmd--handle-goto-success location))))))))
 
 (defun ycmd--send-goto-request (type buffer pos)
@@ -713,31 +715,16 @@ Handle configuration file according the value of
                             `((filepath . ,conf-file))))))
     (ycmd-notify-file-ready-to-parse)))
 
-(defun ycmd--handle-runtime-exception (results)
-  "Handle runtime exceptions in RESULTS."
-  (let* ((exception (assoc-default 'exception results))
-         (exception-type (assoc-default 'TYPE exception))
-         (message (assoc-default 'message results)))
-    (cond ((and (string-equal exception-type "RuntimeError")
-                (string-equal message "File already being parsed."))
-           (setq ycmd--file-already-parsing-exception t)))))
-
 (defun ycmd--handle-notify-response (results)
   "If RESULTS is a vector or nil, the response is an acual parse result.
 Otherwise the response is probably an exception."
   (if (or (not results)
           (vectorp results))
-      (run-hook-with-args 'ycmd-file-parse-result-hook results)
+      (progn
+        (run-hook-with-args 'ycmd-file-parse-result-hook results)
+        (ycmd--report-status 'parsed))
     (when (assoc 'exception results)
-      (ycmd--handle-exception
-       results #'ycmd--handle-runtime-exception))))
-
-(defvar-local ycmd--file-already-parsing-exception nil)
-(defun ycmd--parsing-buffer-finished-p ()
-  "Return t if parsing has finished."
-  (if ycmd--file-already-parsing-exception
-      (setq ycmd--file-already-parsing-exception nil)
-    t))
+      (ycmd--handle-exception results))))
 
 (defun ycmd-notify-file-ready-to-parse ()
   "Send a notification to ycmd that the buffer is ready to be parsed.
@@ -753,13 +740,12 @@ functions in `ycmd-file-parse-result-hook'."
            (content (cons '("event_name" . "FileReadyToParse")
                           (ycmd--standard-content-with-extras
                            buff extra-content))))
-
-      ;; Record that the buffer is being parsed
-      (ycmd--report-status 'parsing)
-
       (deferred:$
         ;; try
         (deferred:$
+          ;; Record that the buffer is being parsed
+          (ycmd--report-status 'parsing)
+
           ;; Make the request.
           (ycmd--request "/event_notification"
                          content
@@ -773,15 +759,8 @@ functions in `ycmd-file-parse-result-hook'."
         ;; catch
         (deferred:error it
           (lambda (err)
-            (message "Error sending notification request: %s" err)))
-
-        ;; finally. As I understand it, this should always be
-        ;; executed.
-        (deferred:nextc it
-          (lambda ()
-            (with-current-buffer buff
-              (when (ycmd--parsing-buffer-finished-p)
-                (ycmd--report-status 'parsed)))))))))
+            (message "Error sending notification request: %s" err)
+            (ycmd--report-status 'errored)))))))
 
 (defun ycmd-display-raw-file-parse-results ()
   "Request file-parse results and display them in a buffer in raw form.
@@ -945,7 +924,8 @@ the name of the newly created file."
               (incf cont)
               (when (< ycmd-startup-timeout cont) ; timeout after specified period
                 (set-window-buffer nil proc-buff)
-                (error "Server timeout."))))))))))
+                (error "Server timeout.")
+                (ycmd--report-status 'errored))))))))))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
@@ -1130,11 +1110,25 @@ _LEN is ununsed."
     (setq ycmd--on-focus-timer
           (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
 
+(defun ycmd--teardown ()
+  "Teardown ycmd in current buffer."
+  (ycmd--kill-timer ycmd--notification-timer)
+  (setq ycmd--last-status-change 'unparsed))
+
+(defun ycmd--global-teardown ()
+  "Teardown ycmd in all buffers."
+  (ycmd--kill-timer ycmd--on-focus-timer)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when ycmd-mode
+        (ycmd--teardown)))))
 
 (defconst ycmd-hooks-alist
   '((after-save-hook                  . ycmd--on-save)
     (after-change-functions           . ycmd--on-change)
-    (window-configuration-change-hook . ycmd--on-window-configuration-change))
+    (window-configuration-change-hook . ycmd--on-window-configuration-change)
+    (kill-buffer-hook                 . ycmd--teardown)
+    (before-revert-hook               . ycmd--teardown))
   "Hooks which ycmd hooks in.")
 
 (add-hook 'kill-emacs-hook 'ycmd-close)
@@ -1198,8 +1192,10 @@ explicitly re-define the prefix key:
   (let ((force-semantic
          (when ycmd-force-semantic-completion "/s"))
         (text (pcase ycmd--last-status-change
-                ((or `unparsed `parsed) "")
-                (`parsing "*"))))
+                (`unparsed "?")
+                (`parsing "*")
+                (`errored "!")
+                (`parsed ""))))
     (concat " ycmd" force-semantic text)))
 
 ;;;###autoload
@@ -1226,7 +1222,8 @@ Otherwise behave as if called interactively.
       (add-hook (car hook) (cdr hook) nil 'local)))
    (t
     (dolist (hook ycmd-hooks-alist)
-      (remove-hook (car hook) (cdr hook) 'local)))))
+      (remove-hook (car hook) (cdr hook) 'local))
+    (ycmd--teardown))))
 
 ;;;###autoload
 (defun ycmd-setup ()
