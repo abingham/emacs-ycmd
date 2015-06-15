@@ -713,6 +713,7 @@ Handle configuration file according the value of
             (t
              (ycmd--request "/ignore_extra_conf_file"
                             `((filepath . ,conf-file))))))
+    (ycmd--report-status 'unparsed)
     (ycmd-notify-file-ready-to-parse)))
 
 (defun ycmd--handle-notify-response (results)
