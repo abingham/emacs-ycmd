@@ -370,10 +370,10 @@ This does nothing if no server is running."
 
   (unwind-protect
       (when (ycmd-running?)
-        (delete-process ycmd--server-process)))
+        (delete-process ycmd--server-process)
+        (ycmd--global-teardown)))
 
-  (ycmd--kill-timer ycmd--keepalive-timer)
-  (ycmd--global-teardown))
+  (ycmd--kill-timer ycmd--keepalive-timer))
 
 (defun ycmd-running? ()
   "Tells you if a ycmd server is already running."
