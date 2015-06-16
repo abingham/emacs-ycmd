@@ -337,6 +337,12 @@ in that list.  If nil, ycmd mode is never turned on by
     "cs")
   "A list of ycmd file type strings which support semantic completion.")
 
+(defmacro ycmd--kill-timer (timer)
+   "Cancel TIMER."
+   `(when ,timer
+      (cancel-timer ,timer)
+      (setq ,timer nil)))
+
 (defun ycmd-diagnostic-file-types (mode)
   "Find the ycmd file types for MODE which support semantic completion.
 
@@ -808,12 +814,6 @@ and `delete-process'.")
 
 If there is no established mapping, return nil."
   (cdr (assoc mode ycmd-file-type-map)))
-
-(defmacro ycmd--kill-timer (timer)
-  "Cancel TIMER."
-  `(when ,timer
-     (cancel-timer ,timer)
-     (setq ,timer nil)))
 
 (defun ycmd--start-keepalive-timer ()
   "Kill any existing keepalive timer and start a new one."
