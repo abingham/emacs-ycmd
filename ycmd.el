@@ -248,6 +248,11 @@ use `ycmd-parse-buffer'."
   :group 'ycmd
   :type 'boolean)
 
+(defcustom ycmd-hide-url-status t
+  "Whether to quash url status messages for ycmd requests."
+  :group 'ycmd
+  :type 'boolean)
+
 (defcustom ycmd-tag-files nil
   "Whether to collect identifiers from tags file.
 
@@ -1044,7 +1049,8 @@ anything like that.)
 "
   (unless (ycmd-running?) (ycmd-open))
 
-  (let* ((ycmd-request-backend 'url-retrieve)
+  (let* ((url-show-status (not ycmd-hide-url-status))
+         (ycmd-request-backend 'url-retrieve)
          (content (json-encode content))
          (hmac (ycmd--get-request-hmac type location content))
          (encoded-hmac (base64-encode-string hmac 't)))
