@@ -376,7 +376,10 @@ This does nothing if no server is running."
 
   (unwind-protect
       (when (ycmd-running?)
-        (delete-process ycmd--server-process)
+        ;; NB: Don't replace this call with delete-process,
+        ;; because that doesn't give ycmd a chance to clean
+        ;; up tempfiles, etc. 
+        (interrupt-process ycmd--server-process)
         (ycmd--global-teardown)))
 
   (ycmd--kill-timer ycmd--keepalive-timer))
