@@ -936,6 +936,13 @@ the name of the newly created file."
   (- (position-bytes (point))
      (position-bytes (line-beginning-position))))
 
+(defun ycmd--encode-string (s)
+  "Encode string S."
+  (if (eval-when-compile
+        (version-list-< (version-to-list emacs-version) '(25)))
+      s
+    (encode-coding-string s 'utf-8 t)))
+
 (defun ycmd--standard-content (&optional buffer)
   "Generate the 'standard' content for ycmd posts.
 
@@ -944,8 +951,10 @@ nil, this uses the current buffer."
   (with-current-buffer (or buffer (current-buffer))
     (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
            (line-num (line-number-at-pos (point)))
-           (full-path (or (buffer-file-name) ""))
-           (file-contents (buffer-substring-no-properties (point-min) (point-max)))
+           (full-path (ycmd--encode-string (or (buffer-file-name) "")))
+           (file-contents (ycmd--encode-string
+                           (buffer-substring-no-properties
+                            (point-min) (point-max))))
            (file-types (or (ycmd-major-mode-to-file-types major-mode)
                            '("generic"))))
       `(("file_data" .
@@ -1012,15 +1021,12 @@ This is useful for debugging.")
 
 (defun ycmd--get-request-hmac (method path body)
   "Generate HMAC for request from METHOD, PATH and BODY."
-  (let* ((hmac-secret (encode-coding-string
-                       ycmd--hmac-secret 'utf-8 t))
-         (joined-hmac-input
-          (mapconcat
-           (lambda (val) (ycmd--hmac-function
-                          (encode-coding-string val 'utf-8 t)
-                          hmac-secret))
-           `(,method ,path ,(or body "")) "")))
-    (ycmd--hmac-function joined-hmac-input hmac-secret)))
+  (ycmd--hmac-function
+   (mapconcat (lambda (val)
+                (ycmd--hmac-function
+                 (ycmd--encode-string val) ycmd--hmac-secret))
+              `(,method ,path ,(or body "")) "")
+   ycmd--hmac-secret))
 
 (defun* ycmd--request (location
                        content
