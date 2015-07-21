@@ -365,7 +365,7 @@ This kills any ycmd server already running (under ycmd.el's
 control.) The newly started server will have a new HMAC secret."
   (interactive)
 
-  (ycmd-close)
+  (ycmd-close 0.5)
 
   (let ((hmac-secret (ycmd--generate-hmac-secret)))
     (ycmd--start-server hmac-secret)
@@ -373,18 +373,25 @@ control.) The newly started server will have a new HMAC secret."
 
   (ycmd--start-keepalive-timer))
 
-(defun ycmd-close ()
+(defun ycmd-close (&optional time-out-secs)
   "Shutdown any running ycmd server.
+
+Wait TIME-OUT-SECS seconds after `interrupt-process' call for the
+ycmd server to end before killing the process with
+`delete-process'.
 
 This does nothing if no server is running."
   (interactive)
 
   (unwind-protect
       (when (ycmd-running?)
-        ;; NB: Don't replace this call with delete-process,
-        ;; because that doesn't give ycmd a chance to clean
-        ;; up tempfiles, etc. 
-        (interrupt-process ycmd--server-process)
+        (condition-case nil
+            (progn
+              (interrupt-process ycmd--server-process)
+              (when time-out-secs
+                (sit-for time-out-secs)
+                (delete-process ycmd--server-process)))
+          (error nil))
         (ycmd--global-teardown)))
 
   (ycmd--kill-timer ycmd--keepalive-timer))
