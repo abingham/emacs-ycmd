@@ -628,7 +628,13 @@ the documentation."
      (-when-let (documentation (assoc-default 'detailed_info result))
        (with-help-window (get-buffer-create " *ycmd-documentation*")
          (with-current-buffer standard-output
-           (insert documentation)))))))
+           (insert documentation)))))
+   (lambda (result)
+     (-when-let* ((exception (assoc-default 'exception result))
+                  (exception-type (assoc-default 'TYPE exception))
+                  (msg (assoc-default 'message result)))
+       (when (string= msg "No documentation available for current context")
+         (message "%s" msg))))))
 
 (define-button-type 'ycmd--error-button
   'face '(error bold underline)
