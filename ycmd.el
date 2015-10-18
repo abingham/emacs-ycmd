@@ -518,6 +518,37 @@ a results vector as argument."
            (ycmd--handle-extra-conf-exception results))
           (default-handler (funcall default-handler results)))))
 
+(defun ycmd--send-request (type success-handler &optional exception-handler)
+  "Send a request of TYPE to the `ycmd' server.
+
+SUCCESS-HANDLER is called when for a successful response.  If
+EXCEPTION-HANDLER is non-nil use it as default exception
+handler."
+  (when ycmd-mode
+    (deferred:$
+
+      (ycmd--send-completer-command-request
+       type (current-buffer) (point))
+
+      (deferred:nextc it
+        (lambda (result)
+          (when result
+            (if (assoc-default 'exception result)
+                (ycmd--handle-exception
+                 result exception-handler)
+              (funcall success-handler result))))))))
+
+(defun ycmd--send-completer-command-request (type buffer pos)
+  "Send Go To request of TYPE to BUFFER at POS."
+  (with-current-buffer buffer
+    (goto-char pos)
+    (let ((content (cons (list "command_arguments" type)
+                         (ycmd--standard-content buffer))))
+      (ycmd--request
+       "/run_completer_command"
+       content
+       :parser 'json-read))))
+
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
   (interactive)
@@ -557,29 +588,8 @@ Useful in case compile-time is considerable."
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request TYPE."
-  (when ycmd-mode
-    (deferred:$
-
-      (ycmd--send-goto-request type (current-buffer) (point))
-
-      (deferred:nextc it
-        (lambda (location)
-          (when location
-            (if (assoc-default 'exception location)
-                (ycmd--handle-exception
-                 location #'ycmd--handle-goto-exception)
-              (ycmd--handle-goto-success location))))))))
-
-(defun ycmd--send-goto-request (type buffer pos)
-  "Send Go To request of TYPE to BUFFER at POS."
-  (with-current-buffer buffer
-    (goto-char pos)
-    (let ((content (cons (list "command_arguments" type)
-                         (ycmd--standard-content buffer))))
-      (ycmd--request
-       "/run_completer_command"
-       content
-       :parser 'json-read))))
+  (ycmd--send-request
+   type 'ycmd--handle-goto-success 'ycmd--handle-goto-exception))
 
 (defun ycmd--goto-location (location)
   "Move cursor to LOCATION.
@@ -605,6 +615,20 @@ Use BUFFER if non-nil or `current-buffer'."
         (goto-line line)
         (forward-char (- col 1))
         (point)))))
+
+(defun ycmd-get-documentation (&optional arg)
+  "Get documentation for current point in buffer.
+
+If optional ARG is non-nil do not reparse buffer before getting
+the documentation."
+  (interactive "P")
+  (ycmd--send-request
+   (if arg "GetDocQuick" "GetDoc")
+   (lambda (result)
+     (-when-let (documentation (assoc-default 'detailed_info result))
+       (with-help-window (get-buffer-create " *ycmd-documentation*")
+         (with-current-buffer standard-output
+           (insert documentation)))))))
 
 (define-button-type 'ycmd--error-button
   'face '(error bold underline)
@@ -1162,12 +1186,13 @@ _LEN is ununsed."
     (define-key map "o" 'ycmd-open)
     (define-key map "c" 'ycmd-close)
     (define-key map "." 'ycmd-goto)
-    (define-key map "f" 'ycmd-goto-definition)
-    (define-key map "d" 'ycmd-goto-declaration)
-    (define-key map "i" 'ycmd-goto-implementation)
-    (define-key map "I" 'ycmd-goto-imprecise)
+    (define-key map "gd" 'ycmd-goto-definition)
+    (define-key map "gD" 'ycmd-goto-declaration)
+    (define-key map "gi" 'ycmd-goto-implementation)
+    (define-key map "gI" 'ycmd-goto-imprecise)
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
+    (define-key map "d" 'ycmd-get-documentation)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 
