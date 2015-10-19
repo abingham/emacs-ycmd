@@ -616,8 +616,8 @@ Use BUFFER if non-nil or `current-buffer'."
         (forward-char (- col 1))
         (point)))))
 
-(defun ycmd-get-documentation (&optional arg)
-  "Get documentation for current point in buffer.
+(defun ycmd-show-documentation (&optional arg)
+  "Show documentation for current point in buffer.
 
 If optional ARG is non-nil do not reparse buffer before getting
 the documentation."
@@ -1198,7 +1198,7 @@ _LEN is ununsed."
     (define-key map "gI" 'ycmd-goto-imprecise)
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
-    (define-key map "d" 'ycmd-get-documentation)
+    (define-key map "d" 'ycmd-show-documentation)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 
