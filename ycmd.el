@@ -622,6 +622,38 @@ Use BUFFER if non-nil or `current-buffer'."
   (interactive)
   (ycmd--send-request "ClearCompilationFlagCache" nil))
 
+(cl-defun ycmd--fontify-code (code &optional (mode major-mode))
+  "Fontify CODE."
+  (cl-check-type mode function)
+  (if (not (stringp code))
+      code
+    (with-temp-buffer
+      (delay-mode-hooks (funcall mode))
+      (setq font-lock-mode t)
+      (funcall font-lock-function font-lock-mode)
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (insert code)
+        (font-lock-default-fontify-region
+         (point-min) (point-max) nil))
+      (buffer-string))))
+
+(defun ycmd--handle-get-parent-or-type-success (result)
+  (-when-let (msg (assoc-default 'message result))
+    (message "%s" (if (string= msg "Unknown semantic parent")
+                      msg
+                    (ycmd--fontify-code msg)))))
+
+(defun ycmd-get-parent ()
+  (interactive)
+  (ycmd--send-request
+   "GetParent" 'ycmd--handle-get-parent-or-type-success))
+
+(defun ycmd-get-type ()
+  (interactive)
+  (ycmd--send-request
+   "GetType" 'ycmd--handle-get-parent-or-type-success))
+
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
 
@@ -1206,6 +1238,8 @@ _LEN is ununsed."
     (define-key map "v" 'ycmd-show-debug-info)
     (define-key map "d" 'ycmd-show-documentation)
     (define-key map "C" 'ycmd-clear-compilation-flag-cache)
+    (define-key map "t" 'ycmd-get-type)
+    (define-key map "T" 'ycmd-get-parent)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 

@@ -284,29 +284,13 @@ candidates list."
             (assoc-default 'completion_start_column c)
             (company-ycmd--get-construct-candidate-fn))))))))
 
-(cl-defun company-ycmd--fontify-code (code &optional (mode major-mode))
-  "Fontify CODE."
-  (cl-check-type mode function)
-  (if (not (stringp code))
-      code
-    (with-temp-buffer
-      (delay-mode-hooks (funcall mode))
-      (setq font-lock-mode t)
-      (funcall font-lock-function font-lock-mode)
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (insert code)
-        (font-lock-default-fontify-region
-         (point-min) (point-max) nil))
-      (buffer-string))))
-
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
   (let ((meta (get-text-property 0 'meta candidate)))
     (if (stringp meta)
         (let ((meta-trimmed (s-trim meta)))
           (if (company-ycmd--extended-features-p)
-              (company-ycmd--fontify-code meta-trimmed)
+              (ycmd--fontify-code meta-trimmed)
             meta-trimmed))
       meta)))
 
