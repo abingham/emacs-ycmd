@@ -60,34 +60,34 @@
 (defcustom ycmd-request-storage-directory
   (concat (file-name-as-directory user-emacs-directory) "request")
   "Directory to store data related to request.el."
-  :group 'request)
+  :group 'ycmd-request)
 
 (defcustom ycmd-request-curl "curl"
   "Executable for curl command."
-  :group 'request)
+  :group 'ycmd-request)
 
 (defcustom ycmd-request-backend (if (executable-find ycmd-request-curl)
                                'curl
                              'url-retrieve)
   "Backend to be used for HTTP request.
 Automatically set to `curl' if curl command is found."
-  :group 'request)
+  :group 'ycmd-request)
 
 (defcustom ycmd-request-timeout nil
   "Default request timeout in second.
 `nil' means no timeout."
-  :group 'request)
+  :group 'ycmd-request)
 
 (defcustom ycmd-request-log-level -1
   "Logging level for request.
 One of `error'/`warn'/`info'/`verbose'/`debug'.
 -1 means no logging."
-  :group 'request)
+  :group 'ycmd-request)
 
 (defcustom ycmd-request-message-level 'warn
   "Logging level for request.
 See `ycmd-request-log-level'."
-  :group 'request)
+  :group 'ycmd-request)
 
 
 ;;; Utilities
