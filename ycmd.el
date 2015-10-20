@@ -536,7 +536,8 @@ handler."
             (if (assoc-default 'exception result)
                 (ycmd--handle-exception
                  result exception-handler)
-              (funcall success-handler result))))))))
+              (when success-handler
+                (funcall success-handler result)))))))))
 
 (defun ycmd--send-completer-command-request (type buffer pos)
   "Send Go To request of TYPE to BUFFER at POS."
@@ -615,6 +616,11 @@ Use BUFFER if non-nil or `current-buffer'."
         (goto-line line)
         (forward-char (- col 1))
         (point)))))
+
+(defun ycmd-clear-compilation-flag-cache ()
+  "Clear the compilation flags cache."
+  (interactive)
+  (ycmd--send-request "ClearCompilationFlagCache" nil))
 
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
@@ -1199,6 +1205,7 @@ _LEN is ununsed."
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
     (define-key map "d" 'ycmd-show-documentation)
+    (define-key map "C" 'ycmd-clear-compilation-flag-cache)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 
