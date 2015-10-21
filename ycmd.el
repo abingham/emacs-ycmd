@@ -334,6 +334,11 @@ in that list.  If nil, ycmd mode is never turned on by
                       (const :tag "Except" not)
                       (repeat :inline t (symbol :tag "mode")))))
 
+(defcustom ycmd-confirm-fixit t
+  "Whether to confirm when applying fixit on line."
+  :group 'ycmd
+  :type 'boolean)
+
 (defconst ycmd--diagnostic-file-types
   '("c"
     "cpp"
@@ -656,6 +661,96 @@ Use BUFFER if non-nil or `current-buffer'."
   (interactive)
   (ycmd--send-request
    "GetType" 'ycmd--handle-get-parent-or-type-success))
+
+(defun ycmd--replace-chunk (start end replacement-text line-delta char-delta buffer)
+  "Replace text between START and END with REPLACEMENT-TEXT.
+
+LINE-DELTA and CHAR-DELTA are offset from former replacements on
+the current line.  BUFFER is the current working buffer."
+  (let* ((start-line (+ (car start) line-delta))
+         (end-line (+ (car end) line-delta))
+         (source-line-count (1+ (- end-line start-line)))
+         (start-column (+ (cdr start) char-delta))
+         (end-column (cdr end))
+         (replacement-lines (s-split "\n" replacement-text))
+         (replacement-lines-count (length replacement-lines))
+         (new-line-delta (- replacement-lines-count source-line-count))
+         new-char-delta)
+    (when (= source-line-count 1)
+      (setq end-column (+ end-column char-delta)))
+    (setq new-char-delta (- (length (car (last replacement-lines)))
+                            (- end-column start-column)))
+    (when (> replacement-lines-count 1)
+      (setq new-char-delta (- new-char-delta start-column)))
+    (save-excursion
+      (with-current-buffer buffer
+        (delete-region
+         (ycmd--col-line-to-position start-column start-line buffer)
+         (ycmd--col-line-to-position end-column end-line buffer))
+        (insert replacement-text)
+        (cons new-line-delta new-char-delta)))))
+
+(defun ycmd--get-chunk-line-and-column (chunk start-or-end)
+  "Get a cons cell with line and column of CHUNK.
+
+START-OR-END specifies whether to get the range start or end."
+  (let* ((range (assoc-default 'range chunk))
+         (pos (assoc-default start-or-end range))
+         (line-num (assoc-default 'line_num pos))
+         (column-num (assoc-default 'column_num pos)))
+    (cons line-num column-num)))
+
+(defun ycmd--chunk-< (c1 c2)
+  "Return t if C1 should go before C2."
+  (let* ((start-c1 (ycmd--get-chunk-line-and-column c1 'start))
+         (line-num-1 (car start-c1))
+         (column-num-1 (cdr start-c1))
+         (start-c2 (ycmd--get-chunk-line-and-column c2 'start))
+         (line-num-2 (car start-c2))
+         (column-num-2 (cdr start-c2)))
+    (or (< line-num-1 line-num-2)
+        (and (= line-num-1 line-num-2)
+             (< column-num-1 column-num-2)))))
+
+(defun ycmd--replace-chunk-list (chunks &optional buffer)
+  "Replace list of CHUNKS.
+
+If BUFFER is spacified use it as working buffer, else use current
+buffer."
+  (let ((chunks-sorted (sort chunks 'ycmd--chunk-<))
+        (buf (or buffer (current-buffer)))
+        (last-line -1)
+        (line-delta 0)
+        (char-delta 0))
+    (dolist (c chunks-sorted)
+      (-when-let* ((chunk-start (ycmd--get-chunk-line-and-column c 'start))
+                   (chunk-end (ycmd--get-chunk-line-and-column c 'end))
+                   (replacement-text (assoc-default 'replacement_text c)))
+        (unless (eq (car chunk-start) last-line)
+          (setq last-line (car chunk-end))
+          (setq char-delta 0))
+        (let ((new-deltas (ycmd--replace-chunk
+                           chunk-start chunk-end replacement-text
+                           line-delta char-delta buf)))
+          (setq line-delta (+ line-delta (car new-deltas)))
+          (setq char-delta (+ char-delta (cdr new-deltas))))))))
+
+(defun ycmd--handle-fixit-success (result)
+  "Handle a successful FixIt response for RESULT."
+  (-if-let* ((fixits (assoc-default 'fixits result))
+             (fixits (and (not (eq (length fixits) 0))
+                          (elt fixits 0)))
+             (chunks (assoc-default 'chunks fixits)))
+      (let ((use-dialog-box nil))
+        (when (or (not ycmd-confirm-fixit)
+                  (y-or-n-p "Apply FixIts on line? "))
+          (ycmd--replace-chunk-list (append chunks nil))))
+    (message "No FixIts available")))
+
+(defun ycmd-fixit()
+  "Get FixIts for current line."
+  (interactive)
+  (ycmd--send-request "FixIt" 'ycmd--handle-fixit-success))
 
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
@@ -1243,6 +1338,7 @@ _LEN is ununsed."
     (define-key map "C" 'ycmd-clear-compilation-flag-cache)
     (define-key map "t" 'ycmd-get-type)
     (define-key map "T" 'ycmd-get-parent)
+    (define-key map "f" 'ycmd-fixit)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 
