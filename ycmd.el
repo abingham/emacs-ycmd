@@ -639,17 +639,20 @@ Use BUFFER if non-nil or `current-buffer'."
       (buffer-string))))
 
 (defun ycmd--handle-get-parent-or-type-success (result)
+  "Handle a successful GetParent or GetType resonse for RESULT."
   (-when-let (msg (assoc-default 'message result))
     (message "%s" (if (string= msg "Unknown semantic parent")
                       msg
                     (ycmd--fontify-code msg)))))
 
 (defun ycmd-get-parent ()
+  "Get semantic parent for symbol at point."
   (interactive)
   (ycmd--send-request
    "GetParent" 'ycmd--handle-get-parent-or-type-success))
 
 (defun ycmd-get-type ()
+  "Get type for symbol at point."
   (interactive)
   (ycmd--send-request
    "GetType" 'ycmd--handle-get-parent-or-type-success))
