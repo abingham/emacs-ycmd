@@ -738,8 +738,7 @@ buffer."
 (defun ycmd--handle-fixit-success (result)
   "Handle a successful FixIt response for RESULT."
   (-if-let* ((fixits (assoc-default 'fixits result))
-             (fixits (and (not (eq (length fixits) 0))
-                          (append fixits nil))))
+             (fixits (append fixits nil)))
       (let ((use-dialog-box nil))
         (when (or (not ycmd-confirm-fixit)
                   (y-or-n-p "Apply FixIts on current line? "))
