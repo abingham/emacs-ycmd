@@ -742,7 +742,7 @@ buffer."
                           (append fixits nil))))
       (let ((use-dialog-box nil))
         (when (or (not ycmd-confirm-fixit)
-                  (y-or-n-p "Apply FixIts on line? "))
+                  (y-or-n-p "Apply FixIts on current line? "))
           (dolist (fixit fixits)
             (-when-let (chunks (assoc-default 'chunks fixit))
               (ycmd--replace-chunk-list (append chunks nil))))))
