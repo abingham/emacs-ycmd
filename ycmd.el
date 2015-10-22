@@ -739,12 +739,13 @@ buffer."
   "Handle a successful FixIt response for RESULT."
   (-if-let* ((fixits (assoc-default 'fixits result))
              (fixits (and (not (eq (length fixits) 0))
-                          (elt fixits 0)))
-             (chunks (assoc-default 'chunks fixits)))
+                          (append fixits nil))))
       (let ((use-dialog-box nil))
         (when (or (not ycmd-confirm-fixit)
                   (y-or-n-p "Apply FixIts on line? "))
-          (ycmd--replace-chunk-list (append chunks nil))))
+          (dolist (fixit fixits)
+            (-when-let (chunks (assoc-default 'chunks fixit))
+              (ycmd--replace-chunk-list (append chunks nil))))))
     (message "No FixIts available")))
 
 (defun ycmd-fixit()
