@@ -734,7 +734,7 @@ buffer."
       (-when-let* ((chunk-start (ycmd--get-chunk-line-and-column c 'start))
                    (chunk-end (ycmd--get-chunk-line-and-column c 'end))
                    (replacement-text (assoc-default 'replacement_text c)))
-        (unless (eq (car chunk-start) last-line)
+        (unless (= (car chunk-start) last-line)
           (setq last-line (car chunk-end))
           (setq char-delta 0))
         (let ((new-deltas (ycmd--replace-chunk
