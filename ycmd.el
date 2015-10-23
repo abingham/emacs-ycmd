@@ -607,6 +607,11 @@ commands."
               (assoc-default 'column_num location)
               (assoc-default 'line_num location))))
 
+(defun ycmd--goto-line (line)
+  "Go to LINE."
+  (goto-char (point-min))
+  (forward-line (1- line)))
+
 (defun ycmd--col-line-to-position (col line &optional buffer)
   "Convert COL and LINE into a position in the current buffer.
 
@@ -618,7 +623,7 @@ Use BUFFER if non-nil or `current-buffer'."
     (if (= col 0)
         0
       (with-current-buffer buff
-        (goto-line line)
+        (ycmd--goto-line line)
         (forward-char (- col 1))
         (point)))))
 
@@ -800,14 +805,14 @@ When clicked, this will popup MESSAGE."
 (defun ycmd--line-start-position (line)
   "Find position at the start of LINE."
   (save-excursion
-    (goto-line line)
+    (ycmd--goto-line line)
     (beginning-of-line)
     (point)))
 
 (defun ycmd--line-end-position (line)
   "Find position at the end of LINE."
   (save-excursion
-    (goto-line line)
+    (ycmd--goto-line line)
     (end-of-line)
     (point)))
 
