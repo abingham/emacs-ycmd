@@ -646,9 +646,12 @@ Use BUFFER if non-nil or `current-buffer'."
 (defun ycmd--handle-get-parent-or-type-success (result)
   "Handle a successful GetParent or GetType resonse for RESULT."
   (-when-let (msg (assoc-default 'message result))
-    (message "%s" (if (string= msg "Unknown semantic parent")
-                      msg
-                    (ycmd--fontify-code msg)))))
+    (message "%s" (pcase msg
+                    ((or "Unknown semantic parent"
+                         "Unknown type"
+                         "Internal error: cursor not valid"
+                         "Internal error: no translation unit") msg)
+                    (_ (ycmd--fontify-code msg))))))
 
 (defun ycmd-get-parent ()
   "Get semantic parent for symbol at point."
