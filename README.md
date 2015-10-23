@@ -1,5 +1,7 @@
 # emacs-ycmd
 
+[![MELPA](http://melpa.org/packages/ycmd-badge.svg)](http://melpa.org/#/ycmd)
+
 emacs-ycmd is a client for [ycmd](https://github.com/Valloric/ycmd),
 the code completion system. It takes care of managing a ycmd server
 and fetching completions from that server.
@@ -75,6 +77,10 @@ you just want to see the possible completions at a point, you can try
 `ycmd-display-completions` which will dump a raw completion struct
 into a buffer. This is more of a debugging tool than anything.
 
+## company-ycmd
+
+[![MELPA](http://melpa.org/packages/company-ycmd-badge.svg)](http://melpa.org/#/company-ycmd)
+
 More likely, you'll want to use a completion framework like
 `company-mode` to manage the completions for you. Here's how to do
 that:
@@ -97,6 +103,8 @@ In any event, if you are facing problems with ycmd not starting and/or hanging E
 ```
 
 ## `flycheck` integration
+
+[![MELPA](http://melpa.org/packages/flycheck-ycmd-badge.svg)](http://melpa.org/#/flycheck-ycmd)
 
 `flycheck-ycmd.el` allows you to use `ycmd` as a backend for
 `flycheck`. With this enabled, whenever `ycmd` parses a file the
