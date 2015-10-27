@@ -906,7 +906,7 @@ Handle configuration file according the value of
 
             ((or (eq ycmd-extra-conf-handler 'load)
                  (and (eq ycmd-extra-conf-handler 'ask)
-                      (y-or-n-p (format "Load YCMD extra conf %s?" conf-file))))
+                      (y-or-n-p (format "Load YCMD extra conf %s? " conf-file))))
              (ycmd--request "/load_extra_conf_file"
                             `((filepath . ,conf-file))))
 
@@ -1119,7 +1119,7 @@ the name of the newly created file."
               (incf cont)
               (when (< ycmd-startup-timeout cont) ; timeout after specified period
                 (set-window-buffer nil proc-buff)
-                (error "Server timeout.")
+                (error "Server timeout")
                 (ycmd--report-status 'errored))))))))))
 
 (defun ycmd--column-in-bytes ()
