@@ -575,6 +575,11 @@ handler."
   (interactive)
   (ycmd--goto "GoToImplementation"))
 
+(defun ycmd-goto-include ()
+  "Go to the include of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToInclude"))
+
 (defun ycmd-goto-imprecise ()
   "Fast implementation of Go To at the cost of precision.
 Useful in case compile-time is considerable."
@@ -1336,10 +1341,11 @@ _LEN is ununsed."
     (define-key map "o" 'ycmd-open)
     (define-key map "c" 'ycmd-close)
     (define-key map "." 'ycmd-goto)
+    (define-key map "gi" 'ycmd-goto-include)
     (define-key map "gd" 'ycmd-goto-definition)
     (define-key map "gD" 'ycmd-goto-declaration)
-    (define-key map "gi" 'ycmd-goto-implementation)
-    (define-key map "gI" 'ycmd-goto-imprecise)
+    (define-key map "gm" 'ycmd-goto-implementation)
+    (define-key map "gp" 'ycmd-goto-imprecise)
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
     (define-key map "d" 'ycmd-show-documentation)
