@@ -588,8 +588,7 @@ Useful in case compile-time is considerable."
 
 (defun ycmd--handle-goto-exception (results)
   "Handle a Go To exception in RESULTS."
-  (let ((msg (assoc-default 'message results nil "UNKNOWN")))
-    (warn (format "goto exception: %s" msg))))
+  (message "%s" (assoc-default 'message results nil "Unknown exception")))
 
 (defun ycmd--handle-goto-success (location)
   "Handle a successfull Go To response for LOCATION."
