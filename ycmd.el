@@ -120,6 +120,7 @@
 
 (defgroup ycmd nil
   "a ycmd emacs client"
+  :link '(url-link :tag "Github" "https://github.com/abingham/emacs-ycmd")
   :group 'tools
   :group 'programming)
 
