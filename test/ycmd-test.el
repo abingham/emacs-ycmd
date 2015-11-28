@@ -53,31 +53,10 @@
 (require 'f)
 (require 'ycmd)
 
-(defun ycmd-test-load-file (filename)
-  (let* ((this-dir (f-dirname (f-this-file)))
-         (filename (f-join this-dir filename)))
-    (f-read filename)))
+(defconst ycmd-test-location
+  (file-name-directory (or load-file-name buffer-file-name)))
 
-(setq ycmd-test-cpp-content
-      (ycmd-test-load-file "test.cpp"))
-
-(setq ycmd-test-goto-declaration-cpp-content
-      (ycmd-test-load-file "test_goto_declaration.cpp"))
-
-(defun ycmd-test-create-file (content)
-  "Create a new temporary file and write CONTENT to it.
-
-Returns buffer visiting new file."
-  (let* ((filename (make-temp-file "ycmd-test"))
-         (buff (create-file-buffer filename)))
-    (with-current-buffer buff
-      (set-visited-file-name filename)
-      (erase-buffer)
-      (insert content)
-      (save-buffer))
-    buff))
-
-(defun ycmd-test-prepare-file (content mode)
+(defun ycmd-test-prepare-file (filename mode)
   "Create a new temporary file containing CONTENT, put that file
 into MODE, and wait for initial ycmd parsing of the file to
 complete.
@@ -86,56 +65,66 @@ This has the side-effect of (re)starting ycmd.
 
 Return the buffer.
 "
-  (lexical-let ((buff (ycmd-test-create-file content))
-                (ycmd-extra-conf-handler 'load))
+  (let ((buff (find-file-noselect (f-join ycmd-test-location filename)))
+        (ycmd-extra-conf-handler 'load)
+        (ycmd-parse-conditions '(mode-enabled)))
     (with-current-buffer buff
+      (delay-mode-hooks (funcall mode))
       (ycmd-open)
       (ycmd-mode t)
-      (funcall mode)
       (while (ycmd-parsing-in-progress-p) (sit-for 0.1)))
     buff))
 
-(ert-deftest ycmd-test-completions ()
-  "Test that completion candidates contain expected results."
-  (lexical-let ((buff (ycmd-test-prepare-file ycmd-test-cpp-content 'c++-mode)))
-    
-    (deferred:sync!
-      
-      (deferred:$
-        (ycmd-get-completions
-         buff
-         (ycmd--col-line-to-position 7 8 buff))
-        
-        (deferred:nextc it
-          (lambda (completions)
-            (let ((start-col (assoc-default 'completion_start_column completions))
-                  (completions (assoc-default 'completions completions)))
-              (should (some (lambda (c) (string-equal "llurp" (assoc-default 'insertion_text c))) completions))
-              (should (= start-col 7)))))))
-    
-    (kill-buffer buff)))
+(defmacro ycmd-ert-test-deferred (name filename mode request-func column line &rest body)
+  "Define a test case for a deferred request to the ycmd.
 
-(ert-deftest ycmd-test-goto-declaration ()
-  "Test that goto-declaration works."
-  (lexical-let ((buff (ycmd-test-prepare-file ycmd-test-goto-declaration-cpp-content 'c++-mode)))
-    
-    (deferred:sync!
-      
-      (deferred:$
-        (ycmd--send-goto-request
-         "GoToDeclaration"
-         buff
-         (ycmd--col-line-to-position 7 9 buff))
-        
-        (deferred:nextc it
-          (lambda (location)
-            (if (assoc-default 'exception location)
-                (should nil)
-              (progn
-                (should (= (assoc-default 'column_num location) 11))
-                (should (= (assoc-default 'line_num location) 5))))))))
-    
-    (kill-buffer buff)))
+NAME is a symbol denoting the local name of the test.  The test
+itself is named `ycmd-test-NAME'.  FILENAME is the input file with
+the `major-mode' MODE.  REQUEST-FUNC is the function with the
+request to the ycmd server.  COLUMN and LINE is the file location
+for the request.  The remaining forms of BODY are used to evaluate
+the server's response,"
+  (declare (indent 3) (debug t))
+  (let ((full-name (intern (format "ycmd-test-%s" name))))
+    `(ert-deftest ,full-name ()
+       (let* ((buff (ycmd-test-prepare-file ,filename ,mode))
+              (current-position (ycmd--col-line-to-position ,column ,line buff)))
+         (deferred:sync!
+           (deferred:$
+             (funcall ,request-func buff current-position)
+             (deferred:nextc it
+               (lambda (response)
+                 ,@body))))
+         (kill-buffer buff)))))
+
+(ycmd-ert-test-deferred get-completions "test.cpp" 'c++-mode
+  'ycmd-get-completions
+  7 8
+  (let ((start-col (assoc-default 'completion_start_column response))
+        (completions (assoc-default 'completions response)))
+    (should (some (lambda (c)
+                    (string-equal
+                     "llurp" (assoc-default 'insertion_text c)))
+                  completions))
+    (should (= start-col 7))))
+
+(ycmd-ert-test-deferred goto-declaration "test_goto.cpp" 'c++-mode
+  (apply-partially #'ycmd--send-completer-command-request "GoToDeclaration")
+  7 9
+  (if (assoc-default 'exception response)
+      (should nil)
+    (progn
+      (should (= (assoc-default 'column_num response) 10))
+      (should (= (assoc-default 'line_num response) 2)))))
+
+(ycmd-ert-test-deferred goto-definition "test_goto.cpp" 'c++-mode
+  (apply-partially #'ycmd--send-completer-command-request "GoToDefinition")
+  7 9
+  (if (assoc-default 'exception response)
+      (should nil)
+    (progn
+      (should (= (assoc-default 'column_num response) 11))
+      (should (= (assoc-default 'line_num response) 5)))))
 
 (provide 'ycmd-test)
 
