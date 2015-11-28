@@ -126,6 +126,21 @@ the server's response,"
       (should (= (assoc-default 'column_num response) 11))
       (should (= (assoc-default 'line_num response) 5)))))
 
+
+(defmacro ycmd-test-with-buffer (filename mode &rest body)
+  "Create temporary current buffer with FILENAME and MODE and execute BODY."
+  (declare (indent 2) (debug t))
+  `(let ((it (ycmd-test-prepare-file ,filename ,mode)))
+     (save-excursion
+       (with-current-buffer it
+         ,@body))
+     (kill-buffer it)))
+
+(ert-deftest ycmd-test-col-line-to-position ()
+  (ycmd-test-with-buffer "test_goto.cpp" 'c++-mode
+   (should (= (ycmd--col-line-to-position 10 2) 23))))
+
+
 (provide 'ycmd-test)
 
 ;;; ycmd-test.el ends here
