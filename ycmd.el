@@ -356,11 +356,229 @@ in that list.  If nil, ycmd mode is never turned on by
     "cs")
   "A list of ycmd file type strings which support semantic completion.")
 
+(defvar ycmd--server-actual-port 0
+  "The actual port being used by the ycmd server.
+This is set based on the output from the server itself.")
+
+(defvar ycmd--hmac-secret nil
+  "This is populated with the hmac secret of the current connection.
+Users should never need to modify this, hence the defconst.  It is
+not, however, treated as a constant by this code.  This value
+gets set in ycmd-open.")
+
+(defconst ycmd--server-process "ycmd-server"
+  "The Emacs name of the server process.
+This is used by functions like `start-process', `get-process'
+and `delete-process'.")
+
+(defvar-local ycmd--notification-timer nil
+  "Timer for notifying ycmd server to do work, e.g. parsing files.")
+
+(defvar ycmd--keepalive-timer nil
+  "Timer for sending keepalive messages to the server.")
+
+(defvar ycmd--on-focus-timer nil
+  "Timer for deferring ycmd server notification to parse a buffer.")
+
+(defconst ycmd--server-buffer-name "*ycmd-server*"
+  "Name of the ycmd server buffer.")
+
+(defvar-local ycmd--last-status-change 'unparsed
+  "The last status of the current buffer.")
+
+(defconst ycmd-hooks-alist
+  '((after-save-hook                  . ycmd--on-save)
+    (after-change-functions           . ycmd--on-change)
+    (window-configuration-change-hook . ycmd--on-window-configuration-change)
+    (kill-buffer-hook                 . ycmd--teardown)
+    (before-revert-hook               . ycmd--teardown))
+  "Hooks which ycmd hooks in.")
+
+(add-hook 'kill-emacs-hook 'ycmd-close)
+
+(defvar ycmd-command-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "p" 'ycmd-parse-buffer)
+    (define-key map "o" 'ycmd-open)
+    (define-key map "c" 'ycmd-close)
+    (define-key map "." 'ycmd-goto)
+    (define-key map "gi" 'ycmd-goto-include)
+    (define-key map "gd" 'ycmd-goto-definition)
+    (define-key map "gD" 'ycmd-goto-declaration)
+    (define-key map "gm" 'ycmd-goto-implementation)
+    (define-key map "gp" 'ycmd-goto-imprecise)
+    (define-key map "s" 'ycmd-toggle-force-semantic-completion)
+    (define-key map "v" 'ycmd-show-debug-info)
+    (define-key map "d" 'ycmd-show-documentation)
+    (define-key map "C" 'ycmd-clear-compilation-flag-cache)
+    (define-key map "t" 'ycmd-get-type)
+    (define-key map "T" 'ycmd-get-parent)
+    (define-key map "f" 'ycmd-fixit)
+    map)
+  "Keymap for `ycmd-mode' interactive commands.")
+
+(defcustom ycmd-keymap-prefix (kbd "C-c Y")
+  "Prefix for key bindings of `ycmd-mode'.
+
+Changing this variable outside Customize does not have any
+effect.  To change the keymap prefix from Lisp, you need to
+explicitly re-define the prefix key:
+
+    (define-key ycmd-mode-map ycmd-keymap-prefix nil)
+    (setq ycmd-keymap-prefix (kbd \"C-c ,\"))
+    (define-key ycmd-mode-map ycmd-keymap-prefix
+                ycmd-command-map)"
+  :group 'ycmd
+  :type 'string
+  :risky t
+  :set
+  (lambda (variable key)
+    (when (and (boundp variable) (boundp 'ycmd-mode-map))
+      (define-key ycmd-mode-map (symbol-value variable) nil)
+      (define-key ycmd-mode-map key ycmd-command-map))
+    (set-default variable key)))
+
+(defvar ycmd-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map ycmd-keymap-prefix ycmd-command-map)
+    map)
+  "Keymap for `ycmd-mode'.")
+
 (defmacro ycmd--kill-timer (timer)
    "Cancel TIMER."
    `(when ,timer
       (cancel-timer ,timer)
       (setq ,timer nil)))
+
+(defun ycmd-parsing-in-progress-p ()
+  "Return t if parsing is in progress."
+  (equal ycmd--last-status-change 'parsing))
+
+(defun ycmd--report-status (status)
+  "Report ycmd STATUS."
+  (setq ycmd--last-status-change status)
+  (force-mode-line-update))
+
+(defun ycmd--mode-line-status-text ()
+  "Get text for the mode line."
+  (let ((force-semantic
+         (when ycmd-force-semantic-completion "/s"))
+        (text (pcase ycmd--last-status-change
+                (`unparsed "?")
+                (`parsing "*")
+                (`errored "!")
+                (`parsed ""))))
+    (concat " ycmd" force-semantic text)))
+
+;;;###autoload
+(define-minor-mode ycmd-mode
+  "Minor mode for interaction with the ycmd completion server.
+
+When called interactively, toggle `ycmd-mode'.  With prefix ARG,
+enable `ycmd-mode' if ARG is positive, otherwise disable it.
+
+When called from Lisp, enable `ycmd-mode' if ARG is omitted,
+nil or positive.  If ARG is `toggle', toggle `ycmd-mode'.
+Otherwise behave as if called interactively.
+
+\\{ycmd-mode-map}"
+  :init-value nil
+  :keymap ycmd-mode-map
+  :lighter (:eval (ycmd--mode-line-status-text))
+  :group 'ycmd
+  :require 'ycmd
+  :after-hook (ycmd--conditional-parse 'mode-enabled)
+  (cond
+   (ycmd-mode
+    (dolist (hook ycmd-hooks-alist)
+      (add-hook (car hook) (cdr hook) nil 'local)))
+   (t
+    (dolist (hook ycmd-hooks-alist)
+      (remove-hook (car hook) (cdr hook) 'local))
+    (ycmd--teardown))))
+
+;;;###autoload
+(defun ycmd-setup ()
+  "Setup `ycmd-mode'.
+
+Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
+  (interactive)
+  (dolist (it ycmd-file-type-map)
+    (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
+(make-obsolete 'ycmd-setup 'global-ycmd-mode "0.9.1")
+
+(defun ycmd--maybe-enable-mode ()
+  "Enable `ycmd-mode' according `ycmd-global-modes'."
+  (when (pcase ycmd-global-modes
+          (`t (ycmd-major-mode-to-file-types major-mode))
+          (`all t)
+          (`(not . ,modes) (not (memq major-mode modes)))
+          (modes (memq major-mode modes)))
+    (ycmd-mode)))
+
+;;;###autoload
+(define-globalized-minor-mode global-ycmd-mode ycmd-mode
+  ycmd--maybe-enable-mode
+  :init-value nil)
+
+
+(defun ycmd--conditional-parse (&optional condition)
+  "Reparse the buffer under CONDITION.
+
+If CONDITION is non-nil, determine whether a ready to parse
+notification should be sent according `ycmd-parse-conditions'."
+  (when (and ycmd-mode
+             (or (not condition)
+                 (memq condition ycmd-parse-conditions)))
+    (ycmd-notify-file-ready-to-parse)))
+
+(defun ycmd--on-save ()
+  "Function to run when the buffer has been saved."
+  (ycmd--conditional-parse 'save))
+
+(defun ycmd--on-idle-change ()
+  "Function to run on idle-change."
+  (ycmd--kill-timer ycmd--notification-timer)
+  (ycmd--conditional-parse 'idle-change))
+
+(defun ycmd--on-change (beg end _len)
+  "Function to run when a buffer change between BEG and END.
+_LEN is ununsed."
+  (save-match-data
+    (when ycmd-mode
+      (ycmd--kill-timer ycmd--notification-timer)
+      (if (string-match-p "\n" (buffer-substring beg end))
+          (ycmd--conditional-parse 'new-line)
+        (setq ycmd--notification-timer
+              (run-at-time ycmd-idle-change-delay nil
+                           #'ycmd--on-idle-change))))))
+
+(defun ycmd--on-unparsed-buffer-focus ()
+  "Function to run when an unparsed buffer gets focus."
+  (ycmd--kill-timer ycmd--on-focus-timer)
+  (ycmd--conditional-parse 'buffer-focus))
+
+(defun ycmd--on-window-configuration-change ()
+  "Function to run by `window-configuration-change-hook'."
+  (when (and ycmd-mode
+             (eq ycmd--last-status-change 'unparsed)
+             (memq 'buffer-focus ycmd-parse-conditions))
+    (ycmd--kill-timer ycmd--on-focus-timer)
+    (setq ycmd--on-focus-timer
+          (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
+
+(defun ycmd--teardown ()
+  "Teardown ycmd in current buffer."
+  (ycmd--kill-timer ycmd--notification-timer)
+  (setq ycmd--last-status-change 'unparsed))
+
+(defun ycmd--global-teardown ()
+  "Teardown ycmd in all buffers."
+  (ycmd--kill-timer ycmd--on-focus-timer)
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when ycmd-mode
+        (ycmd--teardown)))))
 
 (defun ycmd-diagnostic-file-types (mode)
   "Find the ycmd file types for MODE which support semantic completion.
@@ -808,7 +1026,7 @@ When clicked, this will popup MESSAGE."
   (make-text-button
    start end
    'type type
-   'action (lambda (b) (popup-tip message))))
+   'action (lambda (_) (popup-tip message))))
 
 (defconst ycmd--file-ready-buttons
   '(("ERROR" . ycmd--error-button)
@@ -878,7 +1096,7 @@ reasonable visual feedback on the problems found by ycmd."
 This is suitable as an entry in `ycmd-file-parse-result-hook'."
   (with-silent-modifications
     (set-text-properties (point-min) (point-max) nil))
-  (mapcar 'ycmd--decorate-single-parse-result results)
+  (mapc 'ycmd--decorate-single-parse-result results)
   results)
 
 (defun ycmd--display-single-file-parse-result (result)
@@ -892,7 +1110,7 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
     (get-buffer-create buffer)
     (with-current-buffer buffer
       (erase-buffer)
-      (mapcar 'ycmd--display-single-file-parse-result results))
+      (mapc 'ycmd--display-single-file-parse-result results))
     (display-buffer buffer)))
 
 (defun ycmd-parse-buffer ()
@@ -984,33 +1202,6 @@ This is primarily a debug/developer tool."
         (erase-buffer)
         (insert (pp-to-string content))))))
 
-(defvar ycmd--server-actual-port 0
-  "The actual port being used by the ycmd server.
-This is set based on the output from the server itself.")
-
-(defvar ycmd--hmac-secret nil
-  "This is populated with the hmac secret of the current connection.
-Users should never need to modify this, hence the defconst.  It is
-not, however, treated as a constant by this code.  This value
-gets set in ycmd-open.")
-
-(defconst ycmd--server-process "ycmd-server"
-  "The Emacs name of the server process.
-This is used by functions like `start-process', `get-process'
-and `delete-process'.")
-
-(defvar-local ycmd--notification-timer nil
-  "Timer for notifying ycmd server to do work, e.g. parsing files.")
-
-(defvar ycmd--keepalive-timer nil
-  "Timer for sending keepalive messages to the server.")
-
-(defvar ycmd--on-focus-timer nil
-  "Timer for deferring ycmd server notification to parse a buffer.")
-
-(defconst ycmd--server-buffer-name "*ycmd-server*"
-  "Name of the ycmd server buffer.")
-
 (defun ycmd-major-mode-to-file-types (mode)
   "Map a major mode MODE to a list of file-types suitable for ycmd.
 
@@ -1029,7 +1220,7 @@ If there is no established mapping, return nil."
 (defun ycmd--generate-hmac-secret ()
   "Generate a new, random 16-byte HMAC secret key."
   (let ((result '()))
-    (dotimes (x 16 result)
+    (dotimes (_ 16 result)
       (setq result (cons (byte-to-string (random 256)) result)))
     (apply 'concat result)))
 
@@ -1044,9 +1235,11 @@ This produces output for empty alists that ycmd expects."
 
 ;; This defines 'ycmd--hmac-function which we use to combine an HMAC
 ;; key and message contents.
+(defun ycmd--secure-hash (x)
+  "Generate secure sha256 hash of X."
+  (secure-hash 'sha256 x nil nil 1))
 (define-hmac-function ycmd--hmac-function
-  (lambda (x) (secure-hash 'sha256 x nil nil 1))
-  64 64)
+  ycmd--secure-hash 64 64)
 
 (defun ycmd--options-contents (hmac-secret)
   "Return a struct with ycmd options and the HMAC-SECRET applied.
@@ -1276,196 +1469,6 @@ anything like that.)
           (let ((content (ycmd-request-response-data req)))
             (ycmd--log-content "HTTP RESPONSE CONTENT" content)
             content))))))
-
-(defun ycmd--conditional-parse (&optional condition)
-  "Reparse the buffer under CONDITION.
-
-If CONDITION is non-nil, determine whether a ready to parse
-notification should be sent according `ycmd-parse-conditions'."
-  (when (and ycmd-mode
-             (or (not condition)
-                 (memq condition ycmd-parse-conditions)))
-    (ycmd-notify-file-ready-to-parse)))
-
-(defun ycmd--on-save ()
-  "Function to run when the buffer has been saved."
-  (ycmd--conditional-parse 'save))
-
-(defun ycmd--on-idle-change ()
-  "Function to run on idle-change."
-  (ycmd--kill-timer ycmd--notification-timer)
-  (ycmd--conditional-parse 'idle-change))
-
-(defun ycmd--on-change (beg end _len)
-  "Function to run when a buffer change between BEG and END.
-_LEN is ununsed."
-  (save-match-data
-    (when ycmd-mode
-      (ycmd--kill-timer ycmd--notification-timer)
-      (if (string-match-p "\n" (buffer-substring beg end))
-          (ycmd--conditional-parse 'new-line)
-        (setq ycmd--notification-timer
-              (run-at-time ycmd-idle-change-delay nil
-                           #'ycmd--on-idle-change))))))
-
-(defun ycmd--on-unparsed-buffer-focus ()
-  "Function to run when an unparsed buffer gets focus."
-  (ycmd--kill-timer ycmd--on-focus-timer)
-  (ycmd--conditional-parse 'buffer-focus))
-
-(defun ycmd--on-window-configuration-change ()
-  "Function to run by `window-configuration-change-hook'."
-  (when (and ycmd-mode
-             (eq ycmd--last-status-change 'unparsed)
-             (memq 'buffer-focus ycmd-parse-conditions))
-    (ycmd--kill-timer ycmd--on-focus-timer)
-    (setq ycmd--on-focus-timer
-          (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
-
-(defun ycmd--teardown ()
-  "Teardown ycmd in current buffer."
-  (ycmd--kill-timer ycmd--notification-timer)
-  (setq ycmd--last-status-change 'unparsed))
-
-(defun ycmd--global-teardown ()
-  "Teardown ycmd in all buffers."
-  (ycmd--kill-timer ycmd--on-focus-timer)
-  (dolist (buffer (buffer-list))
-    (with-current-buffer buffer
-      (when ycmd-mode
-        (ycmd--teardown)))))
-
-(defconst ycmd-hooks-alist
-  '((after-save-hook                  . ycmd--on-save)
-    (after-change-functions           . ycmd--on-change)
-    (window-configuration-change-hook . ycmd--on-window-configuration-change)
-    (kill-buffer-hook                 . ycmd--teardown)
-    (before-revert-hook               . ycmd--teardown))
-  "Hooks which ycmd hooks in.")
-
-(add-hook 'kill-emacs-hook 'ycmd-close)
-
-(defvar ycmd-command-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "p" 'ycmd-parse-buffer)
-    (define-key map "o" 'ycmd-open)
-    (define-key map "c" 'ycmd-close)
-    (define-key map "." 'ycmd-goto)
-    (define-key map "gi" 'ycmd-goto-include)
-    (define-key map "gd" 'ycmd-goto-definition)
-    (define-key map "gD" 'ycmd-goto-declaration)
-    (define-key map "gm" 'ycmd-goto-implementation)
-    (define-key map "gp" 'ycmd-goto-imprecise)
-    (define-key map "s" 'ycmd-toggle-force-semantic-completion)
-    (define-key map "v" 'ycmd-show-debug-info)
-    (define-key map "d" 'ycmd-show-documentation)
-    (define-key map "C" 'ycmd-clear-compilation-flag-cache)
-    (define-key map "t" 'ycmd-get-type)
-    (define-key map "T" 'ycmd-get-parent)
-    (define-key map "f" 'ycmd-fixit)
-    map)
-  "Keymap for `ycmd-mode' interactive commands.")
-
-(defcustom ycmd-keymap-prefix (kbd "C-c Y")
-  "Prefix for key bindings of `ycmd-mode'.
-
-Changing this variable outside Customize does not have any
-effect.  To change the keymap prefix from Lisp, you need to
-explicitly re-define the prefix key:
-
-    (define-key ycmd-mode-map ycmd-keymap-prefix nil)
-    (setq ycmd-keymap-prefix (kbd \"C-c ,\"))
-    (define-key ycmd-mode-map ycmd-keymap-prefix
-                ycmd-command-map)"
-  :group 'ycmd
-  :type 'string
-  :risky t
-  :set
-  (lambda (variable key)
-    (when (and (boundp variable) (boundp 'ycmd-mode-map))
-      (define-key ycmd-mode-map (symbol-value variable) nil)
-      (define-key ycmd-mode-map key ycmd-command-map))
-    (set-default variable key)))
-
-(defvar ycmd-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map ycmd-keymap-prefix ycmd-command-map)
-    map)
-  "Keymap for `ycmd-mode'.")
-
-(defvar-local ycmd--last-status-change 'unparsed
-  "The last status of the current buffer.")
-
-(defun ycmd-parsing-in-progress-p ()
-  "Return t if parsing is in progress."
-  (equal ycmd--last-status-change 'parsing))
-
-(defun ycmd--report-status (status)
-  "Report ycmd STATUS."
-  (setq ycmd--last-status-change status)
-  (force-mode-line-update))
-
-(defun ycmd--mode-line-status-text ()
-  "Get text for the mode line."
-  (let ((force-semantic
-         (when ycmd-force-semantic-completion "/s"))
-        (text (pcase ycmd--last-status-change
-                (`unparsed "?")
-                (`parsing "*")
-                (`errored "!")
-                (`parsed ""))))
-    (concat " ycmd" force-semantic text)))
-
-;;;###autoload
-(define-minor-mode ycmd-mode
-  "Minor mode for interaction with the ycmd completion server.
-
-When called interactively, toggle `ycmd-mode'.  With prefix ARG,
-enable `ycmd-mode' if ARG is positive, otherwise disable it.
-
-When called from Lisp, enable `ycmd-mode' if ARG is omitted,
-nil or positive.  If ARG is `toggle', toggle `ycmd-mode'.
-Otherwise behave as if called interactively.
-
-\\{ycmd-mode-map}"
-  :init-value nil
-  :keymap ycmd-mode-map
-  :lighter (:eval (ycmd--mode-line-status-text))
-  :group 'ycmd
-  :require 'ycmd
-  :after-hook (ycmd--conditional-parse 'mode-enabled)
-  (cond
-   (ycmd-mode
-    (dolist (hook ycmd-hooks-alist)
-      (add-hook (car hook) (cdr hook) nil 'local)))
-   (t
-    (dolist (hook ycmd-hooks-alist)
-      (remove-hook (car hook) (cdr hook) 'local))
-    (ycmd--teardown))))
-
-;;;###autoload
-(defun ycmd-setup ()
-  "Setup `ycmd-mode'.
-
-Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
-  (interactive)
-  (dolist (it ycmd-file-type-map)
-    (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
-(make-obsolete 'ycmd-setup 'global-ycmd-mode "0.9.1")
-
-(defun ycmd--maybe-enable-mode ()
-  "Enable `ycmd-mode' according `ycmd-global-modes'."
-  (when (pcase ycmd-global-modes
-          (`t (ycmd-major-mode-to-file-types major-mode))
-          (`all t)
-          (`(not . ,modes) (not (memq major-mode modes)))
-          (modes (memq major-mode modes)))
-    (ycmd-mode)))
-
-;;;###autoload
-(define-globalized-minor-mode global-ycmd-mode ycmd-mode
-  ycmd--maybe-enable-mode
-  :init-value nil)
 
 (provide 'ycmd)
 
