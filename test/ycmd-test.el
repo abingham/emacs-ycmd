@@ -56,6 +56,12 @@
 (defconst ycmd-test-location
   (file-name-directory (or load-file-name buffer-file-name)))
 
+(defconst ycmd-test-resources-location
+  (f-join ycmd-test-location "resources"))
+
+(defconst ycmd-test-global-conf
+  (f-join ycmd-test-resources-location ".ycm_extra_conf.py"))
+
 (defun ycmd-test-prepare-file (filename mode)
   "Create a new temporary file containing CONTENT, put that file
 into MODE, and wait for initial ycmd parsing of the file to
@@ -65,7 +71,9 @@ This has the side-effect of (re)starting ycmd.
 
 Return the buffer.
 "
-  (let ((buff (find-file-noselect (f-join ycmd-test-location filename)))
+  (let ((buff (find-file-noselect
+               (f-join ycmd-test-resources-location filename)))
+        (ycmd-global-config ycmd-test-global-conf)
         (ycmd-extra-conf-handler 'load)
         (ycmd-parse-conditions '(mode-enabled)))
     (with-current-buffer buff
