@@ -2,3 +2,4 @@
 *.elc
 *~
 .cask
+.ycm_extra_conf.pyc

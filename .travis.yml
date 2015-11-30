@@ -1,0 +1,24 @@
+language: emacs-lisp
+sudo: false
+env:
+  - EMACS_VERSION=24.5
+before_install:
+  - export PATH="$HOME/bin:$PATH"
+  - wget 'https://raw.githubusercontent.com/flycheck/emacs-travis/master/emacs-travis.mk'
+  - make -f emacs-travis.mk install_emacs
+  - make -f emacs-travis.mk install_cask
+  - emacs --version
+
+  # ycmd
+  - wget -O ycmd.zip 'https://github.com/Valloric/ycmd/archive/master.zip'
+  - unzip ycmd.zip
+  - pushd ycmd-master
+  - python build.py --clang-completer --gocode-completer
+  - popd
+
+install:
+  - make deps
+script:
+  - make compile
+  - make YCMDPATH="./ycmd-master/ycmd" test
+

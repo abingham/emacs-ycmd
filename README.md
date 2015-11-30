@@ -201,3 +201,33 @@ technique that `ert` provides. For example:
 (require 'ycmd-test)
 (ert-run-tests-interactively "ycmd-test")
 ```
+
+It is also possible to run the tests on the command-line with the Makefile
+provided in this repository. Before running test, you need to install the
+[Cask](http://cask.github.io/) in order to be able to install the package
+dependencies.
+
+You can do this by running
+
+``` shell
+make deps
+```
+
+The other thing that is required is to have the `ycmd` folder right next to
+`emacs-ycmd` (`../ycmd`).
+
+To run the tests:
+
+``` shell
+make test
+```
+
+It is also possible to have the `ycmd` server at a different location. In that
+case the path needs to be passed to the `make` command explicitly:
+
+``` shell
+make YCMDPATH='/path/to/ycmd/ycmd' test
+```
+
+Make sure that you provide the path to the ycmd module and not the ycmd root
+directory.
