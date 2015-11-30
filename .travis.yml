@@ -10,15 +10,14 @@ before_install:
   - emacs --version
 
   # ycmd
-  - wget -O ycmd.zip 'https://github.com/Valloric/ycmd/archive/master.zip'
-  - unzip ycmd.zip
-  - pushd ycmd-master
+  - git clone --depth=1 --recursive https://github.com/Valloric/ycmd
+  - cd ycmd
   - python build.py --clang-completer --gocode-completer
-  - popd
+  - cd ..
 
 install:
   - make deps
 script:
   - make compile
-  - make YCMDPATH="./ycmd-master/ycmd" test
+  - make YCMDPATH="ycmd/ycmd" test
 
