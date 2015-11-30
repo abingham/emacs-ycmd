@@ -135,11 +135,11 @@ If for some reason you want to do this manually, the instructions are like this:
 
 ### Disabling ycmd-based flycheck for specific modes
 
-If you use `flycheck-ycmd-set` or otherwise put `ycmd` at the front of
-`flycheck-checkers`, flycheck will use the ycmd checker for every
-buffer in `ycmd-mode`. This may not be what you want. For example,
-even though ycmd supports completion (and, thus, flycheck) for Python,
-you may wish to use pyflakes for flychecking Python code.
+If you use `flycheck-ycmd-setup` or otherwise put `ycmd` at the front of
+`flycheck-checkers`, flycheck will use the ycmd checker for every buffer in
+`ycmd-mode`. This may not be what you want. For example, even though ycmd
+supports completion (and, thus, flycheck) for Python, you may wish to use
+pyflakes for flychecking Python code.
 
 To disable ycmd-based flychecking for specific modes, you can modify
 the `flycheck-disabled-checkers` list in your mode hook. For example:
@@ -193,9 +193,9 @@ See [issue #173](https://github.com/abingham/emacs-ycmd/issues/174) for the init
 
 ## Running tests
 
-`emacs-ycmd` comes with a number of tests that you can. This is mostly
-useful for developers. They are built with `ert`, so you can run them
-using any technique that `ert` provides. For example:
+`emacs-ycmd` comes with a number of tests that you can run. This is mostly
+useful for developers. They are built with `ert`, so you can run them using any
+technique that `ert` provides. For example:
 
 ```emacs
 (require 'ycmd-test)
