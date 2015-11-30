@@ -24,9 +24,6 @@
 
 ;;; Code:
 
-(defun ycmd-run-tests-batch-and-exit ()
-  (ert-run-tests-batch-and-exit "ycmd-test"))
-
 (defun ycmd-runs-this-script-p ()
   t)
 
@@ -37,8 +34,7 @@
          (source-directory (locate-dominating-file current-file "Cask"))
          (pkg-rel-dir (format ".cask/%s/elpa" emacs-version))
          (python-path (or (executable-find "python2")
-                          (executable-find "python")))
-         (ycmd-path (expand-file-name "../ycmd/ycmd" source-directory)))
+                          (executable-find "python"))))
     (setq package-user-dir (expand-file-name pkg-rel-dir source-directory))
     (package-initialize)
 
@@ -51,9 +47,11 @@
       (load (expand-file-name "ycmd" source-directory))
       (load (expand-file-name "ycmd-test" (file-name-directory current-file))))
 
-    (let ((debug-on-error t)
-           (ycmd-server-command (list python-path ycmd-path)))
-      (ycmd-run-tests-batch-and-exit))))
+    (let* ((debug-on-error t)
+           (ycmd-path (expand-file-name (pop argv) source-directory))
+           (ycmd-server-command (list python-path ycmd-path))
+           (ert-selector (pop argv)))
+      (ert-run-tests-batch-and-exit (and "ycmd-" ert-selector)))))
 
 (when (and noninteractive (ycmd-runs-this-script-p))
   (ycmd-run-tests-main))

@@ -2,6 +2,7 @@ EMACS = emacs
 EMACSFLAGS =
 CASK = cask
 ERTSELECTOR = t
+YCMDPATH=../ycmd/ycmd
 CONVERT = convert
 VERSION := $(shell EMACS=$(EMACS) $(CASK) version)
 PKGDIR := $(shell EMACS=$(EMACS) $(CASK) package-directory)
@@ -28,7 +29,7 @@ dist :
 
 # Test targets
 test : $(OBJECTS)
-	$(EMACSBATCH) --script test/run.el '$(ERTSELECTOR)'
+	$(EMACSBATCH) --script test/run.el '$(YCMDPATH)' '$(ERTSELECTOR)'
 
 # Support targets
 deps : $(PKGDIR)
