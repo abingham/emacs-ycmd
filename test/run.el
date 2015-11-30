@@ -35,7 +35,10 @@
   (let* ((load-prefer-newer t)
          (current-file (if load-in-progress load-file-name (buffer-file-name)))
          (source-directory (locate-dominating-file current-file "Cask"))
-         (pkg-rel-dir (format ".cask/%s/elpa" emacs-version)))
+         (pkg-rel-dir (format ".cask/%s/elpa" emacs-version))
+         (python-path (or (executable-find "python2")
+                          (executable-find "python")))
+         (ycmd-path (expand-file-name "../ycmd/ycmd" source-directory)))
     (setq package-user-dir (expand-file-name pkg-rel-dir source-directory))
     (package-initialize)
 
@@ -46,10 +49,11 @@
       (load (expand-file-name "third-party/ycmd-request" source-directory))
       (load (expand-file-name "third-party/ycmd-request-deferred" source-directory))
       (load (expand-file-name "ycmd" source-directory))
-      (load (expand-file-name "ycmd-test" (file-name-directory current-file)))))
+      (load (expand-file-name "ycmd-test" (file-name-directory current-file))))
 
-  (let ((debug-on-error t))
-    (ycmd-run-tests-batch-and-exit)))
+    (let ((debug-on-error t)
+           (ycmd-server-command (list python-path ycmd-path)))
+      (ycmd-run-tests-batch-and-exit))))
 
 (when (and noninteractive (ycmd-runs-this-script-p))
   (ycmd-run-tests-main))
