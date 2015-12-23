@@ -1,5 +1,4 @@
 language: emacs-lisp
-sudo: false
 env:
   - EMACS_VERSION=24.5
 before_install:
