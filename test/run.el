@@ -35,6 +35,8 @@
          (pkg-rel-dir (format ".cask/%s/elpa" emacs-version))
          (python-path (or (executable-find "python2")
                           (executable-find "python"))))
+    (unless python-path
+      (error "Python not found"))
     (setq package-user-dir (expand-file-name pkg-rel-dir source-directory))
     (package-initialize)
 
@@ -51,6 +53,8 @@
            (ycmd-path (expand-file-name (pop argv) source-directory))
            (ycmd-server-command (list python-path ycmd-path))
            (ert-selector (pop argv)))
+      (unless (f-exists? ycmd-path)
+        (error "Ycmd path does not exist"))
       (ert-run-tests-batch-and-exit (and "ycmd-" ert-selector)))))
 
 (when (and noninteractive (ycmd-runs-this-script-p))
