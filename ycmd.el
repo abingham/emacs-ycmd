@@ -1330,8 +1330,7 @@ the name of the newly created file."
 
 (defun ycmd--encode-string (s)
   "Encode string S."
-  (if (eval-when-compile
-        (version-list-< (version-to-list emacs-version) '(25)))
+  (if (version-list-< (version-to-list emacs-version) '(25))
       s
     (encode-coding-string s 'utf-8 t)))
 
