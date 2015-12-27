@@ -47,6 +47,10 @@ emacs configuration by setting `ycmd-global-config`:
 (set-variable 'ycmd-global-config "/path/to/global_config.py")
 ```
 
+**Spacemacs users:** Note that if you're using spacemacs, it will set this if
+you don't. This is not always what you want! See the spacemacs ycmd
+documentation for more info.
+
 If you've got project-specific ycmd configurations (almost certainly
 called `.ycm_extra_conf.py`), and if you want them automatically
 loaded by ycmd as needed (which you probably do), then you can
@@ -93,7 +97,7 @@ that:
 After this you can use your standard `company-mode` keybindings to do
 completion.
 
-### IMPORTANT: Unbuffered output on Windows
+## IMPORTANT: Unbuffered output on Windows
 
 There have been some reports that `ycmd.el` doesn't work on Windows when Python's output is buffered. See, for example, [issue #104](https://github.com/abingham/emacs-ycmd/issues/104). This is because we rely on the ycmd server printing out its host and port information in a timely (i.e. unbuffered) manner. We will almost certainly update the defaults for `ycmd.el` to force unbuffered output. 
 
