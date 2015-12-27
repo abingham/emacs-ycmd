@@ -47,8 +47,8 @@ emacs configuration by setting `ycmd-global-config`:
 (set-variable 'ycmd-global-config "/path/to/global_config.py")
 ```
 
-**Spacemacs users:** Note that if you're using spacemacs, it will set this if
-you don't. This is not always what you want! See the spacemacs ycmd
+**Spacemacs users:** Note that if you don't set `ycmd-global-config`, spacemacs
+will set it for you. This is not always what you want! See the spacemacs ycmd
 documentation for more info.
 
 If you've got project-specific ycmd configurations (almost certainly
