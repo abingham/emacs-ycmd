@@ -738,7 +738,7 @@ To see what the returned structure looks like, you can use
          content
          :parser 'json-read)))))
 
-(defun ycmd--handle-exception (results &optional default-handler)
+(defun ycmd--handle-exception (results)
   "Handle exception in completion RESULTS.
 
 This function handles 'UnknownExtraConf' exceptions or exceptions
@@ -746,11 +746,13 @@ handled by a DEFAULT-HANDLER, which must be a function that takes
 a results vector as argument."
   (let* ((exception (assoc-default 'exception results))
          (exception-type (assoc-default 'TYPE exception)))
-    (cond ((string-equal exception-type "UnknownExtraConf")
-           (ycmd--handle-extra-conf-exception results))
-          (default-handler (funcall default-handler results)))))
+    (pcase exception-type
+      ("UnknownExtraConf"
+       (ycmd--handle-extra-conf-exception results))
+      ((or "ValueError" "RuntimeError")
+       (ycmd--handle-error-exception results)))))
 
-(defun ycmd--send-request (type success-handler &optional exception-handler)
+(defun ycmd--send-request (type success-handler)
   "Send a request of TYPE to the `ycmd' server.
 
 SUCCESS-HANDLER is called when for a successful response.  If
@@ -766,8 +768,7 @@ handler."
         (lambda (result)
           (when result
             (if (assoc-default 'exception result)
-                (ycmd--handle-exception
-                 result exception-handler)
+                (ycmd--handle-exception result)
               (when success-handler
                 (funcall success-handler result)))))))))
 
@@ -813,10 +814,6 @@ Useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToImprecise"))
 
-(defun ycmd--handle-goto-exception (results)
-  "Handle a Go To exception in RESULTS."
-  (message "%s" (assoc-default 'message results nil "Unknown exception")))
-
 (defun ycmd--handle-goto-success (location)
   "Handle a successfull Go To response for LOCATION."
   (push-mark)
@@ -825,8 +822,7 @@ Useful in case compile-time is considerable."
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request TYPE."
-  (ycmd--send-request
-   type 'ycmd--handle-goto-success 'ycmd--handle-goto-exception))
+  (ycmd--send-request type 'ycmd--handle-goto-success))
 
 (defun ycmd--goto-location (location)
   "Move cursor to LOCATION.
@@ -1003,13 +999,7 @@ the documentation."
      (-when-let (documentation (assoc-default 'detailed_info result))
        (with-help-window (get-buffer-create " *ycmd-documentation*")
          (with-current-buffer standard-output
-           (insert documentation)))))
-   (lambda (result)
-     (-when-let* ((exception (assoc-default 'exception result))
-                  (exception-type (assoc-default 'TYPE exception))
-                  (msg (assoc-default 'message result)))
-       (when (string= msg "No documentation available for current context")
-         (message "%s" msg))))))
+           (insert documentation)))))))
 
 (define-button-type 'ycmd--error-button
   'face '(error bold underline)
@@ -1086,10 +1076,6 @@ reasonable visual feedback on the problems found by ycmd."
                btype
                (concat kind ": " text)))))))))
 
-(defun ycmd--display-error (msg)
-  "Display error message with MSG."
-  (message "ERROR: %s" msg))
-
 (defun ycmd-decorate-with-parse-results (results)
   "Decorates a buffer using the RESULTS of a file-ready parse list.
 
@@ -1141,6 +1127,23 @@ Handle configuration file according the value of
                             `((filepath . ,conf-file))))))
     (ycmd--report-status 'unparsed)
     (ycmd-notify-file-ready-to-parse)))
+
+(defun ycmd--handle-error-exception (results)
+  "Handle exception and print message from RESULTS."
+  (let* ((msg (assoc-default 'message results))
+         (is-error (pcase msg
+                     ((or "Still no compile flags, no completions yet."
+                          "File is invalid."
+                          "No completions found; errors in the file?"
+                          (pred (string-prefix-p "Gocode binary not found."))
+                          "Gocode binary not found."
+                          "Gocode returned invalid JSON response."
+                          (pred (string-prefix-p "Gocode panicked")))
+                      t))))
+    (when is-error
+      (ycmd--report-status 'errored))
+    (message "%s" (concat (when is-error "ERROR: ")
+                          (if msg msg "Unknown exception.")))))
 
 (defun ycmd--handle-notify-response (results)
   "If RESULTS is a vector or nil, the response is an acual parse result.
