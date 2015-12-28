@@ -1307,7 +1307,8 @@ the name of the newly created file."
              (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
              (server-program+args (append server-command args))
              (proc (apply #'start-process ycmd--server-process proc-buff server-program+args))
-             (cont 1))
+             (cont t)
+             (start-time (float-time)))
         (while cont
           (set-process-query-on-exit-flag proc nil)
           (accept-process-output proc 0 100 t)
@@ -1320,8 +1321,8 @@ the name of the newly created file."
                               (string-to-number (match-string 1 proc-output)))
                 (setq cont nil)))
              (t
-              (incf cont)
-              (when (< ycmd-startup-timeout cont) ; timeout after specified period
+              ;; timeout after specified period
+              (when (< (/ ycmd-startup-timeout 1000) (- (float-time) start-time))
                 (set-window-buffer nil proc-buff)
                 (error "Server timeout")
                 (ycmd--report-status 'errored))))))))))
