@@ -567,6 +567,14 @@ _LEN is ununsed."
     (setq ycmd--on-focus-timer
           (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
 
+(defmacro ycmd--with-all-ycmd-buffers (&rest body)
+  "Execute BODY with each `ycmd-mode' enabled buffer."
+  (declare (indent 0) (debug t))
+  `(dolist (buffer (buffer-list))
+     (with-current-buffer buffer
+       (when ycmd-mode
+         ,@body))))
+
 (defun ycmd--teardown ()
   "Teardown ycmd in current buffer."
   (ycmd--kill-timer ycmd--notification-timer)
@@ -575,10 +583,7 @@ _LEN is ununsed."
 (defun ycmd--global-teardown ()
   "Teardown ycmd in all buffers."
   (ycmd--kill-timer ycmd--on-focus-timer)
-  (dolist (buffer (buffer-list))
-    (with-current-buffer buffer
-      (when ycmd-mode
-        (ycmd--teardown)))))
+  (ycmd--with-all-ycmd-buffers (ycmd--teardown)))
 
 (defun ycmd-diagnostic-file-types (mode)
   "Find the ycmd file types for MODE which support semantic completion.
@@ -629,9 +634,8 @@ This does nothing if no server is running."
   (ycmd--kill-timer ycmd--keepalive-timer))
 
 (defun ycmd-running? ()
-  "Tells you if a ycmd server is already running."
-  (interactive)
-  (if (get-process ycmd--server-process) 't nil))
+  "Return t if a ycmd server is already running."
+  (and (get-process ycmd--server-process) t))
 
 (defun ycmd--keepalive ()
   "Sends an unspecified message to the server.
@@ -1320,13 +1324,14 @@ the name of the newly created file."
               (progn
                 (set-variable 'ycmd--server-actual-port
                               (string-to-number (match-string 1 proc-output)))
-                (setq cont nil)))
+                (setq cont nil)
+                (ycmd--with-all-ycmd-buffers (ycmd--report-status 'unparsed))))
              (t
               ;; timeout after specified period
               (when (< (/ ycmd-startup-timeout 1000) (- (float-time) start-time))
-                (with-current-buffer orig-buff
-                  (ycmd--report-status 'errored))
-                (error "Server timeout"))))))))))
+                (ycmd--with-all-ycmd-buffers (ycmd--report-status 'errored))
+                (when (ycmd-running?) (ycmd-close))
+                (error "ERROR: Ycmd server timeout"))))))))))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
