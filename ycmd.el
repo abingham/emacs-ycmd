@@ -1298,7 +1298,8 @@ the name of the newly created file."
 
 (defun ycmd--start-server (hmac-secret)
   "Start a new server using HMAC-SECRET as its hmac secret."
-  (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
+  (let ((orig-buff (current-buffer))
+        (proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
       (erase-buffer)
 
@@ -1323,9 +1324,9 @@ the name of the newly created file."
              (t
               ;; timeout after specified period
               (when (< (/ ycmd-startup-timeout 1000) (- (float-time) start-time))
-                (set-window-buffer nil proc-buff)
-                (error "Server timeout")
-                (ycmd--report-status 'errored))))))))))
+                (with-current-buffer orig-buff
+                  (ycmd--report-status 'errored))
+                (error "Server timeout"))))))))))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
