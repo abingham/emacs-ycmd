@@ -111,6 +111,10 @@ feature."
   "Check whether candidate's EXTRA-INFO indicates a filename completion."
   (-contains? '("[File]" "[Dir]" "[File&Dir]") extra-info))
 
+(defun company-ycmd--identifier-completer-p (extra-info)
+  "Check if candidate's EXTRA-INFO indicates a identifier completion."
+  (s-equals? "[ID]" extra-info))
+
 (defmacro company-ycmd--with-destructured-candidate (candidate body)
   "Destructure CANDIDATE and evaluate BODY."
   (declare (indent 1) (debug t))
@@ -120,7 +124,8 @@ feature."
          (extra-menu-info (assoc-default 'extra_menu_info candidate))
          (menu-text (assoc-default 'menu_text candidate))
          (extra-data (assoc-default 'extra_data candidate)))
-     (if (company-ycmd--filename-completer-p extra-menu-info)
+     (if (or (company-ycmd--identifier-completer-p extra-menu-info)
+             (company-ycmd--filename-completer-p extra-menu-info))
          (propertize insertion-text 'return_type extra-menu-info)
        ,body)))
 
