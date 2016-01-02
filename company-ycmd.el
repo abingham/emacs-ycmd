@@ -95,7 +95,7 @@ feature."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode go-mode)
+  '(c++-mode c-mode go-mode objc-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -172,6 +172,8 @@ overloaded functions."
                                       (s-split "\n" detailed-info t)))
            (items (or overloaded-functions (list menu-text)))
            candidates)
+      (when (eq major-mode 'objc-mode)
+        (setq insertion-text (s-chop-suffix ":" insertion-text)))
       (dolist (it (delete-dups items) candidates)
         (let* ((meta (if overloaded-functions it detailed-info))
                (params (company-ycmd--extract-params-clang it))
@@ -266,7 +268,7 @@ candidates list."
 (defun company-ycmd--get-construct-candidate-fn ()
   "Return function to construct candidate(s) for current `major-mode'."
   (pcase (car-safe (ycmd-major-mode-to-file-types major-mode))
-    ((or "cpp" "c") 'company-ycmd--construct-candidate-clang)
+    ((or "cpp" "c" "objc") 'company-ycmd--construct-candidate-clang)
     ("go" 'company-ycmd--construct-candidate-go)
     ("python" 'company-ycmd--construct-candidate-python)
     (_ 'company-ycmd--construct-candidate-generic)))
@@ -355,8 +357,16 @@ candidates list."
                    company-ycmd-insert-arguments
                    (get-text-property 0 'params candidate))
     (insert it)
-    (company-template-c-like-templatify
-     (concat candidate it))))
+    (if (string-match "\\`:[^:]" it)
+        ;; The function `company-clang-objc-templatify' has been renamed to
+        ;; `company-template-objc-templatify' in company-mode commit
+        ;; 6bf24912a8a3c2cfc5e72073b8eb0f1137ab7728. Remove check once a new
+        ;; stable version is released.
+        (if (fboundp 'company-template-objc-templatify)
+            (company-template-objc-templatify it)
+          (company-clang-objc-templatify it))
+      (company-template-c-like-templatify
+       (concat candidate it)))))
 
 (defun company-ycmd--doc-buffer (candidate)
   "Return buffer with docstring for CANDIDATE if it is available."
