@@ -1142,7 +1142,8 @@ Handle configuration file according the value of
                           (pred (string-prefix-p "Gocode binary not found."))
                           "Gocode binary not found."
                           "Gocode returned invalid JSON response."
-                          (pred (string-prefix-p "Gocode panicked")))
+                          (pred (string-prefix-p "Gocode panicked"))
+                          "Received invalid HMAC for response!")
                       t))))
     (when is-error
       (ycmd--report-status 'errored))
