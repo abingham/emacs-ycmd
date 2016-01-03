@@ -1114,23 +1114,21 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
 
 Handle configuration file according the value of
 `ycmd-extra-conf-handler'."
-  (deferred:$
-    (let ((conf-file (assoc-default 'extra_conf_file
-                                    (assoc-default 'exception result))))
-      (cond ((not conf-file)
-             (warn "No extra_conf_file included in UnknownExtraConf exception. Consider reporting this."))
-
-            ((or (eq ycmd-extra-conf-handler 'load)
-                 (and (eq ycmd-extra-conf-handler 'ask)
-                      (y-or-n-p (format "Load YCMD extra conf %s? " conf-file))))
-             (ycmd--request "/load_extra_conf_file"
-                            `((filepath . ,conf-file))))
-
-            (t
-             (ycmd--request "/ignore_extra_conf_file"
-                            `((filepath . ,conf-file))))))
-    (ycmd--report-status 'unparsed)
-    (ycmd-notify-file-ready-to-parse)))
+  (let* ((exception (assoc-default 'exception result))
+         (conf-file (assoc-default 'extra_conf_file exception))
+         location)
+    (if (not conf-file)
+        (warn "No extra_conf_file included in UnknownExtraConf exception. \
+Consider reporting this.")
+      (if (or (eq ycmd-extra-conf-handler 'load)
+              (and (eq ycmd-extra-conf-handler 'ask)
+                   (y-or-n-p (format "Load YCMD extra conf %s? " conf-file))))
+          (setq location "/load_extra_conf_file")
+        (setq location "/ignore_extra_conf_file"))
+      (deferred:sync!
+        (ycmd--request location `((filepath . ,conf-file))))
+      (ycmd--report-status 'unparsed)
+      (ycmd-notify-file-ready-to-parse))))
 
 (defun ycmd--handle-error-exception (results)
   "Handle exception and print message from RESULTS."
