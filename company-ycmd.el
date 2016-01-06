@@ -206,9 +206,8 @@ overloaded functions."
 (defun company-ycmd--construct-candidate-python (candidate)
   "Construct completion string from a CANDIDATE for python file-types."
   (company-ycmd--with-destructured-candidate candidate
-    (let* ((kind (and extra-menu-info (substring extra-menu-info 0 1)))
-           (meta (and detailed-info extra-menu-info
-                      (string-prefix-p "function" extra-menu-info)
+    (let* ((kind extra-menu-info)
+           (meta (and detailed-info
                       (or (and (string-match "\n" detailed-info)
                                (substring detailed-info 0 (match-beginning 0)))
                           detailed-info)))
