@@ -407,6 +407,7 @@ and `delete-process'.")
     (define-key map "gD" 'ycmd-goto-declaration)
     (define-key map "gm" 'ycmd-goto-implementation)
     (define-key map "gp" 'ycmd-goto-imprecise)
+    (define-key map "gr" 'ycmd-goto-references)
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
     (define-key map "d" 'ycmd-show-documentation)
@@ -771,7 +772,8 @@ handler."
       (deferred:nextc it
         (lambda (result)
           (when result
-            (if (assoc-default 'exception result)
+            (if (and (not (vectorp result))
+                     (assoc-default 'exception result))
                 (ycmd--handle-exception result)
               (when success-handler
                 (funcall success-handler result)))))))))
@@ -818,25 +820,37 @@ Useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToImprecise"))
 
-(defun ycmd--handle-goto-success (location)
-  "Handle a successfull Go To response for LOCATION."
-  (push-mark)
-  (ring-insert find-tag-marker-ring (point-marker))
-  (ycmd--goto-location location))
+(defun ycmd-goto-references ()
+  "Get references."
+  (interactive)
+  (ycmd--goto "GoToReferences"))
+
+(defun ycmd--handle-goto-success (result)
+  "Handle a successfull Go To response for RESULT."
+  (let* ((is-vector (vectorp result))
+         (num-items (if is-vector (length result) 1)))
+    (push-mark)
+    (ring-insert find-tag-marker-ring (point-marker))
+    (when is-vector
+      (setq result (append result nil)))
+    (if (eq 1 num-items)
+        (ycmd--goto-location result 'find-file)
+      (ycmd--view result major-mode))))
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request TYPE."
   (ycmd--send-request type 'ycmd--handle-goto-success))
 
-(defun ycmd--goto-location (location)
-  "Move cursor to LOCATION.
+(defun ycmd--goto-location (location find-function)
+  "Move cursor to LOCATION with FIND-FUNCTION.
 
-LOCTION is a structure as returned from e.g. the various GoTo
+LOCATION is a structure as returned from e.g. the various GoTo
 commands."
-  (find-file (assoc-default 'filepath location))
-  (goto-char (ycmd--col-line-to-position
-              (assoc-default 'column_num location)
-              (assoc-default 'line_num location))))
+  (--when-let (assoc-default 'filepath location)
+    (funcall find-function it)
+    (goto-char (ycmd--col-line-to-position
+                (assoc-default 'column_num location)
+                (assoc-default 'line_num location)))))
 
 (defun ycmd--goto-line (line)
   "Go to LINE."
@@ -999,11 +1013,88 @@ the documentation."
   (interactive "P")
   (ycmd--send-request
    (if arg "GetDocQuick" "GetDoc")
-   (lambda (result)
-     (-when-let (documentation (assoc-default 'detailed_info result))
-       (with-help-window (get-buffer-create " *ycmd-documentation*")
-         (with-current-buffer standard-output
-           (insert documentation)))))))
+   'ycmd--handle-get-doc-success))
+
+(defun ycmd--handle-get-doc-success (result)
+  "Handle successful GetDoc response for RESULT."
+  (-when-let (documentation (assoc-default 'detailed_info result))
+    (with-help-window (get-buffer-create " *ycmd-documentation*")
+      (with-current-buffer standard-output
+        (insert documentation)))))
+
+(defmacro ycmd--with-view-buffer (&rest body)
+  "Create view buffer and execute BODY in it."
+  `(let ((buf (get-buffer-create "*ycmd-locations*")))
+     (with-current-buffer buf
+       (setq buffer-read-only nil)
+       (erase-buffer)
+       ,@body
+       (goto-char (point-min))
+       (ycmd-view-mode)
+       buf)))
+
+(defun ycmd--view (result mode)
+  "Select a `ycmd-view-mode' buffer and display RESULT.
+MODE is a major mode for fontifaction."
+  (pop-to-buffer
+   (ycmd--with-view-buffer
+    (->>
+     (--group-by (cdr (assoc 'filepath it)) result)
+     (--map (ycmd--view-insert-location it mode))))))
+
+(define-button-type 'ycmd--location-button
+  'action #'ycmd--view-jump
+  'face nil)
+
+(defun ycmd--view-jump (button)
+  "Jump to BUTTON's location in current window."
+  (let ((location (button-get button 'location)))
+    (ycmd--goto-location location 'find-file)))
+
+(defun ycmd--view-jump-other-window (button)
+  "Jump to BUTTON's location in other window."
+  (let ((location (button-get button 'location)))
+    (ycmd--goto-location location 'find-file-other-window)))
+
+(defun ycmd--view-insert-button (name location)
+  "Insert a view button with NAME and LOCATION."
+  (insert-text-button
+   name
+   'type 'ycmd--location-button
+   'location location))
+
+(defun ycmd--view-insert-location (location mode)
+  "Insert LOCATION into buffer and fontify according MODE."
+  (insert (propertize (concat (car location) "\n") 'face 'bold))
+  (--map
+   (progn
+     (insert "    ")
+     (ycmd--view-insert-button
+      (ycmd--fontify-code (cdr (assoc 'description it)) mode)
+      it)
+     (insert "\n"))
+   (cdr location)))
+
+(defvar ycmd-view-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") 'next-error-no-select)
+    (define-key map (kbd "p") 'previous-error-no-select)
+    (define-key map (kbd "q") 'quit-window)
+    map))
+
+(define-derived-mode ycmd-view-mode special-mode "ycmd-view"
+  "Major mode for locations view and navigation for `ycmd-mode'.
+
+\\{ycmd-view-mode-map}"
+  (setq next-error-function #'ycmd--next-location))
+
+(defun ycmd--next-location (num _reset)
+  "Navigate to the next location in the view buffer.
+NUM is the number of locations to move forward.  If RESET is
+non-nil got to the beginning of buffer before locations
+navigation."
+  (forward-button num)
+  (ycmd--view-jump-other-window (button-at (point))))
 
 (define-button-type 'ycmd--error-button
   'face '(error bold underline)
