@@ -760,9 +760,7 @@ a results vector as argument."
 (defun ycmd--send-request (type success-handler)
   "Send a request of TYPE to the `ycmd' server.
 
-SUCCESS-HANDLER is called when for a successful response.  If
-EXCEPTION-HANDLER is non-nil use it as default exception
-handler."
+SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
     (deferred:$
 
