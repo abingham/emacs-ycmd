@@ -829,7 +829,7 @@ Useful in case compile-time is considerable."
   (ring-insert find-tag-marker-ring (point-marker)))
 
 (defun ycmd--handle-goto-success (result)
-  "Handle a successfull Go To response for RESULT."
+  "Handle a successfull GoTo response for RESULT."
   (let* ((is-vector (vectorp result))
          (num-items (if is-vector (length result) 1)))
     (ycmd--save-marker)
