@@ -16,7 +16,7 @@ ycmd itself, so if you feel lost you might read
 [the ycmd documentation](https://github.com/Valloric/ycmd) and/or the
 [the original YouCompleteMe documentation](https://github.com/Valloric/YouCompleteMe).
 
-**Important:** The `ycmd` package itself doesn't provide a real UI for selecting and inserting completions into your files. For that you need to use `company-ycmd` or another "completion framework".
+**Important:** The `ycmd` package itself doesn't provide a real UI for selecting and inserting completions into your files. For that you need to use [`company-ycmd`](#company-ycmd) or another "completion framework".
 
 ## Quickstart
 
