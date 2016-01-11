@@ -823,12 +823,16 @@ Useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToReferences"))
 
+(defun ycmd--save-marker ()
+  "Save marker."
+  (push-mark)
+  (ring-insert find-tag-marker-ring (point-marker)))
+
 (defun ycmd--handle-goto-success (result)
   "Handle a successfull Go To response for RESULT."
   (let* ((is-vector (vectorp result))
          (num-items (if is-vector (length result) 1)))
-    (push-mark)
-    (ring-insert find-tag-marker-ring (point-marker))
+    (ycmd--save-marker)
     (when is-vector
       (setq result (append result nil)))
     (if (eq 1 num-items)
