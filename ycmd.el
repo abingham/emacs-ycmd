@@ -1071,15 +1071,29 @@ MODE is a major mode for fontifaction."
 
 (defun ycmd--view-insert-location (location mode)
   "Insert LOCATION into buffer and fontify according MODE."
-  (insert (propertize (concat (car location) "\n") 'face 'bold))
-  (--map
-   (progn
-     (insert "    ")
-     (ycmd--view-insert-button
-      (ycmd--fontify-code (cdr (assoc 'description it)) mode)
-      it)
-     (insert "\n"))
-   (cdr location)))
+  (let* ((max-line-num (cdr (assoc 'line_num
+                                   (-max-by
+                                    (lambda (a b)
+                                      (let ((a (cdr (assoc 'line_num a)))
+                                            (b (cdr (assoc 'line_num b))))
+                                        (when (and (numberp a) (numberp b))
+                                          (> a b))))
+                                    (cdr location)))))
+         (max-line-num-width (and max-line-num
+                                  (length (format "%d" max-line-num))))
+         (line-num-format (and max-line-num-width
+                               (format "%%%dd:" max-line-num-width))))
+    (insert (propertize (concat (car location) "\n") 'face 'bold))
+    (--map
+     (progn
+       (when line-num-format
+         (insert (format line-num-format (cdr (assoc 'line_num it)))))
+       (insert "    ")
+       (ycmd--view-insert-button
+        (ycmd--fontify-code (cdr (assoc 'description it)) mode)
+        it)
+       (insert "\n"))
+     (cdr location))))
 
 (defvar ycmd-view-mode-map
   (let ((map (make-sparse-keymap)))
