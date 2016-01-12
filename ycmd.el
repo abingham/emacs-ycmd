@@ -1023,10 +1023,12 @@ the documentation."
 
 (defun ycmd--handle-get-doc-success (result)
   "Handle successful GetDoc response for RESULT."
-  (-when-let (documentation (assoc-default 'detailed_info result))
-    (with-help-window (get-buffer-create " *ycmd-documentation*")
-      (with-current-buffer standard-output
-        (insert documentation)))))
+  (let ((documentation (assoc-default 'detailed_info result)))
+    (if (not (s-blank? documentation))
+        (with-help-window (get-buffer-create " *ycmd-documentation*")
+          (with-current-buffer standard-output
+            (insert documentation)))
+      (message "No documentation available for current context"))))
 
 (defmacro ycmd--with-view-buffer (&rest body)
   "Create view buffer and execute BODY in it."
