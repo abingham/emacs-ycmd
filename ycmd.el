@@ -149,9 +149,9 @@ Options are:
 `ask'
      Ask the user for each unknown extra conf."
   :group 'ycmd
-  :type '(set (const :tag "Load unknown extra confs" load)
-              (const :tag "Ignore unknown extra confs" ignore)
-              (const :tag "Ask the user" ask))
+  :type '(choice (const :tag "Load unknown extra confs" load)
+                 (const :tag "Ignore unknown extra confs" ignore)
+                 (const :tag "Ask the user" ask))
   :risky t)
 
 (defcustom ycmd-host "127.0.0.1"
