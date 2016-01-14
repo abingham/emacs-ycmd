@@ -67,7 +67,7 @@
         :column column-num
         :buffer (current-buffer)
         :filename filepath
-        :message text
+        :message (concat text (when fixit-available " (FixIt)"))
         :checker checker
         :level (assoc-default kind flycheck-ycmd--level-map 'string-equal 'error)))))
 

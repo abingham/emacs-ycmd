@@ -1172,7 +1172,8 @@ When clicked, this will popup MESSAGE."
           (filepath         (assoc-default 'filepath location))
           (kind             (assoc-default 'kind ,result))
           (text             (assoc-default 'text ,result))
-          (ranges           (assoc-default 'ranges ,result)))
+          (ranges           (assoc-default 'ranges ,result))
+          (fixit-available  (assoc-default 'fixit_available ,result)))
      ,body))
 
 (defun ycmd--decorate-single-parse-result (r)
