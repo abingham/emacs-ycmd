@@ -57,27 +57,25 @@
   '(("ERROR" . error)
     ("WARNING" . warning)))
 
-(defun flycheck-ycmd--result-to-error (checker r)
-  "Convert ycmd parse result for CHECKER structure R into a flycheck error object ."
-  (ycmd--with-destructured-parse-result
-   r
-   (if (string-equal filepath (buffer-file-name))
-       (flycheck-error-new
-        :line line-num
-        :column column-num
-        :buffer (current-buffer)
-        :filename filepath
-        :message (concat text (when (eq fixit-available t) " (FixIt)"))
-        :checker checker
-        :level (assoc-default kind flycheck-ycmd--level-map 'string-equal 'error)))))
+(defun flycheck-ycmd--result-to-error (result checker)
+  "Convert ycmd parse RESULT for CHECKER into a flycheck error object."
+  (ycmd--with-destructured-parse-result result
+    (if (string-equal filepath (buffer-file-name))
+        (flycheck-error-new
+         :line line-num
+         :column column-num
+         :buffer (current-buffer)
+         :filename filepath
+         :message (concat text (when (eq fixit-available t) " (FixIt)"))
+         :checker checker
+         :level (assoc-default kind flycheck-ycmd--level-map 'string-equal 'error)))))
 
 (defun flycheck-ycmd--start (checker callback)
   "Start ycmd flycheck CHECKER using CALLBACK to communicate with flycheck."
   (let ((errors (delq
                  nil
-                 (mapcar #'(lambda (i)
-                             (flycheck-ycmd--result-to-error checker i)
-                             )
+                 (mapcar (lambda (result)
+                           (flycheck-ycmd--result-to-error result checker))
                          flycheck-ycmd--cache))))
     (funcall callback 'finished errors))
 
