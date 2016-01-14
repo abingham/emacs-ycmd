@@ -1233,9 +1233,8 @@ Handle configuration file according the value of
     (if (not conf-file)
         (warn "No extra_conf_file included in UnknownExtraConf exception. \
 Consider reporting this.")
-      (if (or (eq ycmd-extra-conf-handler 'load)
-              (and (eq ycmd-extra-conf-handler 'ask)
-                   (y-or-n-p (format "Load YCMD extra conf %s? " conf-file))))
+      (if (and (not (eq ycmd-extra-conf-handler 'ignore))
+               (y-or-n-p (format "Load YCMD extra conf %s? " conf-file)))
           (setq location "/load_extra_conf_file")
         (setq location "/ignore_extra_conf_file"))
       (deferred:sync!
@@ -1387,7 +1386,7 @@ file."
       (use_ultisnips_completer . 1)
       (complete_in_strings . 1)
       (complete_in_comments . 0)
-      (confirm_extra_conf . 1)
+      (confirm_extra_conf . ,(if (eq ycmd-extra-conf-handler 'load) 0 1))
       (server_keep_logfiles . 1)
       (global_ycm_extra_conf . ,global-config)
       (extra_conf_globlist . ,extra-conf-whitelist)
