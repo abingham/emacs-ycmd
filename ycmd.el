@@ -629,8 +629,8 @@ This does nothing if no server is running."
               (when time-out-secs
                 (sit-for time-out-secs)
                 (delete-process ycmd--server-process)))
-          (error nil))
-        (ycmd--global-teardown)))
+          (error nil)))
+    (ycmd--global-teardown))
 
   (ycmd--kill-timer ycmd--keepalive-timer))
 
