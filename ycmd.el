@@ -829,8 +829,7 @@ Useful in case compile-time is considerable."
   (if (fboundp 'xref-push-marker-stack)
       (xref-push-marker-stack)
     (with-no-warnings
-      (ring-insert find-tag-marker-ring (point-marker))))
-  (ring-insert find-tag-marker-ring (point-marker)))
+      (ring-insert find-tag-marker-ring (point-marker)))))
 
 (defun ycmd--handle-goto-success (result)
   "Handle a successfull GoTo response for RESULT."
