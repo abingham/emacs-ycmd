@@ -319,6 +319,16 @@ describe them to ycmd."
   :group 'ycmd
   :type 'integer)
 
+(defcustom ycmd-seed-identifiers-with-keywords nil
+  "Whether to seed identifier database with keywords."
+  :group 'ycmd
+  :type 'boolean)
+
+(defcustom ycmd-get-keywords-function 'ycmd--get-keywords-from-alist
+  "Function to get keywords for current mode."
+  :group 'ycmd
+  :type 'symbol)
+
 (defcustom ycmd-gocode-binary-path (executable-find "gocode")
   "Gocode binary path."
   :group 'ycmd
@@ -355,6 +365,95 @@ in that list.  If nil, ycmd mode is never turned on by
     "objcpp"
     "cs")
   "A list of ycmd file type strings which support semantic completion.")
+
+(defvar ycmd-keywords-alist
+  '((c++-mode
+     "alignas" "alignof" "and" "and_eq" "asm" "auto" "bitand" "bitor" "bool"
+     "break" "case" "catch" "char" "char16_t" "char32_t" "class" "compl"
+     "concept" "const" "const_cast" "constexpr" "continue" "decltype" "default"
+     "define" "defined" "delete" "do" "double" "dynamic_cast" "elif" "else"
+     "endif" "enum" "error" "explicit" "export" "extern" "false" "final" "float"
+     "for" "friend" "goto" "if" "ifdef" "ifndef" "include" "inline" "int" "line"
+     "long" "mutable" "namespace" "new" "noexcept" "not" "not_eq" "nullptr"
+     "operator" "or" "or_eq" "override" "pragma" "_Pragma" "private" "protected"
+     "public" "register" "reinterpret_cast" "requires" "return" "short" "signed"
+     "sizeof" "static" "static_assert" "static_cast" "struct" "switch"
+     "template" "this" "thread_local" "throw" "true" "try" "typedef" "typeid"
+     "typename" "union" "unsigned" "using" "virtual" "void" "volatile" "wchar_t"
+     "while" "xor" "xor_eq")
+    (c-mode
+     "auto" "_Alignas" "_Alignof" "_Atomic" "_Bool" "break" "case" "char"
+     "_Complex" "const" "continue" "default" "define" "defined" "do" "double"
+     "elif" "else" "endif" "enum" "error" "extern" "float" "for" "goto"
+     "_Generic" "if" "ifdef" "ifndef" "_Imaginary" "include" "inline" "int"
+     "line" "long" "_Noreturn" "pragma" "register" "restrict" "return" "short"
+     "signed" "sizeof" "static" "struct" "switch" "_Static_assert" "typedef"
+     "_Thread_local" "undef" "union" "unsigned" "void" "volatile" "while")
+    (go-mode
+     "break" "case" "chan" "const" "continue" "default" "defer" "else"
+     "fallthrough" "for" "func" "go" "goto" "if" "import" "interface" "map"
+     "package" "range" "return" "select" "struct" "switch" "type" "var")
+    (lua-mode
+     "and" "break" "do" "else" "elseif" "end" "false" "for" "function" "if" "in"
+     "local" "nil" "not" "or" "repeat" "return" "then" "true" "until" "while")
+    (python-mode
+     "ArithmeticError" "AssertionError" "AttributeError" "BaseException"
+     "BufferError" "BytesWarning" "DeprecationWarning" "EOFError" "Ellipsis"
+     "EnvironmentError" "Exception" "False" "FloatingPointError" "FutureWarning"
+     "GeneratorExit" "IOError" "ImportError" "ImportWarning" "IndentationError"
+     "IndexError" "KeyError" "KeyboardInterrupt" "LookupError" "MemoryError"
+     "NameError" "None" "NotImplemented" "NotImplementedError" "OSError"
+     "OverflowError" "PendingDeprecationWarning" "ReferenceError" "RuntimeError"
+     "RuntimeWarning" "StandardError" "StopIteration" "SyntaxError"
+     "SyntaxWarning" "SystemError" "SystemExit" "TabError" "True" "TypeError"
+     "UnboundLocalError" "UnicodeDecodeError" "UnicodeEncodeError"
+     "UnicodeError" "UnicodeTranslateError" "UnicodeWarning" "UserWarning"
+     "ValueError" "Warning" "ZeroDivisionError" "__builtins__" "__debug__"
+     "__doc__" "__file__" "__future__" "__import__" "__init__" "__main__"
+     "__name__" "__package__" "_dummy_thread" "_thread" "abc" "abs" "aifc" "all"
+     "and" "any" "apply" "argparse" "array" "as" "assert" "ast" "asynchat"
+     "asyncio" "asyncore" "atexit" "audioop" "base64" "basestring" "bdb" "bin"
+     "binascii" "binhex" "bisect" "bool" "break" "buffer" "builtins" "bytearray"
+     "bytes" "bz2" "calendar" "callable" "cgi" "cgitb" "chr" "chuck" "class"
+     "classmethod" "cmath" "cmd" "cmp" "code" "codecs" "codeop" "coerce"
+     "collections" "colorsys" "compile" "compileall" "complex" "concurrent"
+     "configparser" "contextlib" "continue" "copy" "copyreg" "copyright"
+     "credits" "crypt" "csv" "ctypes" "curses" "datetime" "dbm" "decimal" "def"
+     "del" "delattr" "dict" "difflib" "dir" "dis" "distutils" "divmod" "doctest"
+     "dummy_threading" "elif" "else" "email" "enumerate" "ensurepip" "enum"
+     "errno" "eval" "except" "exec" "execfile" "exit" "faulthandler" "fcntl"
+     "file" "filecmp" "fileinput" "filter" "finally" "float" "fnmatch" "for"
+     "format" "formatter" "fpectl" "fractions" "from" "frozenset" "ftplib"
+     "functools" "gc" "getattr" "getopt" "getpass" "gettext" "glob" "global"
+     "globals" "grp" "gzip" "hasattr" "hash" "hashlib" "heapq" "help" "hex"
+     "hmac" "html" "http" "id" "if" "imghdr" "imp" "impalib" "import"
+     "importlib" "in" "input" "inspect" "int" "intern" "io" "ipaddress" "is"
+     "isinstance" "issubclass" "iter" "itertools" "json" "keyword" "lambda"
+     "len" "license" "linecache" "list" "locale" "locals" "logging" "long"
+     "lzma" "macpath" "mailbox" "mailcap" "map" "marshal" "math" "max"
+     "memoryview" "mimetypes" "min" "mmap" "modulefinder" "msilib" "msvcrt"
+     "multiprocessing" "netrc" "next" "nis" "nntplib" "not" "numbers" "object"
+     "oct" "open" "operator" "optparse" "or" "ord" "os" "ossaudiodev" "parser"
+     "pass" "pathlib" "pdb" "pickle" "pickletools" "pipes" "pkgutil" "platform"
+     "plistlib" "poplib" "posix" "pow" "pprint" "print" "profile" "property"
+     "pty" "pwd" "py_compiler" "pyclbr" "pydoc" "queue" "quit" "quopri" "raise"
+     "random" "range" "raw_input" "re" "readline" "reduce" "reload" "repr"
+     "reprlib" "resource" "return" "reversed" "rlcompleter" "round" "runpy"
+     "sched" "select" "selectors" "self" "set" "setattr" "shelve" "shlex"
+     "shutil" "signal" "site" "slice" "smtpd" "smtplib" "sndhdr" "socket"
+     "socketserver" "sorted" "spwd" "sqlite3" "ssl" "stat" "staticmethod"
+     "statistics" "str" "string" "stringprep" "struct" "subprocess" "sum"
+     "sunau" "super" "symbol" "symtable" "sys" "sysconfig" "syslog" "tabnanny"
+     "tarfile" "telnetlib" "tempfile" "termios" "test" "textwrap" "threading"
+     "time" "timeit" "tkinter" "token" "tokenize" "trace" "traceback"
+     "tracemalloc" "try" "tty" "tuple" "turtle" "type" "types" "unichr"
+     "unicode" "unicodedata" "unittest" "urllib" "uu" "uuid" "vars" "venv"
+     "warnings" "wave" "weakref" "webbrowser" "while" "winsound" "winreg" "with"
+     "wsgiref" "xdrlib" "xml" "xmlrpc" "xrange" "yield" "zip" "zipfile" "zipimport"
+     "zlib"))
+  "Alist mapping major-modes to keywords for.
+
+Keywords source: https://github.com/auto-complete/auto-complete/tree/master/dict")
 
 (defvar ycmd--server-actual-port 0
   "The actual port being used by the ycmd server.
@@ -584,6 +683,7 @@ _LEN is ununsed."
 (defun ycmd--global-teardown ()
   "Teardown ycmd in all buffers."
   (ycmd--kill-timer ycmd--on-focus-timer)
+  (setq ycmd--mode-keywords-loaded nil)
   (ycmd--with-all-ycmd-buffers (ycmd--teardown)))
 
 (defun ycmd-diagnostic-file-types (mode)
@@ -700,6 +800,26 @@ Returns the new value of `ycmd-force-semantic-completion'."
     (unless (listp it)
       (setq it (list it)))
     (mapcar 'expand-file-name it)))
+
+(defvar ycmd--mode-keywords-loaded nil)
+
+(defun ycmd--get-keywords (buffer)
+  "Get syntax keywords for BUFFER."
+  (with-current-buffer buffer
+    (let ((mode major-mode))
+      (unless (memq mode ycmd--mode-keywords-loaded)
+        (--when-let (and (functionp ycmd-get-keywords-function)
+                         (funcall ycmd-get-keywords-function mode))
+          (when (ycmd--string-list-p it)
+            (add-to-list 'ycmd--mode-keywords-loaded mode)
+            it))))))
+
+(defun ycmd--get-keywords-from-alist (mode)
+  "Get keywords from `ycmd-keywords-alist' for MODE."
+  (let ((symbols (cdr (assq mode ycmd-keywords-alist))))
+    (if (consp symbols)
+        symbols
+      (cdr (assq symbols ycmd-keywords-alist)))))
 
 (defun ycmd-get-completions (buffer pos)
   "Get completions in BUFFER for position POS from the ycmd server.
@@ -1281,7 +1401,10 @@ The results of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let* ((buff (current-buffer))
-           (extra-content (and ycmd-tag-files 'tags))
+           (extra-content (append (when ycmd-tag-files
+                                    (list 'tags))
+                                  (when ycmd-seed-identifiers-with-keywords
+                                    (list 'syntax-keywords))))
            (content (cons '("event_name" . "FileReadyToParse")
                           (ycmd--standard-content-with-extras
                            buff extra-content))))
@@ -1475,14 +1598,22 @@ nil, this uses the current buffer."
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
 
-(defun ycmd--standard-content-with-extras (buffer &optional extra)
-  "Generate 'standard' content for BUFFER with EXTRA content."
-  (let ((standard-content (ycmd--standard-content buffer))
-        (extra-content (pcase extra
-                         (`force-semantic '(("force_semantic" . "true")))
-                         (`tags (--when-let (ycmd--get-tag-files buffer)
-                                  `(("tag_files" . ,it)))))))
-    (append extra-content standard-content)))
+(defun ycmd--standard-content-with-extras (buffer &optional extras)
+  "Generate 'standard' content for BUFFER with EXTRAS."
+  (let ((standard-content (ycmd--standard-content buffer)))
+    (unless (listp extras)
+      (setq extras (list extras)))
+    (dolist (extra extras standard-content)
+      (--when-let (pcase extra
+                    (`force-semantic
+                     (cons "force_semantic" "true"))
+                    (`tags
+                     (--when-let (ycmd--get-tag-files buffer)
+                       (cons "tag_files" it)))
+                    (`syntax-keywords
+                     (--when-let (ycmd--get-keywords buffer)
+                       (cons "syntax_keywords" it))))
+        (push it standard-content)))))
 
 
 (defvar ycmd--log-enabled nil
