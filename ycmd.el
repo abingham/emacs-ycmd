@@ -552,7 +552,7 @@ explicitly re-define the prefix key:
 
 (defun ycmd-parsing-in-progress-p ()
   "Return t if parsing is in progress."
-  (equal ycmd--last-status-change 'parsing))
+  (eq ycmd--last-status-change 'parsing))
 
 (defun ycmd--report-status (status)
   "Report ycmd STATUS."
