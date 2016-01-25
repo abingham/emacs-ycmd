@@ -131,14 +131,15 @@ feature."
 
 (defun company-ycmd--extract-params-cpp (function-signature)
   "Extract parameters from FUNCTION-SIGNATURE if possible."
-  (cond ((null function-signature) nil)
+  (cond
+   ((null function-signature) nil)
    ((string-match "[^:]:[^:]" function-signature)
     (substring function-signature (1+ (match-beginning 0))))
    ((string-match "\\((.*)[ a-z]*\\'\\)" function-signature)
     (let ((paren (match-beginning 1)))
       (if (not (and (eq (aref function-signature (1- paren)) ?>)
-                    (not (string-match-p
-                          "operator>" function-signature))))
+                    (s-contains?
+                     "<" (substring function-signature 0 (1- paren)))))
           (match-string 1 function-signature)
         (with-temp-buffer
           (insert function-signature)
