@@ -135,7 +135,15 @@ feature."
    ((string-match "[^:]:[^:]" function-signature)
     (substring function-signature (1+ (match-beginning 0))))
    ((string-match "\\((.*)[ a-z]*\\'\\)" function-signature)
-    (match-string 1 function-signature))))
+    (let ((paren (match-beginning 1)))
+      (if (not (and (eq (aref function-signature (1- paren)) ?>)
+                    (not (string-match-p
+                          "operator>" function-signature))))
+          (match-string 1 function-signature)
+        (with-temp-buffer
+          (insert function-signature)
+          (goto-char paren)
+          (substring function-signature (1- (search-backward "<")))))))))
 
 (defun company-ycmd--convert-kind-cpp (kind)
   "Convert KIND string for display."
