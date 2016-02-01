@@ -305,6 +305,7 @@ list
     (php-mode . ("php"))
     (python-mode . ("python"))
     (ruby-mode . ("ruby"))
+    (rust-mode . ("rust"))
     (scala-mode . ("scala"))
     (tuareg-mode . ("ocaml")))
   "Mapping from major modes to ycmd file-type strings.
