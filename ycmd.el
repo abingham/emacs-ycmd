@@ -290,7 +290,7 @@ list
 
 (defcustom ycmd-file-type-map
   '((c++-mode . ("cpp"))
-    (c-mode . ("cpp"))
+    (c-mode . ("c"))
     (caml-mode . ("ocaml"))
     (csharp-mode . ("cs"))
     (d-mode . ("d"))

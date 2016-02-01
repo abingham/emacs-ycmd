@@ -129,7 +129,7 @@ feature."
          (propertize insertion-text 'return_type extra-menu-info)
        ,body)))
 
-(defun company-ycmd--extract-params-cpp (function-signature)
+(defun company-ycmd--extract-params-clang (function-signature)
   "Extract parameters from FUNCTION-SIGNATURE if possible."
   (cond
    ((null function-signature) nil)
@@ -146,7 +146,7 @@ feature."
           (goto-char paren)
           (substring function-signature (1- (search-backward "<")))))))))
 
-(defun company-ycmd--convert-kind-cpp (kind)
+(defun company-ycmd--convert-kind-clang (kind)
   "Convert KIND string for display."
   (pcase kind
     ("STRUCT" "struct")
@@ -160,7 +160,7 @@ feature."
     ("PARAMETER" "parameter")
     ("NAMESPACE" "namespace")))
 
-(defun company-ycmd--construct-candidate-cpp (candidate)
+(defun company-ycmd--construct-candidate-clang (candidate)
   "Construct a completion string(s) from a CANDIDATE for cpp file-types.
 
 Returns a list with one candidate or multiple candidates for
@@ -174,7 +174,7 @@ overloaded functions."
            candidates)
       (dolist (it (delete-dups items) candidates)
         (let* ((meta (if overloaded-functions it detailed-info))
-               (params (company-ycmd--extract-params-cpp it))
+               (params (company-ycmd--extract-params-clang it))
                (return-type (or (and overloaded-functions
                                      (string-match
                                       (concat "\\(.*\\) "
@@ -182,7 +182,7 @@ overloaded functions."
                                       it)
                                      (match-string 1 it))
                                 extra-menu-info))
-               (kind (company-ycmd--convert-kind-cpp kind))
+               (kind (company-ycmd--convert-kind-clang kind))
                (doc (cdr (assoc 'doc_string extra-data))))
           (setq candidates
                 (cons (propertize insertion-text 'return_type return-type
@@ -265,10 +265,10 @@ candidates list."
 
 (defun company-ycmd--get-construct-candidate-fn ()
   "Return function to construct candidate(s) for current `major-mode'."
-  (pcase (ycmd-major-mode-to-file-types major-mode)
-    (`("cpp") 'company-ycmd--construct-candidate-cpp)
-    (`("go") 'company-ycmd--construct-candidate-go)
-    (`("python") 'company-ycmd--construct-candidate-python)
+  (pcase (car-safe (ycmd-major-mode-to-file-types major-mode))
+    ((or "cpp" "c") 'company-ycmd--construct-candidate-clang)
+    ("go" 'company-ycmd--construct-candidate-go)
+    ("python" 'company-ycmd--construct-candidate-python)
     (_ 'company-ycmd--construct-candidate-generic)))
 
 (defun company-ycmd--get-candidates (cb prefix)
