@@ -95,7 +95,7 @@ feature."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode go-mode objc-mode)
+  '(c++-mode c-mode go-mode objc-mode rust-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -228,6 +228,40 @@ overloaded functions."
       (propertize insertion-text 'meta meta 'doc detailed-info 'kind kind
                   'filepath filepath 'line_num line-num))))
 
+(defun company-ycmd--construct-candidate-rust (candidate)
+  "Construct completion string from CANDIDATE for rust file-types."
+  (company-ycmd--with-destructured-candidate candidate
+    (let* ((meta extra-menu-info)
+           (params (and extra-menu-info
+                        (string-match
+                         (concat "^fn " (regexp-quote insertion-text)
+                                 "(\\(.*\\)).*")
+                         extra-menu-info)
+                        (s-join "," (cl-remove-if
+                                     (lambda (it)
+                                       (string-match-p "self" it))
+                                     (s-split
+                                      ","
+                                      (match-string 1 extra-menu-info)
+                                      t)))))
+           (params (and params (concat "(" (s-trim-left params) ")")))
+           (return-type (and extra-menu-info
+                             (if (string-match
+                                  (concat "^fn " (regexp-quote insertion-text)
+                                          "(.*) -> \\(.*\\)")
+                                  extra-menu-info)
+                                 (match-string 1 extra-menu-info)
+                               (and (string-prefix-p "fn" extra-menu-info)
+                                    "void"))))
+           (location (assoc-default 'location extra-data))
+           (filepath (assoc-default 'filepath location))
+           (line-num (assoc-default 'line_num location))
+           (column-num (assoc-default 'column_num location)))
+      (propertize insertion-text 'meta meta 'kind kind
+                  'params params 'return_type return-type
+                  'filepath filepath 'line_num line-num
+                  'column_num column-num))))
+
 (defun company-ycmd--construct-candidate-generic (candidate)
   "Generic function to construct completion string from a CANDIDATE."
   (company-ycmd--with-destructured-candidate candidate insertion-text))
@@ -271,6 +305,7 @@ candidates list."
     ((or "cpp" "c" "objc") 'company-ycmd--construct-candidate-clang)
     ("go" 'company-ycmd--construct-candidate-go)
     ("python" 'company-ycmd--construct-candidate-python)
+    ("rust" 'company-ycmd--construct-candidate-rust)
     (_ 'company-ycmd--construct-candidate-generic)))
 
 (defun company-ycmd--get-candidates (cb prefix)
