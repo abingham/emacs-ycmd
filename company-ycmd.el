@@ -237,14 +237,13 @@ overloaded functions."
                          (concat "^fn " (regexp-quote insertion-text)
                                  "(\\(.*\\)).*")
                          extra-menu-info)
-                        (s-join "," (cl-remove-if
-                                     (lambda (it)
-                                       (string-match-p "self" it))
-                                     (s-split
-                                      ","
-                                      (match-string 1 extra-menu-info)
-                                      t)))))
-           (params (and params (concat "(" (s-trim-left params) ")")))
+                        (->>
+                         (s-split "," (match-string 1 extra-menu-info) t)
+                         (cl-remove-if (lambda (it)
+                                         (string-match-p "self" it)))
+                         (s-join ",")
+                         (s-trim-left)
+                         (format "(%s)"))))
            (return-type (and extra-menu-info
                              (if (string-match
                                   (concat "^fn " (regexp-quote insertion-text)
