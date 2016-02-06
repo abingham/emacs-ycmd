@@ -1,8 +1,9 @@
 ;;; ycmd.el --- emacs bindings to the ycmd completion server -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2014 Austin Bingham
+;; Copyright (c) 2014-2016 Austin Bingham, Peter Vasil
 ;;
-;; Author: Austin Bingham <austin.bingham@gmail.com>
+;; Authors: Austin Bingham <austin.bingham@gmail.com>
+;;          Peter Vasil <mail@petervasil.net>
 ;; Version: 0.9.1
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Package-Requires: ((emacs "24") (f "0.17.1") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0"))

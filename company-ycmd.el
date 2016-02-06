@@ -1,9 +1,10 @@
 ;;; company-ycmd.el --- company-mode backend for ycmd -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2014 Austin Bingham
+;; Copyright (c) 2014-2016 Austin Bingham, Peter Vasil
 ;;
-;; Author: Austin Bingham <austin.bingham@gmail.com>
-;; Version: 0.1
+;; Authors: Austin Bingham <austin.bingham@gmail.com>
+;;          Peter Vasil <mail@petervasil.net>
+;; version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0") (s "1.9.0") (dash "1.2.0"))
 ;;
