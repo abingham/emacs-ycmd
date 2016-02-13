@@ -851,10 +851,6 @@ To see what the returned structure looks like, you can use
 `ycmd-display-completions'."
   (with-current-buffer buffer
     (goto-char pos)
-
-    (when (ycmd-parsing-in-progress-p)
-      (message "Ycmd completion unavailable while parsing is in progress."))
-
     (when ycmd-mode
       (let* ((extra-content (and ycmd-force-semantic-completion
                                  'force-semantic))
