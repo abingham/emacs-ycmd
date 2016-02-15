@@ -369,16 +369,12 @@ candidates list."
 
 (defun company-ycmd--prefix ()
   "Prefix-command handler for the company backend."
-  (when (ycmd-parsing-in-progress-p)
-    (message "Ycmd completion unavailable while parsing is in progress."))
-
   (and ycmd-mode
        buffer-file-name
        (ycmd-running?)
        (or (not (company-in-string-or-comment))
            (company-ycmd--in-include))
-       (or (and (not (ycmd-parsing-in-progress-p))
-                (company-grab-symbol-cons "\\.\\|->\\|::" 2))
+       (or (company-grab-symbol-cons "\\.\\|->\\|::" 2)
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
