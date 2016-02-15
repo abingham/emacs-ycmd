@@ -319,7 +319,7 @@ candidates list."
 
 If CB is non-nil, call it with candidates."
   (if (assoc-default 'exception completions)
-      (let ((msg (assoc-default 'message c nil "unknown error")))
+      (let ((msg (assoc-default 'message completions nil "unknown error")))
         (message "Exception while fetching candidates: %s" msg)
         '())
     (funcall
