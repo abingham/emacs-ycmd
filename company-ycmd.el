@@ -95,6 +95,12 @@ feature."
   :type 'boolean
   :group 'company-ycmd)
 
+(defcustom company-ycmd-request-sync-timeout 0.05
+  "Timeout for synchronous ycmd completion request.
+When 0, do not use synchronous completion request at all."
+  :type 'number
+  :group 'company-ycmd)
+
 (defconst company-ycmd--extended-features-modes
   '(c++-mode c-mode go-mode objc-mode rust-mode)
   "Major modes which have extended features in `company-ycmd'.")
@@ -308,31 +314,40 @@ candidates list."
     ("rust" 'company-ycmd--construct-candidate-rust)
     (_ 'company-ycmd--construct-candidate-generic)))
 
-(defun company-ycmd--get-candidates (cb prefix)
-  "Call CB with completion candidates for PREFIX at the current point."
-  (deferred:$
+(defun company-ycmd--get-candidates (completions prefix &optional cb)
+  "Get candidates for COMPLETIONS and PREFIX.
 
+If CB is non-nil, call it with candidates."
+  (if (assoc-default 'exception completions)
+      (let ((msg (assoc-default 'message c nil "unknown error")))
+        (message "Exception while fetching candidates: %s" msg)
+        '())
+    (funcall
+     (or cb 'identity)
+     (company-ycmd--construct-candidates
+      (assoc-default 'completions completions)
+      prefix
+      (assoc-default 'completion_start_column completions)
+      (company-ycmd--get-construct-candidate-fn)))))
+
+(defun company-ycmd--get-candidates-synchronously (prefix)
+  "Get completion candidates with PREFIX synchronously."
+  (--when-let (and (ycmd-running?)
+                   (ycmd-get-completions
+                    (current-buffer) (point) :sync))
+    (company-ycmd--get-candidates it prefix)))
+
+(defun company-ycmd--get-candidates-deferred (prefix cb)
+  "Get completion candidates with PREFIX and call CB deferred."
+  (deferred:$
     (deferred:try
       (deferred:$
-        (if (ycmd-running?)
-            (ycmd-get-completions (current-buffer) (point))))
+        (when (ycmd-running?)
+          (ycmd-get-completions (current-buffer) (point))))
       :catch (lambda (err) nil))
-
     (deferred:nextc it
       (lambda (c)
-        (if (assoc-default 'exception c)
-
-            (let ((msg (assoc-default 'message c nil "unknown error")))
-              (message "Exception while fetching candidates: %s" msg)
-              '())
-
-          (funcall
-           cb
-           (company-ycmd--construct-candidates
-            (assoc-default 'completions c)
-            prefix
-            (assoc-default 'completion_start_column c)
-            (company-ycmd--get-construct-candidate-fn))))))))
+        (company-ycmd--get-candidates c prefix cb)))))
 
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
@@ -378,9 +393,17 @@ candidates list."
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
-  "Candidates-command handler for the company backend."
-  (cons :async (lambda (cb)
-                 (company-ycmd--get-candidates cb prefix))))
+  "Candidates-command handler for the company backend for PREFIX."
+  (let ((async-fetcher
+         (cons :async
+               (lambda (cb)
+                 (company-ycmd--get-candidates-deferred prefix cb)))))
+    (if (> company-ycmd-request-sync-timeout 0)
+        (with-timeout
+            (company-ycmd-request-sync-timeout
+             async-fetcher)
+          (company-ycmd--get-candidates-synchronously prefix))
+      async-fetcher)))
 
 (defun company-ycmd--post-completion (candidate)
   "Insert function arguments after completion for CANDIDATE."
@@ -428,7 +451,7 @@ candidates list."
 
 ;;;###autoload
 (defun company-ycmd-setup ()
-  "Add company-ycmd to the front of company-backends"
+  "Add company-ycmd to the front of company-backends."
   (add-to-list 'company-backends 'company-ycmd))
 
 (provide 'company-ycmd)

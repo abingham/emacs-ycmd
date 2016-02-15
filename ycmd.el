@@ -6,7 +6,7 @@
 ;;          Peter Vasil <mail@petervasil.net>
 ;; Version: 0.9.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (f "0.17.1") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0"))
+;; Package-Requires: ((emacs "24") (f "0.17.1") (dash "1.2.0") (deferred "0.3.2") (popup "0.5.0") (cl-lib "0.5"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -103,6 +103,8 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib))
 (require 'dash)
 (require 'deferred)
 (require 'f)
@@ -823,7 +825,7 @@ Returns the new value of `ycmd-force-semantic-completion'."
         symbols
       (cdr (assq symbols ycmd-keywords-alist)))))
 
-(defun ycmd-get-completions (buffer pos)
+(defun ycmd-get-completions (buffer pos &optional sync)
   "Get completions in BUFFER for position POS from the ycmd server.
 
 Returns a deferred object which yields the HTTP message
@@ -859,7 +861,8 @@ To see what the returned structure looks like, you can use
         (ycmd--request
          "/completions"
          content
-         :parser 'json-read)))))
+         :parser 'json-read
+         :sync sync)))))
 
 (defun ycmd--handle-exception (results)
   "Handle exception in completion RESULTS.
@@ -1668,9 +1671,12 @@ This is useful for debugging.")
               `(,method ,path ,(or body "")) "")
    ycmd--hmac-secret))
 
-(defun* ycmd--request (location
-                       content
-                       &key (parser 'buffer-string) (type "POST"))
+(cl-defun ycmd--request (location
+                         content
+                         &key
+                         (parser 'buffer-string)
+                         (type "POST")
+                         (sync nil))
   "Send an asynchronous HTTP request to the ycmd server.
 
 This starts the server if necessary.
@@ -1699,24 +1705,40 @@ anything like that.)
          (ycmd-request-backend 'url-retrieve)
          (content (json-encode content))
          (hmac (ycmd--get-request-hmac type location content))
-         (encoded-hmac (base64-encode-string hmac 't)))
+         (encoded-hmac (base64-encode-string hmac 't))
+         (url (format "http://%s:%s%s"
+                      ycmd-host ycmd--server-actual-port location))
+         (headers `(("Content-Type" . "application/json")
+                    ("X-Ycm-Hmac" . ,encoded-hmac))))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
-    (deferred:$
-
-      (ycmd-request-deferred
-       (format "http://%s:%s%s" ycmd-host ycmd--server-actual-port location)
-       :headers `(("Content-Type" . "application/json")
-                  ("X-Ycm-Hmac" . ,encoded-hmac))
-       :parser parser
-       :data content
-       :type type)
-
-      (deferred:nextc it
-        (lambda (req)
-          (let ((content (ycmd-request-response-data req)))
-            (ycmd--log-content "HTTP RESPONSE CONTENT" content)
-            content))))))
+    (if sync
+        (let (result)
+          (ycmd-request
+           url
+           :headers headers
+           :parser parser
+           :data content
+           :type type
+           :sync t
+           :success
+           (cl-function
+            (lambda (&key data &allow-other-keys)
+              (ycmd--log-content "HTTP RESPONSE CONTENT" data)
+              (setq result data))))
+          result)
+      (deferred:$
+        (ycmd-request-deferred
+         url
+         :headers headers
+         :parser parser
+         :data content
+         :type type)
+        (deferred:nextc it
+          (lambda (req)
+            (let ((content (ycmd-request-response-data req)))
+              (ycmd--log-content "HTTP RESPONSE CONTENT" content)
+              content)))))))
 
 (provide 'ycmd)
 
