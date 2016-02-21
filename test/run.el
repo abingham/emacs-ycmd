@@ -47,6 +47,7 @@
       (load (expand-file-name "third-party/ycmd-request" source-directory))
       (load (expand-file-name "third-party/ycmd-request-deferred" source-directory))
       (load (expand-file-name "ycmd" source-directory))
+      (load (expand-file-name "company-ycmd" source-directory))
       (load (expand-file-name "ycmd-test" (file-name-directory current-file))))
 
     (let* ((debug-on-error t)
@@ -55,7 +56,8 @@
            (ert-selector (pop argv)))
       (unless (f-exists? ycmd-path)
         (error "Ycmd path does not exist"))
-      (ert-run-tests-batch-and-exit (and "ycmd-" ert-selector)))))
+      (ert-run-tests-batch-and-exit
+       (and (or "ycmd-" "company-ycmd-") ert-selector)))))
 
 (when (and noninteractive (ycmd-runs-this-script-p))
   (ycmd-run-tests-main))

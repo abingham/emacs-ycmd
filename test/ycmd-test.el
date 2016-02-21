@@ -52,6 +52,7 @@
 (require 'ert)
 (require 'f)
 (require 'ycmd)
+(require 'company-ycmd)
 
 (defconst ycmd-test-location
   (file-name-directory (or load-file-name buffer-file-name)))
@@ -146,7 +147,143 @@ the server's response,"
 
 (ert-deftest ycmd-test-col-line-to-position ()
   (ycmd-test-with-buffer "test_goto.cpp" 'c++-mode
-   (should (= (ycmd--col-line-to-position 10 2) 23))))
+    (should (= (ycmd--col-line-to-position 10 2) 23))))
+
+(defmacro ycmd-test-with-temp-buffer (mode &rest body)
+  "Create temporary current buffer MODE and execute BODY."
+  (declare (indent 1) (debug t))
+  `(with-temp-buffer
+     (delay-mode-hooks (funcall ,mode))
+     ,@body))
+
+(defun ycmd-test-has-property-with-value (property value item)
+  (let ((pred (pcase value
+                ((pred stringp) 'string=)
+                (_ '=))))
+    (funcall pred value (get-text-property 0 property item))))
+
+(ert-deftest company-ycmd-test-construct-candidate-clang ()
+  (ycmd-test-with-temp-buffer 'c++-mode
+    (let* ((data '((menu_text . "foo()")
+                   (insertion_text . "foo")
+                   (detailed_info . "void foo()\nint foo( int i )\n")
+                   (extra_menu_info . "void")
+                   (kind . "FUNCTION")
+                   (extra_data (doc_string . "A docstring"))))
+           (candidates (company-ycmd--construct-candidate-clang data))
+           (candidate-1 (nth 0 candidates))
+           (candidate-2 (nth 1 candidates)))
+      (should (= (length candidates) 2))
+      (should (string= (assoc-default 'insertion_text data)
+                       (substring-no-properties candidate-1)))
+      (should (ycmd-test-has-property-with-value 'kind "fn" candidate-1))
+      (should (ycmd-test-has-property-with-value 'meta "int foo( int i )" candidate-1))
+      (should (ycmd-test-has-property-with-value 'return_type "int" candidate-1))
+      (should (ycmd-test-has-property-with-value 'params "( int i )" candidate-1))
+      (should (ycmd-test-has-property-with-value 'doc "A docstring" candidate-1))
+      (should (string= (assoc-default 'insertion_text data)
+                       (substring-no-properties candidate-2)))
+      (should (ycmd-test-has-property-with-value 'kind "fn" candidate-2))
+      (should (ycmd-test-has-property-with-value 'meta "void foo()" candidate-2))
+      (should (ycmd-test-has-property-with-value 'return_type "void" candidate-2))
+      (should (ycmd-test-has-property-with-value 'params "()" candidate-2))
+      (should (ycmd-test-has-property-with-value 'doc "A docstring" candidate-2)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-go ()
+  (ycmd-test-with-temp-buffer 'go-mode
+    (let* ((data '((menu_text . "Print")
+                   (insertion_text . "Print")
+                   (detailed_info . "Print func(a ...interface{}) (n int, err error) func")
+                   (extra_menu_info . "func(a ...interface{}) (n int, err error)")
+                   (kind . "func")))
+           (candidate (company-ycmd--construct-candidate-go data)))
+      (should (string= (assoc-default 'insertion_text data)
+                       (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'kind "func" candidate))
+      (should (ycmd-test-has-property-with-value 'params "(a ...interface{})" candidate))
+      (should (ycmd-test-has-property-with-value
+               'meta "func Print(a ...interface{}) (n int, err error)" candidate))
+      (should (ycmd-test-has-property-with-value
+               'return_type "(n int, err error)" candidate)))))
+
+(ert-deftest company-ycmd-test-contruct-candidate-python ()
+  (ycmd-test-with-temp-buffer 'python-mode
+    (let* ((data '((insertion_text . "foo")
+                   (detailed_info . "foo(self)\n\nA function")
+                   (extra_data
+                    (location
+                     (line_num . 6)
+                     (column_num . 7)
+                     (filepath . "/foo/bar.py")))
+                   (extra_menu_info . "function: bar.Foo.foo")))
+           (candidate (company-ycmd--construct-candidate-python data)))
+      (should (string= (assoc-default 'insertion_text data)
+                       (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'meta "foo(self)" candidate))
+      (should (ycmd-test-has-property-with-value
+               'doc (assoc-default 'detailed_info data) candidate))
+      (should (ycmd-test-has-property-with-value
+               'kind (assoc-default 'extra_menu_info data) candidate))
+      (should (ycmd-test-has-property-with-value
+               'filepath (assoc-default
+                          'filepath
+                          (assoc-default
+                           'location (assoc-default 'extra_data data)))
+               candidate))
+      (should (ycmd-test-has-property-with-value
+               'line_num (assoc-default
+                          'line_num
+                          (assoc-default
+                           'location (assoc-default 'extra_data data)))
+               candidate)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-rust ()
+  (ycmd-test-with-temp-buffer 'rust-mode
+    (let* ((data '((insertion_text . "foo")
+                   (kind . "Function")
+                   (extra_data
+                    (location
+                     (line_num . 40)
+                     (column_num . 8)
+                     (filepath . "/foo/bar.rs")))
+                   (extra_menu_info . "fn foo(&self, x: f64) -> f64")))
+           (candidate (company-ycmd--construct-candidate-rust data)))
+      (should (string= (assoc-default 'insertion_text data)
+                       (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value
+               'meta (assoc-default 'extra_menu_info data) candidate))
+      (should (ycmd-test-has-property-with-value
+               'kind (assoc-default 'kind data) candidate))
+      (should (ycmd-test-has-property-with-value 'params "(x: f64)" candidate))
+      (should (ycmd-test-has-property-with-value 'return_type "f64" candidate))
+      (should (ycmd-test-has-property-with-value
+               'filepath (assoc-default
+                          'filepath
+                          (assoc-default
+                           'location (assoc-default 'extra_data data)))
+               candidate))
+      (should (ycmd-test-has-property-with-value
+               'line_num (assoc-default
+                          'line_num
+                          (assoc-default
+                           'location (assoc-default 'extra_data data)))
+               candidate))
+      (should (ycmd-test-has-property-with-value
+               'column_num (assoc-default
+                            'column_num
+                            (assoc-default
+                             'location (assoc-default 'extra_data data)))
+               candidate)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-generic ()
+  (ycmd-test-with-temp-buffer 'c++-mode
+    (let* ((data '((insertion_text . "foo")
+                   (extra_menu_info . "[ID]")))
+           (candidate (company-ycmd--construct-candidate-generic data)))
+      (should (string= (assoc-default 'insertion_text data)
+                       (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value
+               'return_type (assoc-default 'extra_menu_info data) candidate)))))
 
 
 (provide 'ycmd-test)
