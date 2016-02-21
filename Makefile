@@ -13,6 +13,9 @@ export EMACS
 SRCS = ycmd.el third-party/ycmd-request.el third-party/ycmd-request-deferred.el contrib/ycmd-next-error.el
 OBJECTS = $(SRCS:.el=.elc)
 
+SRCS_COMP = company-ycmd.el
+OBJECTS_COMP = $(SRCS_COMP:.el=.elc)
+
 DISTDIR = dist
 BUILDDIR = build
 
@@ -24,11 +27,13 @@ EMACSBATCH = $(EMACS) -Q --batch $(EMACSFLAGS)
 # Build targets
 compile : $(OBJECTS)
 
+compile-comp : $(OBJECTS) $(OBJECTS_COMP)
+
 dist :
 	$(CASK) package
 
 # Test targets
-test : $(OBJECTS)
+test : $(OBJECTS) $(OBJECTS_COMP)
 	$(EMACSBATCH) --script test/run.el '$(YCMDPATH)' '$(ERTSELECTOR)'
 
 # Support targets
@@ -39,7 +44,7 @@ clean : clean-elc
 clobber: clobber-dist clobber-deps
 
 clean-elc :
-	rm -rf $(OBJECTS)
+	rm -rf $(OBJECTS) $(OBJECTS_COMP)
 
 clobber-dist :
 	rm -rf $(DISTDIR)
