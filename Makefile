@@ -10,30 +10,41 @@ PKGDIR := $(shell EMACS=$(EMACS) $(CASK) package-directory)
 # Export the used EMACS to recipe environments
 export EMACS
 
-SRCS = ycmd.el third-party/ycmd-request.el third-party/ycmd-request-deferred.el contrib/ycmd-next-error.el
+SRCS = ycmd.el \
+	third-party/ycmd-request.el \
+	third-party/ycmd-request-deferred.el \
+	contrib/ycmd-next-error.el
+
 OBJECTS = $(SRCS:.el=.elc)
 
 SRCS_COMP = company-ycmd.el
 OBJECTS_COMP = $(SRCS_COMP:.el=.elc)
+
+SRCS_FLYC = flycheck-ycmd.el
+OBJECTS_FLYC = $(SRCS_FLYC:.el=.elc)
 
 DISTDIR = dist
 BUILDDIR = build
 
 EMACSBATCH = $(EMACS) -Q --batch $(EMACSFLAGS)
 
-.PHONY: deps compile dist clean clean-elc \
-	clobber clobber-dist clobber-deps test
+.PHONY: deps all ycmd company-ycmd flycheck-ycmd dist test \
+	clean clean-elc clobber clobber-dist clobber-deps
 
 # Build targets
-compile : $(OBJECTS)
+all : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC)
 
-compile-comp : $(OBJECTS) $(OBJECTS_COMP)
+ycmd : $(OBJECTS)
+
+company-ycmd : $(OBJECTS) $(OBJECTS_COMP)
+
+flycheck-ycmd : $(OBJECTS) $(OBJECTS_FLYC)
 
 dist :
 	$(CASK) package
 
 # Test targets
-test : $(OBJECTS) $(OBJECTS_COMP)
+test : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC)
 	$(EMACSBATCH) --script test/run.el '$(YCMDPATH)' '$(ERTSELECTOR)'
 
 # Support targets
@@ -44,7 +55,7 @@ clean : clean-elc
 clobber: clobber-dist clobber-deps
 
 clean-elc :
-	rm -rf $(OBJECTS) $(OBJECTS_COMP)
+	rm -rf $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC)
 
 clobber-dist :
 	rm -rf $(DISTDIR)

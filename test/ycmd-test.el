@@ -53,6 +53,8 @@
 (require 'f)
 (require 'ycmd)
 (require 'company-ycmd)
+(require 'flycheck-ert)
+(require 'flycheck-ycmd)
 
 (defconst ycmd-test-location
   (file-name-directory (or load-file-name buffer-file-name)))
@@ -320,6 +322,31 @@ the server's response,"
   (with-temp-buffer
     (insert "#include \"foo.h\"")
     (should (not (company-ycmd--in-include)))))
+
+(defun flycheck-ycmd-test-ycmd-mode ()
+  (let ((ycmd-global-config ycmd-test-global-conf)
+        (ycmd-extra-conf-handler 'load)
+        (ycmd-parse-conditions nil))
+    (ycmd-mode +1)
+    (flycheck-ycmd-setup)
+    (deferred:sync!
+      (ycmd-notify-file-ready-to-parse))))
+
+(ert-deftest flycheck-ycmd-test-error ()
+  (let ((flycheck-checkers '(ycmd)))
+    (flycheck-ert-should-syntax-check
+     "test-error.cpp" 'flycheck-ycmd-test-ycmd-mode
+     '(3 15 error "expected ';' at end of declaration list (FixIt)"
+         :checker ycmd))))
+
+(ert-deftest flycheck-ycmd-test-warning ()
+  (let ((flycheck-checkers '(ycmd)))
+    (flycheck-ert-should-syntax-check
+     "test-warning.cpp" 'flycheck-ycmd-test-ycmd-mode
+     '(5 13 warning "unused variable 'a'" :checker ycmd))))
+
+(flycheck-ert-initialize ycmd-test-resources-location)
+
 
 (provide 'ycmd-test)
 
