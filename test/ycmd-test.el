@@ -304,6 +304,22 @@ the server's response,"
   (let ((data "char "))
     (should (null (company-ycmd--extract-params-clang data)))))
 
+(ert-deftest company-ycmd-test-in-include-quoted-true ()
+  (with-temp-buffer
+    (insert "#include \"foo.h\"")
+    (goto-char 15)
+    (should (company-ycmd--in-include))))
+
+(ert-deftest company-ycmd-test-in-include-angle-bracket-true ()
+  (with-temp-buffer
+    (insert "#include <foo>")
+    (goto-char 14)
+    (should (company-ycmd--in-include))))
+
+(ert-deftest company-ycmd-test-in-include-false ()
+  (with-temp-buffer
+    (insert "#include \"foo.h\"")
+    (should (not (company-ycmd--in-include)))))
 
 (provide 'ycmd-test)
 
