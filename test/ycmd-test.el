@@ -285,6 +285,25 @@ the server's response,"
       (should (ycmd-test-has-property-with-value
                'return_type (assoc-default 'extra_menu_info data) candidate)))))
 
+(ert-deftest company-ycmd-test-extract-params-clang-simple ()
+  (let ((data "wchar_t * wmemchr(wchar_t *__p, wchar_t __c, size_t __n)"))
+    (should (equal (company-ycmd--extract-params-clang data)
+                   "(wchar_t *__p, wchar_t __c, size_t __n)"))))
+
+(ert-deftest company-ycmd-test-extract-params-clang-template ()
+  (let ((data "shared_ptr<_Tp> make_shared<typename _Tp>(_Args &&__args...)"))
+    (should (equal (company-ycmd--extract-params-clang data)
+                   "<typename _Tp>(_Args &&__args...)"))))
+
+(ert-deftest company-ycmd-test-extract-params-clang-func-ptr ()
+  (let ((data "void (*)(int) foo"))
+    (should (equal (company-ycmd--extract-params-clang data)
+                   "(*)(int)"))))
+
+(ert-deftest company-ycmd-test-extract-params-clang-null ()
+  (let ((data "char "))
+    (should (null (company-ycmd--extract-params-clang data)))))
+
 
 (provide 'ycmd-test)
 

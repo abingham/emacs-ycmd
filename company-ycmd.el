@@ -138,6 +138,20 @@ When 0, do not use synchronous completion request at all."
 
 (defun company-ycmd--extract-params-clang (function-signature)
   "Extract parameters from FUNCTION-SIGNATURE if possible."
+  (let ((params (company-ycmd--extract-params-clang-1
+                 function-signature)))
+    (if (not (and params (string-prefix-p "(*)" params)))
+        params
+      (with-temp-buffer
+        (insert params)
+        (search-backward ")")
+        (let ((pt (1+ (point))))
+          (re-search-forward ".\\_>" nil t)
+          (delete-region pt (point)))
+        (buffer-string)))))
+
+(defun company-ycmd--extract-params-clang-1 (function-signature)
+  "Extract parameters from FUNCTION-SIGNATURE if possible."
   (cond
    ((null function-signature) nil)
    ((string-match "[^:]:[^:]" function-signature)
