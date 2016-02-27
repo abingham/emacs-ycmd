@@ -17,6 +17,6 @@ before_install:
 install:
   - make deps
 script:
-  - make compile
+  - make all
   - make YCMDPATH="ycmd/ycmd" test
 
