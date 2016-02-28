@@ -1,8 +1,9 @@
 ;;; ycmd-test.el --- tests for ycmd.el -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2014 Austin Bingham
+;; Copyright (c) 2014-2016 Austin Bingham, Peter Vasil
 ;;
-;; Author: Austin Bingham <austin.bingham@gmail.com>
+;; Authors: Austin Bingham <austin.bingham@gmail.com>
+;;          Peter Vasil <mail@petervasil.net>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Package-Requires: ((emacs "24") (f "0.17.1") (ycmd "0.1"))
