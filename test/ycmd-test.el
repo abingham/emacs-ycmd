@@ -63,15 +63,15 @@
 (defconst ycmd-test-resources-location
   (f-join ycmd-test-location "resources"))
 
-(defconst ycmd-test-global-conf
+(defconst ycmd-test-extra-conf
   (f-join ycmd-test-resources-location ".ycm_extra_conf.py"))
 
 (defun ycmd-test-mode ()
   "Setup `ycmd-mode' for test in current buffer."
-  (let ((ycmd-global-config ycmd-test-global-conf)
-        (ycmd-extra-conf-handler 'load)
-        (ycmd-parse-conditions nil))
+  (let ((ycmd-parse-conditions nil))
     (ycmd-mode)
+    (deferred:sync!
+      (ycmd-load-conf-file ycmd-test-extra-conf))
     (deferred:sync!
       (ycmd-notify-file-ready-to-parse))))
 
