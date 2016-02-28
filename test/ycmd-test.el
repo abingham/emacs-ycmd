@@ -66,6 +66,15 @@
 (defconst ycmd-test-global-conf
   (f-join ycmd-test-resources-location ".ycm_extra_conf.py"))
 
+(defun ycmd-test-mode ()
+  "Setup `ycmd-mode' for test in current buffer."
+  (let ((ycmd-global-config ycmd-test-global-conf)
+        (ycmd-extra-conf-handler 'load)
+        (ycmd-parse-conditions nil))
+    (ycmd-mode)
+    (deferred:sync!
+      (ycmd-notify-file-ready-to-parse))))
+
 (defun ycmd-test-prepare-file (filename mode)
   "Create a new temporary file containing CONTENT, put that file
 into MODE, and wait for initial ycmd parsing of the file to
@@ -76,15 +85,10 @@ This has the side-effect of (re)starting ycmd.
 Return the buffer.
 "
   (let ((buff (find-file-noselect
-               (f-join ycmd-test-resources-location filename)))
-        (ycmd-global-config ycmd-test-global-conf)
-        (ycmd-extra-conf-handler 'load)
-        (ycmd-parse-conditions '(mode-enabled)))
+               (f-join ycmd-test-resources-location filename))))
     (with-current-buffer buff
       (delay-mode-hooks (funcall mode))
-      (ycmd-open)
-      (ycmd-mode t)
-      (while (ycmd-parsing-in-progress-p) (sit-for 0.1)))
+      (ycmd-test-mode))
     buff))
 
 (defmacro ycmd-ert-test-deferred (name filename mode request-func column line &rest body)
@@ -324,26 +328,21 @@ the server's response,"
     (insert "#include \"foo.h\"")
     (should (not (company-ycmd--in-include)))))
 
-(defun flycheck-ycmd-test-ycmd-mode ()
-  (let ((ycmd-global-config ycmd-test-global-conf)
-        (ycmd-extra-conf-handler 'load)
-        (ycmd-parse-conditions nil))
-    (ycmd-mode +1)
-    (flycheck-ycmd-setup)
-    (deferred:sync!
-      (ycmd-notify-file-ready-to-parse))))
+(defun flycheck-ycmd-test-mode ()
+  (flycheck-ycmd-setup)
+  (ycmd-test-mode))
 
 (ert-deftest flycheck-ycmd-test-error ()
   (let ((flycheck-checkers '(ycmd)))
     (flycheck-ert-should-syntax-check
-     "test-error.cpp" 'flycheck-ycmd-test-ycmd-mode
+     "test-error.cpp" 'flycheck-ycmd-test-mode
      '(3 15 error "expected ';' at end of declaration list (FixIt)"
          :checker ycmd))))
 
 (ert-deftest flycheck-ycmd-test-warning ()
   (let ((flycheck-checkers '(ycmd)))
     (flycheck-ert-should-syntax-check
-     "test-warning.cpp" 'flycheck-ycmd-test-ycmd-mode
+     "test-warning.cpp" 'flycheck-ycmd-test-mode
      '(5 13 warning "unused variable 'a'" :checker ycmd))))
 
 (flycheck-ert-initialize ycmd-test-resources-location)
