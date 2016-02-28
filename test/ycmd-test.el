@@ -124,7 +124,7 @@ the server's response,"
                   completions))
     (should (= start-col 7))))
 
-(ycmd-ert-test-deferred goto-declaration "test_goto.cpp" 'c++-mode
+(ycmd-ert-test-deferred goto-declaration "test-goto.cpp" 'c++-mode
   (apply-partially #'ycmd--send-completer-command-request "GoToDeclaration")
   7 9
   (if (assoc-default 'exception response)
@@ -133,7 +133,7 @@ the server's response,"
       (should (= (assoc-default 'column_num response) 10))
       (should (= (assoc-default 'line_num response) 2)))))
 
-(ycmd-ert-test-deferred goto-definition "test_goto.cpp" 'c++-mode
+(ycmd-ert-test-deferred goto-definition "test-goto.cpp" 'c++-mode
   (apply-partially #'ycmd--send-completer-command-request "GoToDefinition")
   7 9
   (if (assoc-default 'exception response)
@@ -153,7 +153,7 @@ the server's response,"
      (kill-buffer it)))
 
 (ert-deftest ycmd-test-col-line-to-position ()
-  (ycmd-test-with-buffer "test_goto.cpp" 'c++-mode
+  (ycmd-test-with-buffer "test-goto.cpp" 'c++-mode
     (should (= (ycmd--col-line-to-position 10 2) 23))))
 
 (defmacro ycmd-test-with-temp-buffer (mode &rest body)
