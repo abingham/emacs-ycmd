@@ -75,15 +75,9 @@
     (deferred:sync!
       (ycmd-notify-file-ready-to-parse))))
 
-(defun ycmd-test-prepare-file (filename mode)
-  "Create a new temporary file containing CONTENT, put that file
-into MODE, and wait for initial ycmd parsing of the file to
-complete.
-
-This has the side-effect of (re)starting ycmd.
-
-Return the buffer.
-"
+(defun ycmd-test-prepare-buffer-for-file (filename mode)
+  "Read FILENAME into new temporary buffer and return in.
+Put the buffer into MODE, and run `ycmd-test-mode' on it."
   (let ((buff (find-file-noselect
                (f-join ycmd-test-resources-location filename))))
     (with-current-buffer buff
@@ -91,31 +85,41 @@ Return the buffer.
       (ycmd-test-mode))
     buff))
 
-(defmacro ycmd-ert-test-deferred (name filename mode request-func column line &rest body)
-  "Define a test case for a deferred request to the ycmd.
+(defmacro ycmd-ert-test-deferred-request (name filename mode &rest keys-and-body)
+  "Define a test case for a deferred request to the ycmd server.
 
 NAME is a symbol denoting the local name of the test.  The test
 itself is named `ycmd-test-NAME'.  FILENAME is the input file with
-the `major-mode' MODE.  REQUEST-FUNC is the function with the
-request to the ycmd server.  COLUMN and LINE is the file location
-for the request.  The remaining forms of BODY are used to evaluate
-the server's response,"
+the `major-mode' MODE.  The rest should contain the keywords
+`:request-func' specifying the function with the request to the
+ycmd server.  `:line' and `:column' is the file location for the
+request.  The remaining forms of KEYS-AND-BODY are used to
+evaluate the server's response."
   (declare (indent 3) (debug t))
-  (let ((full-name (intern (format "ycmd-test-%s" name))))
+  (let* ((full-name (intern (format "ycmd-test-%s" name)))
+         (keys-and-body (ert--parse-keys-and-body keys-and-body))
+         (body (cadr keys-and-body))
+         (keys (car keys-and-body)))
     `(ert-deftest ,full-name ()
-       (let* ((buff (ycmd-test-prepare-file ,filename ,mode))
-              (current-position (ycmd--col-line-to-position ,column ,line buff)))
+       (let* ((buff (ycmd-test-prepare-buffer-for-file
+                     ,filename ,mode))
+              (current-position
+               (ycmd--col-line-to-position
+                ,(plist-get keys :column)
+                ,(plist-get keys :line)
+                buff)))
          (deferred:sync!
            (deferred:$
-             (funcall ,request-func buff current-position)
+             (funcall ,(plist-get keys :request-func)
+                      buff current-position)
              (deferred:nextc it
                (lambda (response)
                  ,@body))))
          (kill-buffer buff)))))
 
-(ycmd-ert-test-deferred get-completions "test.cpp" 'c++-mode
-  'ycmd-get-completions
-  7 8
+(ycmd-ert-test-deferred-request get-completions "test.cpp" 'c++-mode
+  :request-func 'ycmd-get-completions
+  :line 8 :column 7
   (let ((start-col (assoc-default 'completion_start_column response))
         (completions (assoc-default 'completions response)))
     (should (some (lambda (c)
@@ -124,18 +128,20 @@ the server's response,"
                   completions))
     (should (= start-col 7))))
 
-(ycmd-ert-test-deferred goto-declaration "test-goto.cpp" 'c++-mode
-  (apply-partially #'ycmd--send-completer-command-request "GoToDeclaration")
-  7 9
+(ycmd-ert-test-deferred-request goto-declaration "test-goto.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "GoToDeclaration")
+  :line 9 :column 7
   (if (assoc-default 'exception response)
       (should nil)
     (progn
       (should (= (assoc-default 'column_num response) 10))
       (should (= (assoc-default 'line_num response) 2)))))
 
-(ycmd-ert-test-deferred goto-definition "test-goto.cpp" 'c++-mode
-  (apply-partially #'ycmd--send-completer-command-request "GoToDefinition")
-  7 9
+(ycmd-ert-test-deferred-request goto-definition "test-goto.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "GoToDefinition")
+  :line 9 :column 7
   (if (assoc-default 'exception response)
       (should nil)
     (progn
@@ -146,7 +152,7 @@ the server's response,"
 (defmacro ycmd-test-with-buffer (filename mode &rest body)
   "Create temporary current buffer with FILENAME and MODE and execute BODY."
   (declare (indent 2) (debug t))
-  `(let ((it (ycmd-test-prepare-file ,filename ,mode)))
+  `(let ((it (ycmd-test-prepare-buffer-for-file ,filename ,mode)))
      (save-excursion
        (with-current-buffer it
          ,@body))
