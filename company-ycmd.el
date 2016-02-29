@@ -102,7 +102,7 @@ When 0, do not use synchronous completion request at all."
   :group 'company-ycmd)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode go-mode objc-mode rust-mode)
+  '(c++-mode c-mode go-mode objc-mode rust-mode python-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -235,19 +235,58 @@ overloaded functions."
       (propertize insertion-text 'return_type return-type
                   'meta meta 'kind kind 'params params))))
 
+(defun company-ycmd--remove-self-from-function-args (args)
+  "Remove function argument `self' from ARGS list."
+  (->> (s-split "," args t)
+       (cl-remove-if (lambda (it) (string-match-p "self" it)))
+       (s-join ",")
+       (s-trim-left)
+       (format "(%s)")))
+
+(defun company-ycmd--extract-params-python (function-sig function-name)
+  "Extract function arguments from FUNCTION-SIG.
+Use FUNCTION-NAME as part of the regex to match arguments.
+Replace any newline characters with spaces."
+  (when (and function-sig
+             (string-match
+              (concat (regexp-quote function-name)
+                      ;; Regex to match everything between parentheses, including
+                      ;; newline.
+                      ;; https://www.emacswiki.org/emacs/MultilineRegexp
+                      "(\\([\0-\377[:nonascii:]]*\\)).*")
+              function-sig))
+    (company-ycmd--remove-self-from-function-args
+     (s-replace "\n" " " (match-string 1 function-sig)))))
+
+(defun company-ycmd--extract-meta-python (doc-string)
+  "Extract string for meta usage from DOC-STRING.
+Remove newline characters in function arguments and replace them
+with spaces."
+  (when doc-string
+    (if (string-match "\n" doc-string)
+        (let (meta)
+          (setq meta (substring doc-string 0 (match-beginning 0)))
+          (while (and (string-match-p "(" meta)
+                      (not (string-match-p ")" meta)))
+            (if (string-match "\n" doc-string (match-end 0))
+                (setq meta (substring doc-string 0 (match-beginning 0)))
+              (setq meta doc-string)))
+          (s-replace "\n" " " meta))
+      doc-string)))
+
 (defun company-ycmd--construct-candidate-python (candidate)
   "Construct completion string from a CANDIDATE for python file-types."
   (company-ycmd--with-destructured-candidate candidate
     (let* ((kind extra-menu-info)
-           (meta (and detailed-info
-                      (or (and (string-match "\n" detailed-info)
-                               (substring detailed-info 0 (match-beginning 0)))
-                          detailed-info)))
+           (params (and (s-prefix-p "function" kind)
+                        (company-ycmd--extract-params-python
+                         detailed-info insertion-text)))
+           (meta (company-ycmd--extract-meta-python detailed-info))
            (location (assoc-default 'location extra-data))
            (filepath (assoc-default 'filepath location))
            (line-num (assoc-default 'line_num location)))
       (propertize insertion-text 'meta meta 'doc detailed-info 'kind kind
-                  'filepath filepath 'line_num line-num))))
+                  'params params 'filepath filepath 'line_num line-num))))
 
 (defun company-ycmd--construct-candidate-rust (candidate)
   "Construct completion string from CANDIDATE for rust file-types."
@@ -258,13 +297,8 @@ overloaded functions."
                          (concat "^fn " (regexp-quote insertion-text)
                                  "(\\(.*\\)).*")
                          extra-menu-info)
-                        (->>
-                         (s-split "," (match-string 1 extra-menu-info) t)
-                         (cl-remove-if (lambda (it)
-                                         (string-match-p "self" it)))
-                         (s-join ",")
-                         (s-trim-left)
-                         (format "(%s)"))))
+                        (company-ycmd--remove-self-from-function-args
+                         (match-string 1 extra-menu-info))))
            (return-type (and extra-menu-info
                              (if (string-match
                                   (concat "^fn " (regexp-quote insertion-text)

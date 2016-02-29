@@ -222,7 +222,7 @@ evaluate the server's response."
 (ert-deftest company-ycmd-test-contruct-candidate-python ()
   (ycmd-test-with-temp-buffer 'python-mode
     (let* ((data '((insertion_text . "foo")
-                   (detailed_info . "foo(self)\n\nA function")
+                   (detailed_info . "foo(self, a, b)\n\nA function")
                    (extra_data
                     (location
                      (line_num . 6)
@@ -232,7 +232,8 @@ evaluate the server's response."
            (candidate (company-ycmd--construct-candidate-python data)))
       (should (string= (assoc-default 'insertion_text data)
                        (substring-no-properties candidate)))
-      (should (ycmd-test-has-property-with-value 'meta "foo(self)" candidate))
+      (should (ycmd-test-has-property-with-value 'meta "foo(self, a, b)" candidate))
+      (should (ycmd-test-has-property-with-value 'params "(a, b)" candidate))
       (should (ycmd-test-has-property-with-value
                'doc (assoc-default 'detailed_info data) candidate))
       (should (ycmd-test-has-property-with-value
@@ -333,6 +334,41 @@ evaluate the server's response."
   (with-temp-buffer
     (insert "#include \"foo.h\"")
     (should (not (company-ycmd--in-include)))))
+
+(ert-deftest company-ycmd-test-remove-self-from-function-args ()
+  (let ((data "self, a, b"))
+    (should (equal (company-ycmd--remove-self-from-function-args data)
+                   "(a, b)"))))
+
+(ert-deftest company-ycmd-test-extract-params-python-simple ()
+  (let ((data "foo(self, a, b)"))
+    (should (equal (company-ycmd--extract-params-python data "foo")
+                   "(a, b)"))))
+
+(ert-deftest company-ycmd-test-extract-params-python-multiline ()
+  (let ((data "foo(self, a,\nb)"))
+    (should (equal (company-ycmd--extract-params-python data "foo")
+                   "(a, b)"))))
+
+(ert-deftest company-ycmd-test-extract-meta-python-simple ()
+  (let ((data "foo(self, a, b)"))
+    (should (equal (company-ycmd--extract-meta-python data)
+                   "foo(self, a, b)"))))
+
+(ert-deftest company-ycmd-test-extract-meta-python-newline ()
+  (let ((data "foo(self, a,\nb)"))
+    (should (equal (company-ycmd--extract-meta-python data)
+                   "foo(self, a, b)"))))
+
+(ert-deftest company-ycmd-test-extract-meta-python-extended ()
+  (let ((data "foo(self, a, b) -> bar\n\nbar"))
+    (should (equal (company-ycmd--extract-meta-python data)
+                   "foo(self, a, b) -> bar"))))
+
+(ert-deftest company-ycmd-test-extract-meta-python-multiline ()
+  (let ((data "foo(self, a,\nb) -> bar\n\nbar"))
+    (should (equal (company-ycmd--extract-meta-python data)
+                   "foo(self, a, b) -> bar"))))
 
 (defun flycheck-ycmd-test-mode ()
   (flycheck-ycmd-setup)
