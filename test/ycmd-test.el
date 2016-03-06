@@ -148,6 +148,72 @@ evaluate the server's response."
       (should (= (assoc-default 'column_num response) 11))
       (should (= (assoc-default 'line_num response) 5)))))
 
+(defun ycmd-test-fixit-handler (buffer response file-name)
+  (let ((ycmd-confirm-fixit nil))
+    (when (assoc-default 'fixits response)
+      (with-current-buffer buffer
+        (ycmd--handle-fixit-success response)
+        (let ((actual (buffer-string))
+              (expected (with-current-buffer
+                            (find-file-noselect file-name)
+                          (buffer-string))))
+          (set-buffer-modified-p nil)
+          (set-visited-file-name nil 'no-query)
+          (string= actual expected))))))
+
+(ycmd-ert-test-deferred-request fixit-insert1
+    "test-fixit-cpp11-insert1.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "FixIt")
+  :line 7 :column 6
+  (should
+   (ycmd-test-fixit-handler
+    buff response "test-fixit-cpp11-insert1-expected.cpp")))
+
+(ycmd-ert-test-deferred-request fixit-insert2
+    "test-fixit-cpp11-insert2.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "FixIt")
+  :line 7 :column 5
+  (should
+   (ycmd-test-fixit-handler
+    buff response "test-fixit-cpp11-insert2-expected.cpp")))
+
+(ycmd-ert-test-deferred-request fixit-delete
+    "test-fixit-cpp11-delete.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "FixIt")
+  :line 1 :column 6
+  (should
+   (ycmd-test-fixit-handler
+    buff response "test-fixit-cpp11-delete-expected.cpp")))
+
+(ycmd-ert-test-deferred-request fixit-replace
+    "test-fixit-cpp11-replace.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "FixIt")
+  :line 3 :column 6
+  (should
+   (ycmd-test-fixit-handler
+    buff response "test-fixit-cpp11-replace-expected.cpp")))
+
+(ycmd-ert-test-deferred-request fixit-delete-add
+    "test-fixit-cpp11-delete-add.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "FixIt")
+  :line 5 :column 3
+  (should
+   (ycmd-test-fixit-handler
+    buff response "test-fixit-cpp11-delete-add-expected.cpp")))
+
+(ycmd-ert-test-deferred-request fixit-multiple
+    "test-fixit-cpp11-multiple.cpp" 'c++-mode
+  :request-func (apply-partially #'ycmd--send-completer-command-request
+                                 "FixIt")
+  :line 2 :column 15
+  (should
+   (ycmd-test-fixit-handler
+    buff response "test-fixit-cpp11-multiple-expected.cpp")))
 
 (defmacro ycmd-test-with-buffer (filename mode &rest body)
   "Create temporary current buffer with FILENAME and MODE and execute BODY."
