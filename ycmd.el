@@ -333,8 +333,28 @@ describe them to ycmd."
   :group 'ycmd
   :type 'symbol)
 
-(defcustom ycmd-gocode-binary-path (executable-find "gocode")
+(defcustom ycmd-gocode-binary-path nil
   "Gocode binary path."
+  :group 'ycmd
+  :type 'string)
+
+(defcustom ycmd-godef-binary-path nil
+  "Godef binary path."
+  :group 'ycmd
+  :type 'string)
+
+(defcustom ycmd-rust-src-path nil
+  "Rust source path."
+  :group 'ycmd
+  :type 'string)
+
+(defcustom ycmd-racerd-binary-path nil
+  "Racerd binary path."
+  :group 'ycmd
+  :type 'string)
+
+(defcustom ycmd-python-binary-path nil
+  "Python binary path."
   :group 'ycmd
   :type 'string)
 
@@ -1496,33 +1516,35 @@ file."
   (let ((hmac-secret (base64-encode-string hmac-secret))
         (global-config (or ycmd-global-config ""))
         (extra-conf-whitelist (or ycmd-extra-conf-whitelist []))
-        (max-num-identifier-candidates ycmd-max-num-identifier-candidates)
-        (gocode-binary-path (or ycmd-gocode-binary-path "")))
-    `((filetype_blacklist (vimwiki . 1) (mail . 1) (qf . 1) (tagbar . 1) (unite . 1) (infolog . 1) (notes . 1) (text . 1) (pandoc . 1) (markdown . 1))
-      (auto_start_csharp_server . 1)
-      (filetype_whitelist (* . 1))
-      (csharp_server_port . 2000)
-      (seed_identifiers_with_syntax . 0)
-      (auto_stop_csharp_server . 1)
-      (max_diagnostics_to_display . 30)
+        (confirm-extra-conf (if (eq ycmd-extra-conf-handler 'load) 0 1))
+        (gocode-binary-path (or ycmd-gocode-binary-path ""))
+        (godef-binary-path (or ycmd-godef-binary-path ""))
+        (rust-src-path (or ycmd-rust-src-path ""))
+        (racerd-binary-path (or ycmd-racerd-binary-path ""))
+        (python-binary-path (or ycmd-python-binary-path "")))
+    `((filepath_completion_use_working_dir . 0)
+      (auto_trigger . 1)
+      (min_num_of_chars_for_completion . 2)
       (min_num_identifier_candidate_chars . 0)
-      (max_num_identifier_candidates . ,max-num-identifier-candidates)
-      (use_ultisnips_completer . 1)
-      (complete_in_strings . 1)
-      (complete_in_comments . 0)
-      (confirm_extra_conf . ,(if (eq ycmd-extra-conf-handler 'load) 0 1))
-      (server_keep_logfiles . 1)
-      (global_ycm_extra_conf . ,global-config)
-      (extra_conf_globlist . ,extra-conf-whitelist)
-      (hmac_secret . ,hmac-secret)
-      (collect_identifiers_from_tags_files . ,(if ycmd-tag-files 1 0))
+      (semantic_triggers . ())
       (filetype_specific_completion_to_disable (gitcommit . 1))
       (collect_identifiers_from_comments_and_strings . 0)
-      (min_num_of_chars_for_completion . 2)
-      (filepath_completion_use_working_dir . 0)
-      (semantic_triggers . ())
-      (auto_trigger . 1)
-      (gocode_binary_path . ,gocode-binary-path))))
+      (max_num_identifier_candidates . ,ycmd-max-num-identifier-candidates)
+      (extra_conf_globlist . ,extra-conf-whitelist)
+      (global_ycm_extra_conf . ,global-config)
+      (confirm_extra_conf . ,confirm-extra-conf)
+      (max_diagnostics_to_display . 30)
+      (auto_start_csharp_server . 1)
+      (auto_stop_csharp_server . 1)
+      (use_ultisnips_completer . 1)
+      (csharp_server_port . 0)
+      (hmac_secret . ,hmac-secret)
+      (server_keep_logfiles . 1)
+      (gocode_binary_path . ,gocode-binary-path)
+      (godef_binary_path . ,godef-binary-path)
+      (rust_src_path . ,rust-src-path)
+      (racerd_binary_path . ,racerd-binary-path)
+      (python_binary_path . ,python-binary-path))))
 
 (defun ycmd--create-options-file (hmac-secret)
   "Create a new options file for a ycmd server with HMAC-SECRET.
@@ -1607,7 +1629,7 @@ nil, this uses the current buffer."
     (dolist (extra extras standard-content)
       (--when-let (pcase extra
                     (`force-semantic
-                     (cons "force_semantic" "true"))
+                     (cons "force_semantic" t))
                     (`tags
                      (--when-let (ycmd--get-tag-files buffer)
                        (cons "tag_files" it)))
