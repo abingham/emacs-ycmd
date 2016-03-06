@@ -181,9 +181,7 @@ evaluate the server's response."
       (with-current-buffer buffer
         (ycmd--handle-fixit-success response)
         (let ((actual (buffer-string))
-              (expected (with-current-buffer
-                            (find-file-noselect file-name)
-                          (buffer-string))))
+              (expected (f-read file-name)))
           (set-buffer-modified-p nil)
           (set-visited-file-name nil 'no-query)
           (string= actual expected))))))
@@ -192,16 +190,15 @@ evaluate the server's response."
   (declare (indent 2) (debug t))
   (let* ((line (plist-get keys :line))
          (column (plist-get keys :column)))
-    (macroexpand
-     `(ycmd-ert-deftest-deferred-request
-          ,name ,(plist-get keys :filename) ,mode
-        :request-func
-        (apply-partially #'ycmd--send-completer-command-request
-                         "FixIt")
-        :line ,line :column ,column
-        (should
-         (ycmd-test-fixit-handler
-          buff response ,(plist-get keys :filename-expected)))))))
+    `(ycmd-ert-deftest-deferred-request
+         ,name ,(plist-get keys :filename) ,mode
+       :request-func
+       (apply-partially #'ycmd--send-completer-command-request
+                        "FixIt")
+       :line ,line :column ,column
+       (should
+        (ycmd-test-fixit-handler
+         buff response ,(plist-get keys :filename-expected))))))
 
 (ycmd-ert-deftest-fixit fixit-cpp-insert1 'c++-mode
   :filename "test-fixit-cpp11-insert1.cpp"
