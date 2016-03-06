@@ -119,15 +119,15 @@ evaluate the server's response."
                  ,@body))))
          (kill-buffer buff)))))
 
-(ycmd-ert-deftest-deferred-request get-completions "test.cpp" 'c++-mode
+(ycmd-ert-deftest-deferred-request get-completions-cpp "test.cpp" 'c++-mode
   :request-func 'ycmd-get-completions
   :line 8 :column 7
   (let ((start-col (assoc-default 'completion_start_column response))
         (completions (assoc-default 'completions response)))
-    (should (some (lambda (c)
-                    (string-equal
-                     "llurp" (assoc-default 'insertion_text c)))
-                  completions))
+    (should (cl-some (lambda (c)
+                       (string-equal
+                        "llurp" (assoc-default 'insertion_text c)))
+                     completions))
     (should (= start-col 7))))
 
 (ycmd-ert-deftest-deferred-request goto-declaration "test-goto.cpp" 'c++-mode
@@ -149,6 +149,21 @@ evaluate the server's response."
     (progn
       (should (= (assoc-default 'column_num response) 11))
       (should (= (assoc-default 'line_num response) 5)))))
+
+(ycmd-ert-deftest-deferred-request get-completions-python "test.py" 'python-mode
+  :request-func 'ycmd-get-completions
+  :line 7 :column 3
+  (let ((start-col (assoc-default 'completion_start_column response))
+        (completions (assoc-default 'completions response)))
+    (should (cl-some (lambda (c)
+                       (string-equal
+                        "a" (assoc-default 'insertion_text c)))
+                     completions))
+    (should (cl-some (lambda (c)
+                       (string-equal
+                        "b" (assoc-default 'insertion_text c)))
+                     completions))
+    (should (= start-col 3))))
 
 (defun ycmd-test-fixit-handler (buffer response file-name)
   (let ((ycmd-confirm-fixit nil)
