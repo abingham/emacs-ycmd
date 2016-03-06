@@ -1436,13 +1436,13 @@ functions in `ycmd-file-parse-result-hook'."
 
 This is primarily a debug/developer tool."
   (interactive)
-  (deferred:$
-    (ycmd-notify-file-ready-to-parse)
-    (deferred:nextc it
-      (lambda (content)
-        (pop-to-buffer "*ycmd-file-ready*")
-        (erase-buffer)
-        (insert (pp-to-string content))))))
+  (let ((ycmd-file-parse-result-hook
+         `(lambda (content)
+            (pop-to-buffer "*ycmd-file-ready*")
+            (erase-buffer)
+            (insert (pp-to-string content)))))
+    (deferred:sync!
+      (ycmd-notify-file-ready-to-parse))))
 
 (defun ycmd-major-mode-to-file-types (mode)
   "Map a major mode MODE to a list of file-types suitable for ycmd.
