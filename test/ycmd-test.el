@@ -165,6 +165,15 @@ evaluate the server's response."
                      completions))
     (should (= start-col 3))))
 
+(ycmd-ert-deftest-deferred-request get-completions-go "test.go" 'go-mode
+  :request-func 'ycmd-get-completions
+  :line 9 :column 10
+  (let* ((start-col (assoc-default 'completion_start_column response))
+         (completions (assoc-default 'completions response))
+         (c (nth 0 (append completions nil))))
+    (should (string= "Logger" (assoc-default 'insertion_text c)))
+    (should (= start-col 6))))
+
 (defun ycmd-test-fixit-handler (buffer response file-name)
   (let ((ycmd-confirm-fixit nil)
         (fixits (assoc-default 'fixits response)))
