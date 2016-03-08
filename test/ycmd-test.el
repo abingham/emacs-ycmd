@@ -76,15 +76,23 @@
     (deferred:sync!
       (ycmd-notify-file-ready-to-parse))))
 
-(defun ycmd-test-prepare-buffer-for-file (filename mode)
-  "Read FILENAME into new temporary buffer and return in.
-Put the buffer into MODE, and run `ycmd-test-mode' on it."
-  (let ((buff (find-file-noselect
-               (f-join ycmd-test-resources-location filename))))
-    (with-current-buffer buff
-      (delay-mode-hooks (funcall mode))
-      (ycmd-test-mode))
-    buff))
+(defmacro ycmd-ert-with-temp-buffer (mode &rest body)
+  "Set MODE and eval BODY within a temporary buffer.
+
+Like `flycheck-ert-with-temp-buffer', but sets MODE before
+evaluating BODY."
+  (declare (indent 1))
+  `(flycheck-ert-with-temp-buffer
+     (delay-mode-hooks (funcall ,mode))
+     ,@body))
+
+(defmacro ycmd-ert-with-resource-buffer (resource-file mode &rest body)
+  (declare (indent 2))
+  `(flycheck-ert-with-file-buffer
+       (f-join ,ycmd-test-resources-location ,resource-file)
+     (delay-mode-hooks (funcall ,mode))
+     (ycmd-test-mode)
+     ,@body))
 
 (defmacro ycmd-ert-deftest-deferred-request (name filename mode
                                                   &rest keys-and-body)
@@ -103,21 +111,19 @@ evaluate the server's response."
          (body (cadr keys-and-body))
          (keys (car keys-and-body)))
     `(ert-deftest ,full-name ()
-       (let* ((buff (ycmd-test-prepare-buffer-for-file
-                     ,filename ,mode))
-              (current-position
-               (ycmd--col-line-to-position
-                ,(plist-get keys :column)
-                ,(plist-get keys :line)
-                buff)))
-         (deferred:sync!
-           (deferred:$
-             (funcall ,(plist-get keys :request-func)
-                      buff current-position)
-             (deferred:nextc it
-               (lambda (response)
-                 ,@body))))
-         (kill-buffer buff)))))
+       (ycmd-ert-with-resource-buffer ,filename ,mode
+         (let* ((current-position
+                 (ycmd--col-line-to-position
+                  ,(plist-get keys :column)
+                  ,(plist-get keys :line)
+                  (current-buffer))))
+           (goto-char current-position)
+           (deferred:sync!
+             (deferred:$
+               (funcall ,(plist-get keys :request-func))
+               (deferred:nextc it
+                 (lambda (response)
+                   ,@body)))))))))
 
 (ycmd-ert-deftest-deferred-request get-completions-cpp "test.cpp" 'c++-mode
   :request-func 'ycmd-get-completions
@@ -174,17 +180,16 @@ evaluate the server's response."
     (should (string= "Logger" (assoc-default 'insertion_text c)))
     (should (= start-col 6))))
 
-(defun ycmd-test-fixit-handler (buffer response file-name)
+(defun ycmd-test-fixit-handler (response file-name)
   (let ((ycmd-confirm-fixit nil)
         (fixits (assoc-default 'fixits response)))
     (when (and fixits (> (length fixits) 0))
-      (with-current-buffer buffer
-        (ycmd--handle-fixit-success response)
-        (let ((actual (buffer-string))
-              (expected (f-read file-name)))
-          (set-buffer-modified-p nil)
-          (set-visited-file-name nil 'no-query)
-          (string= actual expected))))))
+      (ycmd--handle-fixit-success response)
+      (let ((actual (buffer-string))
+            (expected (f-read file-name)))
+        (set-buffer-modified-p nil)
+        (set-visited-file-name nil 'no-query)
+        (string= actual expected)))))
 
 (defmacro ycmd-ert-deftest-fixit (name mode &rest keys)
   (declare (indent 2) (debug t))
@@ -198,7 +203,7 @@ evaluate the server's response."
        :line ,line :column ,column
        (should
         (ycmd-test-fixit-handler
-         buff response ,(plist-get keys :filename-expected))))))
+         response ,(plist-get keys :filename-expected))))))
 
 (ycmd-ert-deftest-fixit fixit-cpp-insert1 'c++-mode
   :filename "test-fixit-cpp11-insert1.cpp"
@@ -230,25 +235,9 @@ evaluate the server's response."
   :filename-expected "test-fixit-cpp11-multiple-expected.cpp"
   :line 2 :column 15)
 
-(defmacro ycmd-test-with-buffer (filename mode &rest body)
-  "Create temporary current buffer with FILENAME and MODE and execute BODY."
-  (declare (indent 2) (debug t))
-  `(let ((it (ycmd-test-prepare-buffer-for-file ,filename ,mode)))
-     (save-excursion
-       (with-current-buffer it
-         ,@body))
-     (kill-buffer it)))
-
 (ert-deftest ycmd-test-col-line-to-position ()
-  (ycmd-test-with-buffer "test-goto.cpp" 'c++-mode
+  (ycmd-ert-with-resource-buffer "test-goto.cpp" 'c++-mode
     (should (= (ycmd--col-line-to-position 10 2) 23))))
-
-(defmacro ycmd-test-with-temp-buffer (mode &rest body)
-  "Create temporary current buffer MODE and execute BODY."
-  (declare (indent 1) (debug t))
-  `(with-temp-buffer
-     (delay-mode-hooks (funcall ,mode))
-     ,@body))
 
 (defun ycmd-test-has-property-with-value (property value item)
   (let ((pred (pcase value
@@ -257,7 +246,7 @@ evaluate the server's response."
     (funcall pred value (get-text-property 0 property item))))
 
 (ert-deftest company-ycmd-test-construct-candidate-clang ()
-  (ycmd-test-with-temp-buffer 'c++-mode
+  (ycmd-ert-with-temp-buffer 'c++-mode
     (let* ((data '((menu_text . "foo()")
                    (insertion_text . "foo")
                    (detailed_info . "void foo()\nint foo( int i )\n")
@@ -284,7 +273,7 @@ evaluate the server's response."
       (should (ycmd-test-has-property-with-value 'doc "A docstring" candidate-2)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-go ()
-  (ycmd-test-with-temp-buffer 'go-mode
+  (ycmd-ert-with-temp-buffer 'go-mode
     (let* ((data '((menu_text . "Print")
                    (insertion_text . "Print")
                    (detailed_info . "Print func(a ...interface{}) (n int, err error) func")
@@ -301,7 +290,7 @@ evaluate the server's response."
                'return_type "(n int, err error)" candidate)))))
 
 (ert-deftest company-ycmd-test-contruct-candidate-python ()
-  (ycmd-test-with-temp-buffer 'python-mode
+  (ycmd-ert-with-temp-buffer 'python-mode
     (let* ((data '((insertion_text . "foo")
                    (detailed_info . "foo(self, a, b)\n\nA function")
                    (extra_data
@@ -333,7 +322,7 @@ evaluate the server's response."
                candidate)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-rust ()
-  (ycmd-test-with-temp-buffer 'rust-mode
+  (ycmd-ert-with-temp-buffer 'rust-mode
     (let* ((data '((insertion_text . "foo")
                    (kind . "Function")
                    (extra_data
@@ -371,7 +360,7 @@ evaluate the server's response."
                candidate)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-generic ()
-  (ycmd-test-with-temp-buffer 'c++-mode
+  (ycmd-ert-with-temp-buffer 'c++-mode
     (let* ((data '((insertion_text . "foo")
                    (extra_menu_info . "[ID]")))
            (candidate (company-ycmd--construct-candidate-generic data)))

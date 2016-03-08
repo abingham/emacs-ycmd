@@ -71,7 +71,7 @@
 (defun ac-ycmd-candidates ()
   "Get the list of completions at point."
   (if (ycmd-running?)
-      (let ((completions (assoc-default 'completions (ycmd-get-completions (point)))))
+      (let ((completions (assoc-default 'completions (ycmd-get-completions))))
         (mapcar (lambda (c) (cdr (assoc 'insertion_text c))) completions))
     nil))
   ;; (if (ycmd-running?)

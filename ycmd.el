@@ -788,7 +788,7 @@ This is really a utility/debugging function for developers, but
 it might be interesting for some users."
   (interactive)
   (deferred:$
-    (ycmd-get-completions (current-buffer) (point))
+    (ycmd-get-completions)
     (deferred:nextc it
       (lambda (completions)
         (pop-to-buffer "*ycmd-completions*")
@@ -846,8 +846,8 @@ Returns the new value of `ycmd-force-semantic-completion'."
         symbols
       (cdr (assq symbols ycmd-keywords-alist)))))
 
-(defun ycmd-get-completions (buffer pos &optional sync)
-  "Get completions in BUFFER for position POS from the ycmd server.
+(defun ycmd-get-completions (&optional sync)
+  "Get completions in current buffer from the ycmd server.
 
 Returns a deferred object which yields the HTTP message
 content.  If completions are available, the structure looks like
@@ -871,19 +871,21 @@ structure looks like this:
     (TYPE . \"RuntimeError\")))
 
 To see what the returned structure looks like, you can use
-`ycmd-display-completions'."
-  (with-current-buffer buffer
-    (goto-char pos)
-    (when ycmd-mode
-      (let* ((extra-content (and ycmd-force-semantic-completion
-                                 'force-semantic))
-             (content (ycmd--standard-content-with-extras
-                       buffer extra-content)))
-        (ycmd--request
-         "/completions"
-         content
-         :parser 'json-read
-         :sync sync)))))
+`ycmd-display-completions'.
+
+If SYNC is non-nil the function does not return a deferred object
+and blocks until the request has finished."
+  (when ycmd-mode
+    (let* ((buffer (current-buffer))
+           (extra-content (and ycmd-force-semantic-completion
+                               'force-semantic))
+           (content (ycmd--standard-content-with-extras
+                     buffer extra-content)))
+      (ycmd--request
+       "/completions"
+       content
+       :parser 'json-read
+       :sync sync))))
 
 (defun ycmd--handle-exception (results)
   "Handle exception in completion RESULTS.
@@ -906,8 +908,7 @@ SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
     (deferred:$
 
-      (ycmd--send-completer-command-request
-       type (current-buffer) (point))
+      (ycmd--send-completer-command-request type)
 
       (deferred:nextc it
         (lambda (result)
@@ -918,16 +919,15 @@ SUCCESS-HANDLER is called when for a successful response."
               (when success-handler
                 (funcall success-handler result)))))))))
 
-(defun ycmd--send-completer-command-request (type buffer pos)
+(defun ycmd--send-completer-command-request (type)
   "Send Go To request of TYPE to BUFFER at POS."
-  (with-current-buffer buffer
-    (goto-char pos)
-    (let ((content (cons (list "command_arguments" type)
-                         (ycmd--standard-content buffer))))
-      (ycmd--request
-       "/run_completer_command"
-       content
-       :parser 'json-read))))
+  (let* ((buffer (current-buffer))
+         (content (cons (list "command_arguments" type)
+                        (ycmd--standard-content buffer))))
+    (ycmd--request
+     "/run_completer_command"
+     content
+     :parser 'json-read)))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
