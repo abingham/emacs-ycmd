@@ -57,6 +57,9 @@
   '(("ERROR" . error)
     ("WARNING" . warning)))
 
+(defvar flycheck-ycmd--cache nil
+  "Cache for parse results.")
+
 (defun flycheck-ycmd--result-to-error (result checker)
   "Convert ycmd parse RESULT for CHECKER into a flycheck error object."
   (ycmd--with-destructured-parse-result result
@@ -81,8 +84,6 @@
 
   ;; OR call (callback 'errored some-message)
   )
-
-(defvar flycheck-ycmd--cache '())
 
 (defun flycheck-ycmd--cache-parse-results (results)
   "Cache ycmd output RESULTS for error display.

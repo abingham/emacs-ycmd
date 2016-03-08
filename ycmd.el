@@ -509,6 +509,9 @@ and `delete-process'.")
 (defvar-local ycmd--last-status-change 'unparsed
   "The last status of the current buffer.")
 
+(defvar ycmd--mode-keywords-loaded nil
+  "List of modes for which keywords have been loaded.")
+
 (defconst ycmd-hooks-alist
   '((after-save-hook                  . ycmd--on-save)
     (after-change-functions           . ycmd--on-change)
@@ -824,8 +827,6 @@ Returns the new value of `ycmd-force-semantic-completion'."
     (unless (listp it)
       (setq it (list it)))
     (mapcar 'expand-file-name it)))
-
-(defvar ycmd--mode-keywords-loaded nil)
 
 (defun ycmd--get-keywords (buffer)
   "Get syntax keywords for BUFFER."
