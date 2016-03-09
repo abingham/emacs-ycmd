@@ -464,9 +464,10 @@ If CB is non-nil, call it with candidates."
         ;; `company-template-objc-templatify' in company-mode commit
         ;; 6bf24912a8a3c2cfc5e72073b8eb0f1137ab7728. Remove check once a new
         ;; stable version is released.
-        (if (fboundp 'company-template-objc-templatify)
-            (company-template-objc-templatify it)
-          (company-clang-objc-templatify it))
+        (with-no-warnings
+          (if (fboundp 'company-template-objc-templatify)
+              (company-template-objc-templatify it)
+            (company-clang-objc-templatify it)))
       (company-template-c-like-templatify
        (concat candidate it)))))
 

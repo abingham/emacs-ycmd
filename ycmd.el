@@ -1769,4 +1769,5 @@ anything like that.)
 
 ;; Local Variables:
 ;; indent-tabs-mode: nil
+;; byte-compile-warnings: (not mapcar)
 ;; End:
