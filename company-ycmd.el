@@ -436,7 +436,7 @@ If CB is non-nil, call it with candidates."
        (ycmd-running?)
        (or (not (company-in-string-or-comment))
            (company-ycmd--in-include))
-       (or (company-grab-symbol-cons "/\\|\\.\\|->\\|::" 2)
+       (or (company-grab-symbol-cons "\\.\\|->\\|::\\|/" 2)
            'stop)))
 
 (defun company-ycmd--candidates (prefix)
