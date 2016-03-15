@@ -53,18 +53,14 @@
     (-when-let (symbol (symbol-at-point))
       (if (eq symbol (car ycmd-eldoc--cache))
           (cadr ycmd-eldoc--cache)
-        (deferred:sync!
-          (deferred:$
-            (ycmd-get-completions)
-            (deferred:nextc it
-              (lambda (completions)
-                (-when-let* ((candidates
-                              (assoc-default 'completions completions))
-                             (text (ycmd-eldoc--generate-message
-                                    (symbol-name symbol) candidates)))
-                  (setq text (ycmd--fontify-code text))
-                  (setq ycmd-eldoc--cache (list symbol text))
-                  text)))))))))
+        (-when-let* ((completions (ycmd-get-completions :sync))
+                     (candidates
+                      (assoc-default 'completions completions))
+                     (text (ycmd-eldoc--generate-message
+                            (symbol-name symbol) candidates)))
+          (setq text (ycmd--fontify-code text))
+          (setq ycmd-eldoc--cache (list symbol text))
+          text)))))
 
 (defun ycmd-eldoc--goto-func-name ()
   "If point is inside a function call, move to the function name.
