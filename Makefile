@@ -39,11 +39,11 @@ all : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC) $(OBJECTS_ELDOC)
 
 ycmd : $(OBJECTS)
 
-company-ycmd : $(OBJECTS) $(OBJECTS_COMP)
+company-ycmd : ycmd $(OBJECTS_COMP)
 
-flycheck-ycmd : $(OBJECTS) $(OBJECTS_FLYC)
+flycheck-ycmd : ycmd $(OBJECTS_FLYC)
 
-ycmd-eldoc : $(OBJECTS) $(OBJECTS_ELDOC)
+ycmd-eldoc : ycmd $(OBJECTS_ELDOC)
 
 dist :
 	$(CASK) package
