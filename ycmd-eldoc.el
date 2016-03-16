@@ -62,6 +62,7 @@
           (setq ycmd-eldoc--cache (list symbol text))
           text)))))
 
+;; Source: https://github.com/racer-rust/emacs-racer/blob/master/racer.el
 (defun ycmd-eldoc--goto-func-name ()
   "If point is inside a function call, move to the function name.
 foo(bar, |baz); -> foo|(bar, baz);"
