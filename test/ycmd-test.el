@@ -422,6 +422,21 @@ evaluate the server's response."
     (should (equal (company-ycmd--extract-params-python data "foo")
                    "(a, b)"))))
 
+(ert-deftest company-ycmd-test-extract-params-python-with-docstring ()
+  (let ((data "foo(self, a, b) -> A docstring"))
+    (should (equal (company-ycmd--extract-params-python data "foo")
+                   "(a, b)"))))
+
+(ert-deftest company-ycmd-test-extract-params-python-with-docstring-no-params-1 ()
+  (let ((data "foo() -> A docstring"))
+    (should (equal (company-ycmd--extract-params-python data "foo")
+                   "()"))))
+
+(ert-deftest company-ycmd-test-extract-params-python-with-docstring-no-params-2 ()
+  (let ((data "x.__foo__() <==> foo(x)"))
+    (should (equal (company-ycmd--extract-params-python data "__foo__")
+                   "()"))))
+
 (ert-deftest company-ycmd-test-extract-meta-python-simple ()
   (let ((data "foo(self, a, b)"))
     (should (equal (company-ycmd--extract-meta-python data)

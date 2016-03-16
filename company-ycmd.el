@@ -253,7 +253,7 @@ Replace any newline characters with spaces."
                       ;; Regex to match everything between parentheses, including
                       ;; newline.
                       ;; https://www.emacswiki.org/emacs/MultilineRegexp
-                      "(\\([\0-\377[:nonascii:]]*\\)).*")
+                      "(\\([\0-\377[:nonascii:]]*?\\)).*")
               function-sig))
     (company-ycmd--remove-self-from-function-args
      (s-replace "\n" " " (match-string 1 function-sig)))))
