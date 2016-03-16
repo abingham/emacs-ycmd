@@ -167,27 +167,27 @@ response."
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   ;; :disabled t ;; TODO Find out why this fails sometimes
   :line 7 :column 3
-  (ycmd-with-deferred-request 'ycmd-get-completions
-    (let ((start-col (assoc-default 'completion_start_column response))
-          (completions (assoc-default 'completions response)))
-      (should (cl-some (lambda (c)
-                         (string-equal
-                          "a" (assoc-default 'insertion_text c)))
-                       completions))
-      (should (cl-some (lambda (c)
-                         (string-equal
-                          "b" (assoc-default 'insertion_text c)))
-                       completions))
-      (should (= start-col 3)))))
+  (let* ((response (ycmd-get-completions :sync))
+         (start-col (assoc-default 'completion_start_column response))
+         (completions (assoc-default 'completions response)))
+    (should (cl-some (lambda (c)
+                       (string-equal
+                        "a" (assoc-default 'insertion_text c)))
+                     completions))
+    (should (cl-some (lambda (c)
+                       (string-equal
+                        "b" (assoc-default 'insertion_text c)))
+                     completions))
+    (should (= start-col 3))))
 
 (ycmd-ert-deftest get-completions-go "test.go" 'go-mode
   :line 9 :column 10
-  (ycmd-with-deferred-request 'ycmd-get-completions
-    (let* ((start-col (assoc-default 'completion_start_column response))
-           (completions (assoc-default 'completions response))
-           (c (nth 0 (append completions nil))))
-      (should (string= "Logger" (assoc-default 'insertion_text c)))
-      (should (= start-col 6)))))
+  (let* ((response (ycmd-get-completions :sync))
+         (start-col (assoc-default 'completion_start_column response))
+         (completions (assoc-default 'completions response))
+         (c (nth 0 (append completions nil))))
+    (should (string= "Logger" (assoc-default 'insertion_text c)))
+    (should (= start-col 6))))
 
 (defun ycmd-test-fixit-handler (response file-name)
   (let ((ycmd-confirm-fixit nil)
