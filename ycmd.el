@@ -318,6 +318,20 @@ describe them to ycmd."
   :group 'ycmd
   :type '(alist :key-type symbol :value-type (repeat string)))
 
+(defcustom ycmd-min-num-chars-for-completion 2
+  "The minimum number of characters for identifier completion.
+
+It controls the number of characters the user needs to type
+before identifier-based completion suggestions are triggered.
+
+This option is NOT used for semantic completion.
+
+Setting this it to a high number like 99 effectively turns off
+the identifier completion engine and just leaves the semantic
+engine."
+  :group 'ycmd
+  :type 'integer)
+
 (defcustom ycmd-max-num-identifier-candidates 10
   "The maximum number of identifier completion results."
   :group 'ycmd
@@ -1525,7 +1539,7 @@ file."
         (python-binary-path (or ycmd-python-binary-path "")))
     `((filepath_completion_use_working_dir . 0)
       (auto_trigger . 1)
-      (min_num_of_chars_for_completion . 2)
+      (min_num_of_chars_for_completion . ,ycmd-min-num-chars-for-completion)
       (min_num_identifier_candidate_chars . 0)
       (semantic_triggers . ())
       (filetype_specific_completion_to_disable (gitcommit . 1))
