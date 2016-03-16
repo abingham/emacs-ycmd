@@ -202,8 +202,13 @@ re-parsing the contents."
   :group 'ycmd
   :type '(number))
 
-(defcustom ycmd-startup-timeout 3000
-  "Number of milliseconds to wait for the server to start."
+(defcustom ycmd-startup-timeout 3
+  "Number of seconds to wait for the server to start."
+  :group 'ycmd
+  :type '(number))
+
+(defcustom ycmd-delete-process-delay 3
+  "Seconds to wait for the server to finish before killing the process."
   :group 'ycmd
   :type '(number))
 
@@ -730,7 +735,7 @@ This kills any ycmd server already running (under ycmd.el's
 control.) The newly started server will have a new HMAC secret."
   (interactive)
 
-  (ycmd-close 0.5)
+  (ycmd-close)
 
   (let ((hmac-secret (ycmd--generate-hmac-secret)))
     (ycmd--start-server hmac-secret)
@@ -738,32 +743,36 @@ control.) The newly started server will have a new HMAC secret."
 
   (ycmd--start-keepalive-timer))
 
-(defun ycmd-close (&optional time-out-secs)
+(defun ycmd-close ()
   "Shutdown any running ycmd server.
-
-Wait TIME-OUT-SECS seconds after `interrupt-process' call for the
-ycmd server to end before killing the process with
-`delete-process'.
 
 This does nothing if no server is running."
   (interactive)
-
-  (unwind-protect
-      (when (ycmd-running?)
-        (condition-case nil
-            (progn
-              (interrupt-process ycmd--server-process)
-              (when time-out-secs
-                (sit-for time-out-secs)
-                (delete-process ycmd--server-process)))
-          (error nil)))
-    (ycmd--global-teardown))
-
+  (when (ycmd-running?)
+    (ycmd--stop-server))
+  (ycmd--global-teardown)
   (ycmd--kill-timer ycmd--keepalive-timer))
+
+(defun ycmd--stop-server ()
+  "Stop the ycmd server process.
+
+Call `interrupt-process' for the ycmd server and wait for the
+ycmd server to stop.  If the ycmd server is still running after a
+timeout specified by `ycmd-delete-process-delay', then kill the
+process with `delete-process'."
+  (condition-case nil
+      (let ((start-time (float-time)))
+        (interrupt-process ycmd--server-process)
+        (while (and (ycmd-running?)
+                    (> ycmd-delete-process-delay
+                       (- (float-time) start-time)))
+          (sit-for 0.05))
+        (delete-process ycmd--server-process))
+    (error nil)))
 
 (defun ycmd-running? ()
   "Return t if a ycmd server is already running."
-  (and (get-process ycmd--server-process) t))
+  (process-live-p (get-process ycmd--server-process)))
 
 (defun ycmd--keepalive ()
   "Sends an unspecified message to the server.
@@ -1562,6 +1571,7 @@ the name of the newly created file."
   "Start a new server using HMAC-SECRET as its hmac secret."
   (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
+      (buffer-disable-undo proc-buff)
       (erase-buffer)
 
       (let* ((options-file (ycmd--create-options-file hmac-secret))
@@ -1585,7 +1595,7 @@ the name of the newly created file."
                 (ycmd--with-all-ycmd-buffers (ycmd--report-status 'unparsed))))
              (t
               ;; timeout after specified period
-              (when (< (/ ycmd-startup-timeout 1000) (- (float-time) start-time))
+              (when (< ycmd-startup-timeout (- (float-time) start-time))
                 (ycmd--with-all-ycmd-buffers (ycmd--report-status 'errored))
                 (when (ycmd-running?) (ycmd-close))
                 (error "ERROR: Ycmd server timeout"))))))))))
