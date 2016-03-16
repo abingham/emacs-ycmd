@@ -175,6 +175,18 @@ The slightly longer and probably better answer is:
 
 For a full explanation see [the `emacs-ycmd` defect related to this](https://github.com/abingham/emacs-ycmd/issues/144) as well as [the root `flycheck` issue](https://github.com/flycheck/flycheck/issues/526).
 
+## `eldoc` integration
+
+`ycmd-eldoc` adds eldoc support for `ycmd-mode` buffers.
+
+``` emacs-lisp
+(require 'ycmd-eldoc)
+(add-hook 'ycmd-mode-hook 'ycmd-eldoc-setup)
+```
+
+Note: eldoc messages will only be shown for functions which are retrieved via semantic completion.
+
+
 ## `next-error` integration
 
 emacs-ycmd reports found errors through emacs buttons; to integrate those with
