@@ -572,10 +572,10 @@ explicitly re-define the prefix key:
   "Keymap for `ycmd-mode'.")
 
 (defmacro ycmd--kill-timer (timer)
-   "Cancel TIMER."
-   `(when ,timer
-      (cancel-timer ,timer)
-      (setq ,timer nil)))
+  "Cancel TIMER."
+  `(when ,timer
+     (cancel-timer ,timer)
+     (setq ,timer nil)))
 
 (defun ycmd-parsing-in-progress-p ()
   "Return t if parsing is in progress."
