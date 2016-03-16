@@ -56,6 +56,7 @@
 (require 'company-ycmd)
 (require 'flycheck-ert)
 (require 'flycheck-ycmd)
+(require 'ycmd-eldoc)
 (require 'macroexp)
 
 (defconst ycmd-test-location
@@ -71,6 +72,7 @@
   "Setup `ycmd-mode' for test in current buffer."
   (let ((ycmd-parse-conditions nil))
     (ycmd-mode)
+    (ycmd-open)
     (deferred:sync!
       (ycmd-load-conf-file ycmd-test-extra-conf))
     (deferred:sync!
@@ -94,17 +96,15 @@ evaluating BODY."
      (ycmd-test-mode)
      ,@body))
 
-(defmacro ycmd-ert-deftest-deferred-request (name filename mode
-                                                  &rest keys-and-body)
+(defmacro ycmd-ert-deftest (name filename mode &rest keys-and-body)
   "Define a test case for a deferred request to the ycmd server.
 
 NAME is a symbol denoting the local name of the test.  The test
 itself is named `ycmd-test-NAME'.  FILENAME is the input file with
-the `major-mode' MODE.  The rest should contain the keywords
-`:request-func' specifying the function with the request to the
-ycmd server.  `:line' and `:column' is the file location for the
-request.  The remaining forms of KEYS-AND-BODY are used to
-evaluate the server's response."
+the `major-mode' MODE.  The rest should contain keywords.  `:line'
+and `:column' is the file location for the request.  The remaining
+forms of KEYS-AND-BODY are used to evaluate the server's
+response."
   (declare (indent 3) (debug t))
   (let* ((full-name (intern (format "ycmd-test-%s" name)))
          (keys-and-body (ert--parse-keys-and-body keys-and-body))
@@ -119,50 +119,57 @@ evaluate the server's response."
                   ,(plist-get keys :line)
                   (current-buffer))))
            (goto-char current-position)
-           (deferred:sync!
-             (deferred:$
-               (funcall ,(plist-get keys :request-func))
-               (deferred:nextc it
-                 (lambda (response)
-                   ,@body)))))))))
+           ,@body)))))
 
-(ycmd-ert-deftest-deferred-request get-completions-cpp "test.cpp" 'c++-mode
-  :request-func 'ycmd-get-completions
+(defmacro ycmd-with-deferred-request (request-func body)
+  "Run a request with REQUEST-FUNC and eval BODY with response."
+  (declare (indent 1))
+  `(deferred:sync!
+     (deferred:$
+       (funcall ,request-func)
+       (deferred:nextc it
+         (lambda (response)
+           ,(macroexpand-all body))))))
+
+(ycmd-ert-deftest get-completions-cpp "test.cpp" 'c++-mode
   :line 8 :column 7
-  (let ((start-col (assoc-default 'completion_start_column response))
-        (completions (assoc-default 'completions response)))
+  (let* ((response (ycmd-get-completions :sync))
+         (start-col (assoc-default 'completion_start_column response))
+         (completions (assoc-default 'completions response)))
     (should (cl-some (lambda (c)
                        (string-equal
                         "llurp" (assoc-default 'insertion_text c)))
                      completions))
     (should (= start-col 7))))
 
-(ycmd-ert-deftest-deferred-request goto-declaration "test-goto.cpp" 'c++-mode
-  :request-func (apply-partially #'ycmd--send-completer-command-request
-                                 "GoToDeclaration")
+(ycmd-ert-deftest goto-declaration "test-goto.cpp" 'c++-mode
   :line 9 :column 7
-  (if (assoc-default 'exception response)
-      (should nil)
-    (progn
-      (should (= (assoc-default 'column_num response) 10))
-      (should (= (assoc-default 'line_num response) 2)))))
+  (ycmd-with-deferred-request
+      (apply-partially #'ycmd--send-completer-command-request
+                       "GoToDeclaration")
+    (if (assoc-default 'exception response)
+        (should nil)
+      (progn
+        (should (= (assoc-default 'column_num response) 10))
+        (should (= (assoc-default 'line_num response) 2))))))
 
-(ycmd-ert-deftest-deferred-request goto-definition "test-goto.cpp" 'c++-mode
-  :request-func (apply-partially #'ycmd--send-completer-command-request
-                                 "GoToDefinition")
+(ycmd-ert-deftest goto-definition "test-goto.cpp" 'c++-mode
   :line 9 :column 7
-  (if (assoc-default 'exception response)
-      (should nil)
-    (progn
-      (should (= (assoc-default 'column_num response) 11))
-      (should (= (assoc-default 'line_num response) 5)))))
+  (ycmd-with-deferred-request
+      (apply-partially #'ycmd--send-completer-command-request
+                       "GoToDefinition")
+    (if (assoc-default 'exception response)
+        (should nil)
+      (progn
+        (should (= (assoc-default 'column_num response) 11))
+        (should (= (assoc-default 'line_num response) 5))))))
 
-(ycmd-ert-deftest-deferred-request get-completions-python "test.py" 'python-mode
-  :disabled t ;; TODO Find out why this fails sometimes
-  :request-func 'ycmd-get-completions
+(ycmd-ert-deftest get-completions-python "test.py" 'python-mode
+  ;; :disabled t ;; TODO Find out why this fails sometimes
   :line 7 :column 3
-  (let ((start-col (assoc-default 'completion_start_column response))
-        (completions (assoc-default 'completions response)))
+  (let* ((response (ycmd-get-completions :sync))
+         (start-col (assoc-default 'completion_start_column response))
+         (completions (assoc-default 'completions response)))
     (should (cl-some (lambda (c)
                        (string-equal
                         "a" (assoc-default 'insertion_text c)))
@@ -173,10 +180,10 @@ evaluate the server's response."
                      completions))
     (should (= start-col 3))))
 
-(ycmd-ert-deftest-deferred-request get-completions-go "test.go" 'go-mode
-  :request-func 'ycmd-get-completions
+(ycmd-ert-deftest get-completions-go "test.go" 'go-mode
   :line 9 :column 10
-  (let* ((start-col (assoc-default 'completion_start_column response))
+  (let* ((response (ycmd-get-completions :sync))
+         (start-col (assoc-default 'completion_start_column response))
          (completions (assoc-default 'completions response))
          (c (nth 0 (append completions nil))))
     (should (string= "Logger" (assoc-default 'insertion_text c)))
@@ -197,15 +204,14 @@ evaluate the server's response."
   (declare (indent 2) (debug t))
   (let* ((line (plist-get keys :line))
          (column (plist-get keys :column)))
-    `(ycmd-ert-deftest-deferred-request
-         ,name ,(plist-get keys :filename) ,mode
-       :request-func
-       (apply-partially #'ycmd--send-completer-command-request
-                        "FixIt")
+    `(ycmd-ert-deftest ,name ,(plist-get keys :filename) ,mode
        :line ,line :column ,column
-       (should
-        (ycmd-test-fixit-handler
-         response ,(plist-get keys :filename-expected))))))
+       (ycmd-with-deferred-request
+           ',(apply-partially
+              #'ycmd--send-completer-command-request "FixIt")
+         (should
+          (ycmd-test-fixit-handler
+           response ,(plist-get keys :filename-expected)))))))
 
 (ycmd-ert-deftest-fixit fixit-cpp-insert1 'c++-mode
   :filename "test-fixit-cpp11-insert1.cpp"
@@ -476,6 +482,14 @@ evaluate the server's response."
 
 (flycheck-ert-initialize ycmd-test-resources-location)
 
+(ycmd-ert-deftest eldoc-info-at-point-on-keyword "test-eldoc.cpp" 'c++-mode
+  :line 8 :column 8
+  (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
+                 "void bar( int x )")))
+(ycmd-ert-deftest eldoc-info-at-point-between-par "test-eldoc.cpp" 'c++-mode
+  :line 8 :column 11
+  (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
+                 "void bar( int x )")))
 
 (provide 'ycmd-test)
 

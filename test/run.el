@@ -49,6 +49,7 @@
       (load (expand-file-name "ycmd" source-directory))
       (load (expand-file-name "company-ycmd" source-directory))
       (load (expand-file-name "flycheck-ycmd" source-directory))
+      (load (expand-file-name "ycmd-eldoc" source-directory))
       (load (expand-file-name "ycmd-test" (file-name-directory current-file))))
 
     (let* ((debug-on-error t)

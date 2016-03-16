@@ -23,22 +23,27 @@ OBJECTS_COMP = $(SRCS_COMP:.el=.elc)
 SRCS_FLYC = flycheck-ycmd.el
 OBJECTS_FLYC = $(SRCS_FLYC:.el=.elc)
 
+SRCS_ELDOC = ycmd-eldoc.el
+OBJECTS_ELDOC = $(SRCS_ELDOC:.el=.elc)
+
 DISTDIR = dist
 BUILDDIR = build
 
 EMACSBATCH = $(EMACS) -Q --batch $(EMACSFLAGS)
 
-.PHONY: deps all ycmd company-ycmd flycheck-ycmd dist test \
-	clean clean-elc clobber clobber-dist clobber-deps
+.PHONY: deps all ycmd company-ycmd flycheck-ycmd ycmd-eldoc dist \
+	test clean clean-elc clobber clobber-dist clobber-deps
 
 # Build targets
-all : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC)
+all : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC) $(OBJECTS_ELDOC)
 
 ycmd : $(OBJECTS)
 
-company-ycmd : $(OBJECTS) $(OBJECTS_COMP)
+company-ycmd : ycmd $(OBJECTS_COMP)
 
-flycheck-ycmd : $(OBJECTS) $(OBJECTS_FLYC)
+flycheck-ycmd : ycmd $(OBJECTS_FLYC)
+
+ycmd-eldoc : ycmd $(OBJECTS_ELDOC)
 
 dist :
 	$(CASK) package
@@ -55,7 +60,7 @@ clean : clean-elc
 clobber: clobber-dist clobber-deps
 
 clean-elc :
-	rm -rf $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC)
+	rm -rf $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC) $(OBJECTS_ELDOC)
 
 clobber-dist :
 	rm -rf $(DISTDIR)
