@@ -502,6 +502,14 @@ If CB is non-nil, call it with candidates."
   "Add company-ycmd to the front of company-backends."
   (add-to-list 'company-backends 'company-ycmd))
 
+(defun company-ycmd--init ()
+  (unless (eq company-minimum-prefix-length
+              ycmd-min-num-chars-for-completion)
+    (setq-local company-minimum-prefix-length
+                ycmd-min-num-chars-for-completion)))
+
+(add-hook 'ycmd-mode-hook #'company-ycmd--init)
+
 (provide 'company-ycmd)
 
 ;;; company-ycmd.el ends here
