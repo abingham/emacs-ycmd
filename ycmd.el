@@ -785,11 +785,11 @@ process with `delete-process'."
     (error nil)))
 
 (defun ycmd-running? ()
-  "Return non-nil if a ycmd server is already running."
-  (let ((process (get-process ycmd--server-process)))
+  "Return t if a ycmd server is already running."
+  (-when-let (process (get-process ycmd--server-process))
     (and (processp process)
-         (memq (process-status process)
-               '(run open listen connect stop)))))
+         (process-live-p process)
+         t)))
 
 (defun ycmd--keepalive ()
   "Sends an unspecified message to the server.
