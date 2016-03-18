@@ -496,6 +496,9 @@ response."
   (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
                  "void bar( int x )")))
 
+(ert-deftest ycmd-test-not-running ()
+  (should-not (ycmd-running?)))
+
 (provide 'ycmd-test)
 
 ;;; ycmd-test.el ends here
