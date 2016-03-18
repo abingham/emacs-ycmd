@@ -59,14 +59,15 @@
 (require 'ycmd-eldoc)
 (require 'macroexp)
 
-(defconst ycmd-test-location
-  (file-name-directory (or load-file-name buffer-file-name)))
+(eval-and-compile
+  (defconst ycmd-test-location
+    (file-name-directory (f-this-file)))
 
-(defconst ycmd-test-resources-location
-  (f-join ycmd-test-location "resources"))
+  (defconst ycmd-test-resources-location
+    (f-join ycmd-test-location "resources"))
 
-(defconst ycmd-test-extra-conf
-  (f-join ycmd-test-resources-location ".ycm_extra_conf.py"))
+  (defconst ycmd-test-extra-conf
+    (f-join ycmd-test-resources-location ".ycm_extra_conf.py")))
 
 (defun ycmd-test-mode ()
   "Setup `ycmd-mode' for test in current buffer."
@@ -179,6 +180,8 @@ response."
                         "b" (assoc-default 'insertion_text c)))
                      completions))
     (should (= start-col 3))))
+
+(declare-function go-mode "go-mode")
 
 (ycmd-ert-deftest get-completions-go "test.go" 'go-mode
   :line 9 :column 10
@@ -328,6 +331,8 @@ response."
                           (assoc-default
                            'location (assoc-default 'extra_data data)))
                candidate)))))
+
+(declare-function rust-mode "rust-mode")
 
 (ert-deftest company-ycmd-test-construct-candidate-rust ()
   (ycmd-ert-with-temp-buffer 'rust-mode
