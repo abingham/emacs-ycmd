@@ -1067,10 +1067,10 @@ Use BUFFER if non-nil or `current-buffer'."
   "Handle a successful GetParent or GetType resonse for RESULT."
   (-when-let (msg (assoc-default 'message result))
     (message "%s" (pcase msg
-                    ((or "Unknown semantic parent"
-                         "Unknown type"
-                         "Internal error: cursor not valid"
-                         "Internal error: no translation unit") msg)
+                    ((or `"Unknown semantic parent"
+                         `"Unknown type"
+                         `"Internal error: cursor not valid"
+                         `"Internal error: no translation unit") msg)
                     (_ (ycmd--fontify-code msg))))))
 
 (defun ycmd-get-parent ()
