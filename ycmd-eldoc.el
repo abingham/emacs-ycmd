@@ -102,8 +102,11 @@ foo(bar, |baz); -> foo|(bar, baz);"
 (defun ycmd-eldoc-setup ()
   "Setup eldoc for `ycmd-mode'."
   (interactive)
-  (add-function :before-until (local 'eldoc-documentation-function)
-                #'ycmd-eldoc--documentation-function)
+  (if (fboundp 'add-function)
+      (add-function :before-until (local 'eldoc-documentation-function)
+                    #'ycmd-eldoc--documentation-function)
+    (set (make-local-variable 'eldoc-documentation-function)
+         'ycmd-eldoc--documentation-function))
   (eldoc-mode +1))
 
 (defadvice ycmd--teardown (after ycmd-teardown-after activate)
