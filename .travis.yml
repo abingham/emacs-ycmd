@@ -4,8 +4,10 @@ cache:
     - .cask/
 env:
   matrix:
+    # Run unit tests against oldest supported stable, latest stable, and trunk
     - EMACS_VERSION=24.3
     - EMACS_VERSION=24.5
+    - EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
 before_install:
   - export PATH="$HOME/bin:$PATH"
   - wget 'https://raw.githubusercontent.com/flycheck/emacs-travis/master/emacs-travis.mk'
@@ -24,3 +26,10 @@ install:
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
   - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" test; fi
+matrix:
+  # Finish the build even if any build with allowed failures are still running
+  fast_finish: true
+  allow_failures:
+    # Allow the snapshot build to fail, because Emacs snapshot sometimes fails
+    # to build
+    - env: EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
