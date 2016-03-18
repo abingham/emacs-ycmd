@@ -106,10 +106,9 @@ foo(bar, |baz); -> foo|(bar, baz);"
                 #'ycmd-eldoc--documentation-function)
   (eldoc-mode +1))
 
-(advice-add 'ycmd--teardown :after
-            (lambda ()
-              "Reset ycmd-eldoc--cache on `ycmd--teardown'"
-              (setq ycmd-eldoc--cache nil)))
+(defadvice ycmd--teardown (after ycmd-teardown-after activate)
+  "Reset ycmd-eldoc--cache on `ycmd--teardown'."
+  (setq ycmd-eldoc--cache nil))
 
 (provide 'ycmd-eldoc)
 
