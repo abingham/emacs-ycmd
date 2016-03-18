@@ -356,7 +356,7 @@ candidates list."
 (defun company-ycmd--get-construct-candidate-fn ()
   "Return function to construct candidate(s) for current `major-mode'."
   (pcase (car-safe (ycmd-major-mode-to-file-types major-mode))
-    ((or "cpp" "c" "objc") 'company-ycmd--construct-candidate-clang)
+    ((or `"cpp" `"c" `"objc") 'company-ycmd--construct-candidate-clang)
     ("go" 'company-ycmd--construct-candidate-go)
     ("python" 'company-ycmd--construct-candidate-python)
     ("rust" 'company-ycmd--construct-candidate-rust)
