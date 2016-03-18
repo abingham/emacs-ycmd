@@ -1,12 +1,17 @@
 language: emacs-lisp
+cache:
+  directories:
+    - .cask/
 env:
-  - EMACS_VERSION=24.5
+  matrix:
+    - EMACS_VERSION=24.3
+    - EMACS_VERSION=24.5
 before_install:
   - export PATH="$HOME/bin:$PATH"
   - wget 'https://raw.githubusercontent.com/flycheck/emacs-travis/master/emacs-travis.mk'
-  - make -f emacs-travis.mk install_emacs
-  - make -f emacs-travis.mk install_cask
-  - emacs --version
+  - if [[ -n $EMACS_VERSION ]]; then make -f emacs-travis.mk install_emacs; fi
+  - if [[ -n $EMACS_VERSION ]]; then make -f emacs-travis.mk install_cask; fi
+  - if [[ -n $EMACS_VERSION ]]; then emacs --version; fi
 
   # ycmd
   - git clone --depth=1 --recursive https://github.com/Valloric/ycmd
@@ -15,8 +20,7 @@ before_install:
   - cd ..
 
 install:
-  - make deps
+  - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
-  - make all
-  - make YCMDPATH="ycmd/ycmd" test
-
+  - if [[ -n $EMACS_VERSION ]]; then make all; fi
+  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" test; fi
