@@ -167,7 +167,7 @@ response."
         (should (= (assoc-default 'line_num response) 5))))))
 
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
-  ;; :disabled t ;; TODO Find out why this fails sometimes
+  :disabled t ;; TODO Find out why this fails sometimes
   :line 7 :column 3
   (let* ((response (ycmd-get-completions :sync))
          (start-col (assoc-default 'completion_start_column response))
