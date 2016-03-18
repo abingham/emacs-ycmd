@@ -95,7 +95,8 @@ evaluating BODY."
        (f-join ,ycmd-test-resources-location ,resource-file)
      (delay-mode-hooks (funcall ,mode))
      (ycmd-test-mode)
-     ,@body))
+     ,@body
+     (ycmd-close)))
 
 (defmacro ycmd-ert-deftest (name filename mode &rest keys-and-body)
   "Define a test case for a deferred request to the ycmd server.
