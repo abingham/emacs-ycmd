@@ -508,7 +508,7 @@ Users should never need to modify this, hence the defconst.  It is
 not, however, treated as a constant by this code.  This value
 gets set in ycmd-open.")
 
-(defconst ycmd--server-process "ycmd-server"
+(defconst ycmd--server-process-name "ycmd-server"
   "The Emacs name of the server process.
 This is used by functions like `start-process', `get-process'
 and `delete-process'.")
@@ -776,17 +776,17 @@ timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
   (condition-case nil
       (let ((start-time (float-time)))
-        (interrupt-process ycmd--server-process)
+        (interrupt-process ycmd--server-process-name)
         (while (and (ycmd-running?)
                     (> ycmd-delete-process-delay
                        (- (float-time) start-time)))
           (sit-for 0.05))
-        (delete-process ycmd--server-process))
+        (delete-process ycmd--server-process-name))
     (error nil)))
 
 (defun ycmd-running? ()
   "Return t if a ycmd server is already running."
-  (--when-let (get-process ycmd--server-process)
+  (--when-let (get-process ycmd--server-process-name)
     (and (processp it) (process-live-p it) t)))
 
 (defun ycmd--keepalive ()
@@ -1591,9 +1591,11 @@ the name of the newly created file."
 
       (let* ((options-file (ycmd--create-options-file hmac-secret))
              (server-command ycmd-server-command)
-             (args (apply 'list (concat "--options_file=" options-file) ycmd-server-args))
+             (args (apply 'list (concat "--options_file=" options-file)
+                          ycmd-server-args))
              (server-program+args (append server-command args))
-             (proc (apply #'start-process ycmd--server-process proc-buff server-program+args))
+             (proc (apply #'start-process ycmd--server-process-name proc-buff
+                          server-program+args))
              (cont t)
              (start-time (float-time)))
         (while cont
