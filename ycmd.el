@@ -786,10 +786,8 @@ process with `delete-process'."
 
 (defun ycmd-running? ()
   "Return t if a ycmd server is already running."
-  (-when-let (process (get-process ycmd--server-process))
-    (and (processp process)
-         (process-live-p process)
-         t)))
+  (--when-let (get-process ycmd--server-process)
+    (and (processp it) (process-live-p it) t)))
 
 (defun ycmd--keepalive ()
   "Sends an unspecified message to the server.
