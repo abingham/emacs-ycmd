@@ -301,7 +301,7 @@ response."
       (should (ycmd-test-has-property-with-value
                'return_type "(n int, err error)" candidate)))))
 
-(ert-deftest company-ycmd-test-contruct-candidate-python ()
+(ert-deftest company-ycmd-test-construct-candidate-python ()
   (ycmd-ert-with-temp-buffer 'python-mode
     (let* ((data '((insertion_text . "foo")
                    (detailed_info . "foo(self, a, b)\n\nA function")

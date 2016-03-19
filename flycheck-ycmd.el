@@ -4,7 +4,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (dash "1.2.0") (flycheck "0.22") (ycmd "0.9"))
+;; Package-Requires: ((emacs "24") (dash "1.2.0") (flycheck "0.22") (ycmd "0.9") (let-alist "1.0.4"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -46,6 +46,8 @@
 ;;
 ;;; Code:
 
+(eval-when-compile
+  (require 'let-alist))
 (require 'dash)
 (require 'flycheck)
 (require 'ycmd)
@@ -62,16 +64,16 @@
 
 (defun flycheck-ycmd--result-to-error (result checker)
   "Convert ycmd parse RESULT for CHECKER into a flycheck error object."
-  (ycmd--with-destructured-parse-result result
-    (if (string-equal filepath (buffer-file-name))
+  (let-alist result
+    (if (string-equal .location.filepath (buffer-file-name))
         (flycheck-error-new
-         :line line-num
-         :column column-num
+         :line .location.line_num
+         :column .location.column_num
          :buffer (current-buffer)
-         :filename filepath
-         :message (concat text (when (eq fixit-available t) " (FixIt)"))
+         :filename .location.filepath
+         :message (concat .text (when (eq .fixit_available t) " (FixIt)"))
          :checker checker
-         :level (assoc-default kind flycheck-ycmd--level-map 'string-equal 'error)))))
+         :level (assoc-default .kind flycheck-ycmd--level-map 'string-equal 'error)))))
 
 (defun flycheck-ycmd--start (checker callback)
   "Start ycmd flycheck CHECKER using CALLBACK to communicate with flycheck."

@@ -49,7 +49,7 @@ dist :
 	$(CASK) package
 
 # Test targets
-test : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC)
+test : $(OBJECTS) $(OBJECTS_COMP) $(OBJECTS_FLYC) $(OBJECTS_ELDOC)
 	$(EMACSBATCH) --script test/run.el '$(YCMDPATH)' '$(ERTSELECTOR)'
 
 # Support targets
