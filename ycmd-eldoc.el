@@ -102,7 +102,7 @@ foo(bar, |baz); -> foo|(bar, baz);"
 (defun ycmd-eldoc-setup ()
   "Setup eldoc for `ycmd-mode'."
   (interactive)
-  (if (fboundp 'add-function)
+  (if (eval-when-compile (fboundp 'add-function))
       (add-function :before-until (local 'eldoc-documentation-function)
                     #'ycmd-eldoc--documentation-function)
     (set (make-local-variable 'eldoc-documentation-function)
