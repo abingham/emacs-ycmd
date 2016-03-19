@@ -1765,11 +1765,7 @@ anything like that.)
     (if sync
         (let (result)
           (ycmd-request
-           url
-           :headers headers
-           :parser parser
-           :data content
-           :type type
+           url :headers headers :parser parser :data content :type type
            :sync t
            :success
            (cl-function
@@ -1779,11 +1775,7 @@ anything like that.)
           result)
       (deferred:$
         (ycmd-request-deferred
-         url
-         :headers headers
-         :parser parser
-         :data content
-         :type type)
+         url :headers headers :parser parser :data content :type type)
         (deferred:nextc it
           (lambda (req)
             (let ((content (ycmd-request-response-data req)))
