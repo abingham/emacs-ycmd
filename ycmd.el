@@ -163,7 +163,7 @@ Options are:
   :type '(string)
   :group 'ycmd)
 
-                                        ; TODO: Figure out the best default value for this.
+;; TODO: Figure out the best default value for this.
 (defcustom ycmd-server-command '("python" "/path/to/ycmd/package/")
   "The ycmd server program command.
 
