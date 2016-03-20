@@ -5,7 +5,7 @@
 ;; Author: Peter Vasil <mail@petervasil.net>
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Version: 0.1
-;; Package-Requires: ((ycmd "0.1") (deferred "0.2.0") (s "1.9.0") (dash "1.2.0") (cl-lib "0.5"))
+;; Package-Requires: ((ycmd "0.1") (deferred "0.2.0") (s "1.9.0") (dash "1.2.0") (cl-lib "0.5") (let-alist "1.0.4))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'let-alist))
 (require 'cl-lib)
 (require 'eldoc)
 (require 'ycmd)
@@ -83,13 +85,12 @@ foo(bar, |baz); -> foo|(bar, baz);"
   (-when-let* ((filtered-list
                 (cl-remove-if-not
                  (lambda (val)
-                   (let ((text (assoc-default 'insertion_text val))
-                         (extra-info (assoc-default 'extra_menu_info val)))
-                     (and (s-equals? text symbol)
-                          (or (not extra-info)
+                   (let-alist val
+                     (and (s-equals? .insertion_text symbol)
+                          (or (not .extra_menu_info)
                               (not (-contains?
                                     '("[ID]" "[File]" "[Dir]" "[File&Dir]")
-                                    extra-info))))))
+                                    .extra_menu_info))))))
                  ;; Convert vector to list
                  (append result nil)))
                (item (car filtered-list))
