@@ -50,6 +50,7 @@
 ;;; Code:
 
 
+(require 'let-alist)
 (require 'ert)
 (require 'f)
 (require 'ycmd)
@@ -135,67 +136,64 @@ response."
 
 (ycmd-ert-deftest get-completions-cpp "test.cpp" 'c++-mode
   :line 8 :column 7
-  (let* ((response (ycmd-get-completions :sync))
-         (start-col (assoc-default 'completion_start_column response))
-         (completions (assoc-default 'completions response)))
-    (should (cl-some (lambda (c)
-                       (string-equal
-                        "llurp" (assoc-default 'insertion_text c)))
-                     completions))
-    (should (= start-col 7))))
+  (let ((response (ycmd-get-completions :sync)))
+    (let-alist response
+      (should (cl-some (lambda (c)
+                         (string-equal
+                          "llurp" (cdr (assq 'insertion_text c))))
+                       .completions))
+      (should (= .completion_start_column 7)))))
 
 (ycmd-ert-deftest goto-declaration "test-goto.cpp" 'c++-mode
   :line 9 :column 7
   (ycmd-with-deferred-request
       (apply-partially #'ycmd--send-completer-command-request
                        "GoToDeclaration")
-    (if (assoc-default 'exception response)
-        (should nil)
-      (progn
-        (should (= (assoc-default 'column_num response) 10))
-        (should (= (assoc-default 'line_num response) 2))))))
+    (let-alist response
+      (if .exception
+          (should nil)
+        (should (= .column_num 10))
+        (should (= .line_num 2))))))
 
 (ycmd-ert-deftest goto-definition "test-goto.cpp" 'c++-mode
   :line 9 :column 7
   (ycmd-with-deferred-request
       (apply-partially #'ycmd--send-completer-command-request
                        "GoToDefinition")
-    (if (assoc-default 'exception response)
-        (should nil)
-      (progn
-        (should (= (assoc-default 'column_num response) 11))
-        (should (= (assoc-default 'line_num response) 5))))))
+    (let-alist response
+      (if .exception
+          (should nil)
+        (should (= .column_num 11))
+        (should (= .line_num 5))))))
 
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   :disabled t ;; TODO Find out why this fails sometimes
   :line 7 :column 3
-  (let* ((response (ycmd-get-completions :sync))
-         (start-col (assoc-default 'completion_start_column response))
-         (completions (assoc-default 'completions response)))
-    (should (cl-some (lambda (c)
-                       (string-equal
-                        "a" (assoc-default 'insertion_text c)))
-                     completions))
-    (should (cl-some (lambda (c)
-                       (string-equal
-                        "b" (assoc-default 'insertion_text c)))
-                     completions))
-    (should (= start-col 3))))
+  (let ((response (ycmd-get-completions :sync)))
+    (let-alist response
+      (should (cl-some (lambda (c)
+                         (string-equal
+                          "a" (cdr (assq 'insertion_text c))))
+                       .completions))
+      (should (cl-some (lambda (c)
+                         (string-equal
+                          "b" (cdr (assq 'insertion_text c))))
+                       .completions))
+      (should (= .completion_start_column 3)))))
 
 (declare-function go-mode "go-mode")
 
 (ycmd-ert-deftest get-completions-go "test.go" 'go-mode
   :line 9 :column 10
-  (let* ((response (ycmd-get-completions :sync))
-         (start-col (assoc-default 'completion_start_column response))
-         (completions (assoc-default 'completions response))
-         (c (nth 0 (append completions nil))))
-    (should (string= "Logger" (assoc-default 'insertion_text c)))
-    (should (= start-col 6))))
+  (let ((response (ycmd-get-completions :sync)))
+    (let-alist response
+      (let ((c (nth 0 (append .completions nil))))
+        (should (string= "Logger" (cdr (assq 'insertion_text c))))
+        (should (= .completion_start_column 6))))))
 
 (defun ycmd-test-fixit-handler (response file-name)
   (let ((ycmd-confirm-fixit nil)
-        (fixits (assoc-default 'fixits response)))
+        (fixits (cdr (assq 'fixits response))))
     (when (and fixits (> (length fixits) 0))
       (ycmd--handle-fixit-success response)
       (let ((actual (buffer-string))
@@ -269,14 +267,14 @@ response."
            (candidate-1 (nth 0 candidates))
            (candidate-2 (nth 1 candidates)))
       (should (= (length candidates) 2))
-      (should (string= (assoc-default 'insertion_text data)
+      (should (string= (cdr (assq 'insertion_text data))
                        (substring-no-properties candidate-1)))
       (should (ycmd-test-has-property-with-value 'kind "fn" candidate-1))
       (should (ycmd-test-has-property-with-value 'meta "int foo( int i )" candidate-1))
       (should (ycmd-test-has-property-with-value 'return_type "int" candidate-1))
       (should (ycmd-test-has-property-with-value 'params "( int i )" candidate-1))
       (should (ycmd-test-has-property-with-value 'doc "A docstring" candidate-1))
-      (should (string= (assoc-default 'insertion_text data)
+      (should (string= (cdr (assq 'insertion_text data))
                        (substring-no-properties candidate-2)))
       (should (ycmd-test-has-property-with-value 'kind "fn" candidate-2))
       (should (ycmd-test-has-property-with-value 'meta "void foo()" candidate-2))
@@ -292,7 +290,7 @@ response."
                    (extra_menu_info . "func(a ...interface{}) (n int, err error)")
                    (kind . "func")))
            (candidate (company-ycmd--construct-candidate-go data)))
-      (should (string= (assoc-default 'insertion_text data)
+      (should (string= (cdr (assq 'insertion_text data))
                        (substring-no-properties candidate)))
       (should (ycmd-test-has-property-with-value 'kind "func" candidate))
       (should (ycmd-test-has-property-with-value 'params "(a ...interface{})" candidate))
@@ -312,26 +310,16 @@ response."
                      (filepath . "/foo/bar.py")))
                    (extra_menu_info . "function: bar.Foo.foo")))
            (candidate (company-ycmd--construct-candidate-python data)))
-      (should (string= (assoc-default 'insertion_text data)
-                       (substring-no-properties candidate)))
-      (should (ycmd-test-has-property-with-value 'meta "foo(self, a, b)" candidate))
-      (should (ycmd-test-has-property-with-value 'params "(a, b)" candidate))
-      (should (ycmd-test-has-property-with-value
-               'doc (assoc-default 'detailed_info data) candidate))
-      (should (ycmd-test-has-property-with-value
-               'kind (assoc-default 'extra_menu_info data) candidate))
-      (should (ycmd-test-has-property-with-value
-               'filepath (assoc-default
-                          'filepath
-                          (assoc-default
-                           'location (assoc-default 'extra_data data)))
-               candidate))
-      (should (ycmd-test-has-property-with-value
-               'line_num (assoc-default
-                          'line_num
-                          (assoc-default
-                           'location (assoc-default 'extra_data data)))
-               candidate)))))
+      (let-alist data
+        (should (string= .insertion_text (substring-no-properties candidate)))
+        (should (ycmd-test-has-property-with-value 'meta "foo(self, a, b)" candidate))
+        (should (ycmd-test-has-property-with-value 'params "(a, b)" candidate))
+        (should (ycmd-test-has-property-with-value 'doc .detailed_info candidate))
+        (should (ycmd-test-has-property-with-value 'kind .extra_menu_info candidate))
+        (should (ycmd-test-has-property-with-value
+                 'filepath .extra_data.location.filepath candidate))
+        (should (ycmd-test-has-property-with-value
+                 'line_num .extra_data.location.line_num candidate))))))
 
 (declare-function rust-mode "rust-mode")
 
@@ -346,42 +334,28 @@ response."
                      (filepath . "/foo/bar.rs")))
                    (extra_menu_info . "fn foo(&self, x: f64) -> f64")))
            (candidate (company-ycmd--construct-candidate-rust data)))
-      (should (string= (assoc-default 'insertion_text data)
-                       (substring-no-properties candidate)))
-      (should (ycmd-test-has-property-with-value
-               'meta (assoc-default 'extra_menu_info data) candidate))
-      (should (ycmd-test-has-property-with-value
-               'kind (assoc-default 'kind data) candidate))
-      (should (ycmd-test-has-property-with-value 'params "(x: f64)" candidate))
-      (should (ycmd-test-has-property-with-value 'return_type "f64" candidate))
-      (should (ycmd-test-has-property-with-value
-               'filepath (assoc-default
-                          'filepath
-                          (assoc-default
-                           'location (assoc-default 'extra_data data)))
-               candidate))
-      (should (ycmd-test-has-property-with-value
-               'line_num (assoc-default
-                          'line_num
-                          (assoc-default
-                           'location (assoc-default 'extra_data data)))
-               candidate))
-      (should (ycmd-test-has-property-with-value
-               'column_num (assoc-default
-                            'column_num
-                            (assoc-default
-                             'location (assoc-default 'extra_data data)))
-               candidate)))))
+      (let-alist data
+        (should (string= .insertion_text (substring-no-properties candidate)))
+        (should (ycmd-test-has-property-with-value 'meta .extra_menu_info candidate))
+        (should (ycmd-test-has-property-with-value 'kind .kind candidate))
+        (should (ycmd-test-has-property-with-value 'params "(x: f64)" candidate))
+        (should (ycmd-test-has-property-with-value 'return_type "f64" candidate))
+        (should (ycmd-test-has-property-with-value
+                 'filepath .extra_data.location.filepath candidate))
+        (should (ycmd-test-has-property-with-value
+                 'line_num .extra_data.location.line_num candidate))
+        (should (ycmd-test-has-property-with-value
+                 'column_num .extra_data.location.column_num candidate))))))
 
 (ert-deftest company-ycmd-test-construct-candidate-generic ()
   (ycmd-ert-with-temp-buffer 'c++-mode
     (let* ((data '((insertion_text . "foo")
                    (extra_menu_info . "[ID]")))
            (candidate (company-ycmd--construct-candidate-generic data)))
-      (should (string= (assoc-default 'insertion_text data)
+      (should (string= (cdr (assq 'insertion_text data))
                        (substring-no-properties candidate)))
       (should (ycmd-test-has-property-with-value
-               'return_type (assoc-default 'extra_menu_info data) candidate)))))
+               'return_type (cdr (assq 'extra_menu_info data)) candidate)))))
 
 (ert-deftest company-ycmd-test-extract-params-clang-simple ()
   (let ((data "wchar_t * wmemchr(wchar_t *__p, wchar_t __c, size_t __n)"))

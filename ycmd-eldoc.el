@@ -56,8 +56,7 @@
       (if (eq symbol (car ycmd-eldoc--cache))
           (cadr ycmd-eldoc--cache)
         (-when-let* ((completions (ycmd-get-completions :sync))
-                     (candidates
-                      (assoc-default 'completions completions))
+                     (candidates (cdr (assq 'completions completions)))
                      (text (ycmd-eldoc--generate-message
                             (symbol-name symbol) candidates)))
           (setq text (ycmd--fontify-code text))
@@ -94,8 +93,8 @@ foo(bar, |baz); -> foo|(bar, baz);"
                  ;; Convert vector to list
                  (append result nil)))
                (item (car filtered-list))
-               (msg (or (assoc-default 'detailed_info item)
-                        (assoc-default 'extra_menu_info item))))
+               (msg (or (cdr (assq 'detailed_info item))
+                        (cdr (assq 'extra_menu_info item)))))
     (unless (s-blank? msg)
       (car (s-split-up-to "\n" msg 1)))))
 

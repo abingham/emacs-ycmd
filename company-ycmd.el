@@ -112,7 +112,7 @@ When 0, do not use synchronous completion request at all."
 
 (defun company-ycmd--prefix-candidate-p (candidate prefix)
   "Return t if CANDIDATE string begins with PREFIX."
-  (let ((insertion-text (assoc-default 'insertion_text candidate)))
+  (let ((insertion-text (cdr (assq 'insertion_text candidate))))
     (s-starts-with? prefix insertion-text t)))
 
 (defun company-ycmd--filename-completer-p (extra-info)
@@ -336,7 +336,7 @@ candidates list."
          candidates)
     (dolist (candidate (append completion-vector nil) (nreverse candidates))
       (when (s-present? prefix-diff)
-        (let ((it (assoc 'insertion_text candidate)))
+        (let ((it (assq 'insertion_text candidate)))
           (setcdr it (concat prefix-diff
                              (substring-no-properties (cdr it))))))
       (when (or company-ycmd-enable-fuzzy-matching
