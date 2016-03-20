@@ -930,10 +930,10 @@ a results vector as argument."
 
 SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
+    (when (ycmd-parsing-in-progress-p)
+      (error "Can't send \"%s\" request while parsing is in progress" type))
     (deferred:$
-
       (ycmd--send-completer-command-request type)
-
       (deferred:nextc it
         (lambda (result)
           (when result
