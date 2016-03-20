@@ -1432,8 +1432,8 @@ Otherwise the response is probably an exception."
   (if (or (not results)
           (vectorp results))
       (progn
-        (run-hook-with-args 'ycmd-file-parse-result-hook results)
-        (ycmd--report-status 'parsed))
+        (ycmd--report-status 'parsed)
+        (run-hook-with-args 'ycmd-file-parse-result-hook results))
     (when (assoc 'exception results)
       (ycmd--handle-exception results))))
 
