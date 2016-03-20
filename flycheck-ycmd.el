@@ -65,15 +65,15 @@
 (defun flycheck-ycmd--result-to-error (result checker)
   "Convert ycmd parse RESULT for CHECKER into a flycheck error object."
   (let-alist result
-    (if (string-equal .location.filepath (buffer-file-name))
-        (flycheck-error-new
-         :line .location.line_num
-         :column .location.column_num
-         :buffer (current-buffer)
-         :filename .location.filepath
-         :message (concat .text (when (eq .fixit_available t) " (FixIt)"))
-         :checker checker
-         :level (assoc-default .kind flycheck-ycmd--level-map 'string-equal 'error)))))
+    (when (string-equal .location.filepath (buffer-file-name))
+      (flycheck-error-new
+       :line .location.line_num
+       :column .location.column_num
+       :buffer (current-buffer)
+       :filename .location.filepath
+       :message (concat .text (when (eq .fixit_available t) " (FixIt)"))
+       :checker checker
+       :level (assoc-default .kind flycheck-ycmd--level-map 'string-equal 'error)))))
 
 (defun flycheck-ycmd--start (checker callback)
   "Start ycmd flycheck CHECKER using CALLBACK to communicate with flycheck."
