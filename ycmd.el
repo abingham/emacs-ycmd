@@ -930,18 +930,19 @@ a results vector as argument."
 
 SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
-    (when (ycmd-parsing-in-progress-p)
-      (error "Can't send \"%s\" request while parsing is in progress" type))
-    (deferred:$
-      (ycmd--send-completer-command-request type)
-      (deferred:nextc it
-        (lambda (result)
-          (when result
-            (if (and (not (vectorp result))
-                     (assoc-default 'exception result))
-                (ycmd--handle-exception result)
-              (when success-handler
-                (funcall success-handler result)))))))))
+    (if (ycmd-parsing-in-progress-p)
+        (message "Can't send \"%s\" request while parsing is in progress!"
+                 type)
+      (deferred:$
+        (ycmd--send-completer-command-request type)
+        (deferred:nextc it
+          (lambda (result)
+            (when result
+              (if (and (not (vectorp result))
+                       (assoc-default 'exception result))
+                  (ycmd--handle-exception result)
+                (when success-handler
+                  (funcall success-handler result))))))))))
 
 (defun ycmd--send-completer-command-request (type)
   "Send Go To request of TYPE to BUFFER at POS."
