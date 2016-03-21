@@ -1088,8 +1088,10 @@ Use BUFFER if non-nil or `current-buffer'."
 (defun ycmd--replace-chunk (start end replacement-text line-delta char-delta buffer)
   "Replace text between START and END with REPLACEMENT-TEXT.
 
-LINE-DELTA and CHAR-DELTA are offset from former replacements on
-the current line.  BUFFER is the current working buffer."
+START and END are cons cells representing a line and column
+pair (car and cdr).  LINE-DELTA and CHAR-DELTA are offset from
+former replacements on the current line.  BUFFER is the current
+working buffer."
   (let* ((start-line (+ (car start) line-delta))
          (end-line (+ (car end) line-delta))
          (source-line-count (1+ (- end-line start-line)))
