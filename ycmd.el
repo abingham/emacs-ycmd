@@ -1368,10 +1368,9 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
   (ycmd--conditional-parse))
 
 (defun ycmd--handle-extra-conf-exception (conf-file)
-  "Handle an exception of type `UnknownExtraConf' in RESULT.
+  "Handle an exception of type `UnknownExtraConf'.
 
-Handle configuration file according the value of
-`ycmd-extra-conf-handler'."
+Handle CONF-FILE according the value of `ycmd-extra-conf-handler'."
   (if (not conf-file)
       (warn "No extra_conf_file included in UnknownExtraConf exception. \
 Consider reporting this.")
