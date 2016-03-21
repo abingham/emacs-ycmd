@@ -1235,8 +1235,10 @@ MODE is a major mode for fontifaction."
    'type 'ycmd--location-button
    'location location))
 
-(defun ycmd--view-insert-location (location mode)
-  "Insert LOCATION into buffer and fontify according MODE."
+(defun ycmd--view-insert-location (location-group mode)
+  "Insert LOCATION-GROUP into `current-buffer' and fontify according MODE.
+LOCATION-GROUP is a cons cell whose car is the filepath and the whose
+cdr is a list of location objects."
   (let* ((max-line-num (cdr (assq 'line_num
                                   (-max-by
                                    (lambda (a b)
@@ -1244,22 +1246,21 @@ MODE is a major mode for fontifaction."
                                            (b (cdr (assq 'line_num b))))
                                        (when (and (numberp a) (numberp b))
                                          (> a b))))
-                                   (cdr location)))))
+                                   (cdr location-group)))))
          (max-line-num-width (and max-line-num
                                   (length (format "%d" max-line-num))))
          (line-num-format (and max-line-num-width
                                (format "%%%dd:" max-line-num-width))))
-    (insert (propertize (concat (car location) "\n") 'face 'bold))
+    (insert (propertize (concat (car location-group) "\n") 'face 'bold))
     (--map
-     (progn
+     (let-alist it
        (when line-num-format
-         (insert (format line-num-format (cdr (assq 'line_num it)))))
+         (insert (format line-num-format .line_num)))
        (insert "    ")
        (ycmd--view-insert-button
-        (ycmd--fontify-code (cdr (assq 'description it)) mode)
-        it)
+        (ycmd--fontify-code .description mode) it)
        (insert "\n"))
-     (cdr location))))
+     (cdr location-group))))
 
 (defvar ycmd-view-mode-map
   (let ((map (make-sparse-keymap)))
