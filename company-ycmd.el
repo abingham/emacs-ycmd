@@ -379,15 +379,25 @@ If CB is non-nil, call it with candidates."
 
 (defun company-ycmd--get-candidates-deferred (prefix cb)
   "Get completion candidates with PREFIX and call CB deferred."
-  (deferred:$
-    (deferred:try
-      (deferred:$
-        (when (ycmd-running?)
-          (ycmd-get-completions)))
-      :catch (lambda (_err) nil))
-    (deferred:nextc it
-      (lambda (c)
-        (company-ycmd--get-candidates c prefix cb)))))
+  (let ((request-buffer (current-buffer))
+        (request-window (selected-window))
+        (request-point (point))
+        (request-tick (buffer-chars-modified-tick)))
+    (deferred:$
+      (deferred:try
+        (deferred:$
+          (when (ycmd-running?)
+            (ycmd-get-completions)))
+        :catch (lambda (_err) nil))
+      (deferred:nextc it
+        (lambda (c)
+          (if (or (not (equal request-window (selected-window)))
+                  (with-current-buffer (window-buffer request-window)
+                    (or (not (equal request-buffer (current-buffer)))
+                        (not (equal request-point (point)))
+                        (not (equal request-tick (buffer-chars-modified-tick))))))
+              (message "Skip ycmd completion response")
+            (company-ycmd--get-candidates c prefix cb)))))))
 
 (defun company-ycmd--meta (candidate)
   "Fetch the metadata text-property from a CANDIDATE string."
