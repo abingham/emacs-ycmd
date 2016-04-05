@@ -151,7 +151,7 @@ To disable ycmd-based flychecking for specific modes, you can modify
 the `flycheck-disabled-checkers` list in your mode hook. For example:
 
 ```
-(add-hook 'python-mode-hook (lambda () (add-to-list 'flycheck-disabled-checkers 'ycmd))
+(add-hook 'python-mode-hook (lambda () (add-to-list 'flycheck-disabled-checkers 'ycmd)))
 ```
 
 With this, the ycmd checker will be ignored in `python-mode`. Since
