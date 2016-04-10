@@ -39,6 +39,18 @@
 (require 'dash)
 (require 's)
 
+(defgroup ycmd-eldoc nil
+  "Eldoc support for `ycmd-mode'.")
+
+(defcustom ycmd-eldoc-always-semantic-server-query-modes
+  '(not c-mode c++-mode objc-mode)
+  "Modes for which `ycmd-eldoc' always queries semantic completion.
+
+If t, the ycmd server query is always semantic.  If a list, server
+query is semantic for all `major-mode' symbols in that list.  If
+the `car' of the list is `not', server query is sematic for all
+`major-mode' symbols _not_ in that list.  If nil, the server query
+is only semantic after a semantic trigger.")
 
 (defvar-local ycmd-eldoc--cache nil)
 
@@ -48,6 +60,13 @@
     (--when-let (ycmd-eldoc--info-at-point)
       (eldoc-message it))))
 
+(defun ycmd-eldoc-always-semantic-server-query-p ()
+  "Check whether server query should be semantic."
+  (pcase ycmd-eldoc-always-semantic-server-query-modes
+    (`t t)
+    (`(not . ,modes) (not (memq major-mode modes)))
+    (modes (memq major-mode modes))))
+
 (defun ycmd-eldoc--info-at-point ()
   "Get function info at point."
   (save-excursion
@@ -55,7 +74,11 @@
     (-when-let (symbol (symbol-at-point))
       (if (eq symbol (car ycmd-eldoc--cache))
           (cadr ycmd-eldoc--cache)
-        (-when-let* ((completions (ycmd-get-completions :sync))
+        (-when-let* ((completions
+                      (let ((ycmd-force-semantic-completion
+                             (or ycmd-force-semantic-completion
+                                 (ycmd-eldoc-always-semantic-server-query-p))))
+                        (ycmd-get-completions :sync)))
                      (candidates (cdr (assq 'completions completions)))
                      (text (ycmd-eldoc--generate-message
                             (symbol-name symbol) candidates)))

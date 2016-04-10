@@ -471,6 +471,19 @@ response."
   (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
                  "void bar( int x )")))
 
+(ycmd-ert-deftest eldoc-force-semantic-info-fail "test-eldoc.cpp" 'c++-mode
+  :line 8 :column 5
+  (let ((ycmd-eldoc-always-semantic-server-query-modes nil)
+        (ycmd-force-semantic-completion nil))
+    (should-not (ycmd-eldoc--info-at-point))))
+
+(ycmd-ert-deftest eldoc-force-semantic-info "test-eldoc.cpp" 'c++-mode
+  :line 8 :column 5
+  (let ((ycmd-eldoc-always-semantic-server-query-modes t)
+        (ycmd-force-semantic-completion nil))
+    (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
+                   "Foo l"))))
+
 (ert-deftest ycmd-test-not-running ()
   (should-not (ycmd-running?)))
 
