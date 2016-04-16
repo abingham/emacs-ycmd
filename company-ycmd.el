@@ -71,11 +71,6 @@
   :group 'company
   :group 'ycmd)
 
-(defconst company-ycmd-completion-properties
-  '(kind extra_menu_info detailed_info menu_text extra_data)
-  "Fields from ycmd completions structures that we attach as text
-  properties to company completion strings.")
-
 (defcustom company-ycmd-insert-arguments t
   "When non-nil, insert function arguments as a template after completion.
 
