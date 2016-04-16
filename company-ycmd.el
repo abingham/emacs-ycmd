@@ -119,7 +119,7 @@ When 0, do not use synchronous completion request at all."
   (s-equals? "[ID]" extra-info))
 
 (defmacro company-ycmd--with-destructured-candidate (candidate body)
-  (declare (indent 1))
+  (declare (indent 1) (debug t))
   `(let-alist ,candidate
      (if (or (company-ycmd--identifier-completer-p .extra_menu_info)
              (company-ycmd--filename-completer-p .extra_menu_info))
