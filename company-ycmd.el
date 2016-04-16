@@ -177,8 +177,7 @@ When 0, do not use synchronous completion request at all."
 Returns a list with one candidate or multiple candidates for
 overloaded functions."
   (company-ycmd--with-destructured-candidate candidate
-    (let* ((overloaded-functions (and (company-ycmd--extended-features-p)
-                                      company-ycmd-insert-arguments
+    (let* ((overloaded-functions (and company-ycmd-insert-arguments
                                       (stringp .detailed_info)
                                       (s-split "\n" .detailed_info t)))
            (items (or overloaded-functions (list .menu_text)))
