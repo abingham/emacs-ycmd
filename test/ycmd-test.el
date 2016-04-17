@@ -313,7 +313,7 @@ response."
       (let-alist data
         (should (string= .insertion_text (substring-no-properties candidate)))
         (should (ycmd-test-has-property-with-value 'meta "foo(self, a, b)" candidate))
-        (should (ycmd-test-has-property-with-value 'params "(a, b)" candidate))
+        (should (ycmd-test-has-property-with-value 'params "(self, a, b)" candidate))
         (should (ycmd-test-has-property-with-value 'doc .detailed_info candidate))
         (should (ycmd-test-has-property-with-value 'kind .extra_menu_info candidate))
         (should (ycmd-test-has-property-with-value
@@ -338,8 +338,9 @@ response."
         (should (string= .insertion_text (substring-no-properties candidate)))
         (should (ycmd-test-has-property-with-value 'meta .extra_menu_info candidate))
         (should (ycmd-test-has-property-with-value 'kind .kind candidate))
-        (should (ycmd-test-has-property-with-value 'params "(x: f64)" candidate))
-        (should (ycmd-test-has-property-with-value 'return_type "f64" candidate))
+        (should (ycmd-test-has-property-with-value
+                 'annotation (concat "(&self, x: f64) -> f64 [" .kind "]") candidate))
+        (should (ycmd-test-has-property-with-value 'params "(&self, x: f64)" candidate))
         (should (ycmd-test-has-property-with-value
                  'filepath .extra_data.location.filepath candidate))
         (should (ycmd-test-has-property-with-value
@@ -394,24 +395,24 @@ response."
     (should (not (company-ycmd--in-include)))))
 
 (ert-deftest company-ycmd-test-remove-self-from-function-args ()
-  (let ((data "self, a, b"))
+  (let ((data "(self, a, b)"))
     (should (equal (company-ycmd--remove-self-from-function-args data)
                    "(a, b)"))))
 
 (ert-deftest company-ycmd-test-extract-params-python-simple ()
   (let ((data "foo(self, a, b)"))
     (should (equal (company-ycmd--extract-params-python data "foo")
-                   "(a, b)"))))
+                   "(self, a, b)"))))
 
 (ert-deftest company-ycmd-test-extract-params-python-multiline ()
   (let ((data "foo(self, a,\nb)"))
     (should (equal (company-ycmd--extract-params-python data "foo")
-                   "(a, b)"))))
+                   "(self, a, b)"))))
 
 (ert-deftest company-ycmd-test-extract-params-python-with-docstring ()
   (let ((data "foo(self, a, b) -> A docstring"))
     (should (equal (company-ycmd--extract-params-python data "foo")
-                   "(a, b)"))))
+                   "(self, a, b)"))))
 
 (ert-deftest company-ycmd-test-extract-params-python-with-docstring-no-params-1 ()
   (let ((data "foo() -> A docstring"))
