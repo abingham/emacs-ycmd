@@ -226,11 +226,15 @@ overloaded functions."
 
 (defun company-ycmd--remove-self-from-function-args (args)
   "Remove function argument `self' from ARGS list."
-  (->> (s-split "," args t)
-       (cl-remove-if (lambda (it) (string-match-p "self" it)))
-       (s-join ",")
-       (s-trim-left)
-       (format "(%s)")))
+  (if (s-contains? "self" args)
+      (when (string-match "(\\(.*\\))" args)
+        (->> (s-split "," (match-string 1 args) t)
+             (cl-remove-if (lambda (s) (string-match-p "self" s)))
+             (s-join ",")
+             (s-trim-left)
+             (s-prepend (substring args 0 (match-beginning 1)))
+             (s-append (substring args (match-end 1)))))
+    args))
 
 (defun company-ycmd--extract-params-python (function-sig function-name)
   "Extract function arguments from FUNCTION-SIG.
@@ -242,10 +246,9 @@ Replace any newline characters with spaces."
                       ;; Regex to match everything between parentheses, including
                       ;; newline.
                       ;; https://www.emacswiki.org/emacs/MultilineRegexp
-                      "(\\([\0-\377[:nonascii:]]*?\\)).*")
+                      "\\(([\0-\377[:nonascii:]]*?)\\).*")
               function-sig))
-    (company-ycmd--remove-self-from-function-args
-     (s-replace "\n" " " (match-string 1 function-sig)))))
+    (s-replace "\n" " " (match-string 1 function-sig))))
 
 (defun company-ycmd--extract-meta-python (doc-string)
   "Extract string for meta usage from DOC-STRING.
@@ -280,26 +283,31 @@ with spaces."
   "Construct completion string from CANDIDATE for rust file-types."
   (company-ycmd--with-destructured-candidate candidate
     (let* ((meta .extra_menu_info)
-           (params (and .extra_menu_info
-                        (string-match
-                         (concat "^fn " (regexp-quote .insertion_text)
-                                 "(\\(.*\\)).*")
-                         .extra_menu_info)
-                        (company-ycmd--remove-self-from-function-args
-                         (match-string 1 .extra_menu_info))))
-           (return-type (and .extra_menu_info
-                             (if (string-match
-                                  (concat "^fn " (regexp-quote .insertion_text)
-                                          "(.*) -> \\(.*\\)")
-                                  .extra_menu_info)
-                                 (match-string 1 .extra_menu_info)
-                               (and (string-prefix-p "fn" .extra_menu_info)
-                                    "void"))))
+           (context (pcase .kind
+                      ("Module"
+                       (if (string= .insertion_text .extra_menu_info)
+                           ""
+                         (concat " " .extra_menu_info)))
+                      (_
+                       (->> .extra_menu_info
+                            (funcall (lambda (needle s)
+                                       (-if-let (idx (s-index-of needle s))
+                                           (substring s (+ idx (length needle)))
+                                         s))
+                                     .insertion_text)
+                            (s-chop-suffixes '(" {" "," ";"))))))
+           (annotation (concat context
+                               (when (s-present? .kind)
+                                 (format " [%s]" .kind))))
+           (params (and (string= "Function" .kind)
+                        (if (string-match "\\(.*?\\) -> .*" context)
+                            (match-string 1 context)
+                          context)))
            (filepath .extra_data.location.filepath)
            (line-num .extra_data.location.line_num)
            (column-num .extra_data.location.column_num))
       (propertize .insertion_text 'meta meta 'kind .kind
-                  'params params 'return_type return-type
+                  'params params 'annotation annotation
                   'filepath filepath 'line_num line-num
                   'column_num column-num))))
 
@@ -405,15 +413,17 @@ If CB is non-nil, call it with candidates."
 
 (defun company-ycmd--annotation (candidate)
   "Fetch the annotation text-property from a CANDIDATE string."
-  (let ((kind (and company-ycmd-show-completion-kind
-                   (get-text-property 0 'kind candidate)))
-        (return-type (get-text-property 0 'return_type candidate))
-        (params (get-text-property 0 'params candidate)))
-    (concat params
-            (when (s-present? return-type)
-              (s-prepend " -> " return-type))
-            (when (s-present? kind)
-              (format " [%s]" kind)))))
+  (-if-let (annotation (get-text-property 0 'annotation candidate))
+      annotation
+    (let ((kind (and company-ycmd-show-completion-kind
+                     (get-text-property 0 'kind candidate)))
+          (return-type (get-text-property 0 'return_type candidate))
+          (params (get-text-property 0 'params candidate)))
+      (concat params
+              (when (s-present? return-type)
+                (s-prepend " -> " return-type))
+              (when (s-present? kind)
+                (format " [%s]" kind))))))
 
 (defconst company-ycmd--include-declaration
   (rx line-start "#" (zero-or-more blank) (or "include" "import")
@@ -454,6 +464,8 @@ If CB is non-nil, call it with candidates."
   (--when-let (and (company-ycmd--extended-features-p)
                    company-ycmd-insert-arguments
                    (get-text-property 0 'params candidate))
+    (when (memq major-mode '(python-mode rust-mode))
+      (setq it (company-ycmd--remove-self-from-function-args it)))
     (insert it)
     (if (string-match "\\`:[^:]" it)
         ;; The function `company-clang-objc-templatify' has been renamed to
