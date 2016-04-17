@@ -40,7 +40,9 @@
 (require 's)
 
 (defgroup ycmd-eldoc nil
-  "Eldoc support for `ycmd-mode'.")
+  "Eldoc support for `ycmd-mode'."
+  :group 'ycmd
+  :group 'eldoc)
 
 (defcustom ycmd-eldoc-always-semantic-server-query-modes
   '(not c-mode c++-mode objc-mode)
