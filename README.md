@@ -101,7 +101,7 @@ completion.
 
 ## IMPORTANT: Unbuffered output on Windows
 
-There have been some reports that `ycmd.el` doesn't work on Windows when Python's output is buffered. See, for example, [issue #104](https://github.com/abingham/emacs-ycmd/issues/104). This is because we rely on the ycmd server printing out its host and port information in a timely (i.e. unbuffered) manner. We will almost certainly update the defaults for `ycmd.el` to force unbuffered output. 
+There have been some reports that `ycmd.el` doesn't work on Windows when Python's output is buffered. See, for example, [issue #104](https://github.com/abingham/emacs-ycmd/issues/104). This is because we rely on the ycmd server printing out its host and port information in a timely (i.e. unbuffered) manner. We will almost certainly update the defaults for `ycmd.el` to force unbuffered output.
 
 In any event, if you are facing problems with ycmd not starting and/or hanging Emacs on Windows, try adding `-u` to your `ycmd-server-command`. For example:
 ```
@@ -205,7 +205,7 @@ REQUEST [error] Error (error) while connecting to http://127.0.0.1:38987/complet
 REQUEST [error] Error (error) while connecting to http://127.0.0.1:38987/event_notification. [26 times]
 ```
 
-These almost never indicate something you need to be concerned about. To quiet them, you can set `ycmd-request-message-level` to `-1`. 
+These almost never indicate something you need to be concerned about. To quiet them, you can set `request-message-level` to `-1`.
 
 See [issue #173](https://github.com/abingham/emacs-ycmd/issues/174) for the initial discussion of this topic.
 
