@@ -10,10 +10,7 @@ PKGDIR := $(shell EMACS=$(EMACS) $(CASK) package-directory)
 # Export the used EMACS to recipe environments
 export EMACS
 
-SRCS = ycmd.el \
-	third-party/ycmd-request.el \
-	third-party/ycmd-request-deferred.el \
-	contrib/ycmd-next-error.el
+SRCS = ycmd.el contrib/ycmd-next-error.el
 
 OBJECTS = $(SRCS:.el=.elc)
 
@@ -73,6 +70,4 @@ $(PKGDIR) : Cask
 	touch $(PKGDIR)
 
 %.elc : %.el $(PKGDIR)
-	$(CASK) exec $(EMACSBATCH) \
-		--eval "(add-to-list 'load-path \"${PWD}/third-party\")" \
-		-L . -f batch-byte-compile $<
+	$(CASK) exec $(EMACSBATCH) -L . -f batch-byte-compile $<
