@@ -44,6 +44,8 @@
              emacs-version (format-time-string "%F" emacs-build-time))
 
     (let ((debug-on-error t))
+      (load (expand-file-name "third-party/ycmd-request" source-directory))
+      (load (expand-file-name "third-party/ycmd-request-deferred" source-directory))
       (load (expand-file-name "ycmd" source-directory))
       (load (expand-file-name "company-ycmd" source-directory))
       (load (expand-file-name "flycheck-ycmd" source-directory))
