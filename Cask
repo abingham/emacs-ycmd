@@ -5,7 +5,9 @@
 
 (files "ycmd.el" "third-party/ycmd-request.el"
        "third-party/ycmd-request-deferred.el"
-       "contrib/ycmd-next-error.el")
+       "contrib/ycmd-next-error.el"
+       "company-ycmd.el" "flycheck-ycmd.el"
+       "ycmd-eldoc.el")
 
 (depends-on "f")
 (depends-on "dash")
