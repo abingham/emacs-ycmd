@@ -1376,8 +1376,7 @@ Consider reporting this.")
                (y-or-n-p (format "Load YCMD extra conf %s? " conf-file)))
           (setq location "/load_extra_conf_file")
         (setq location "/ignore_extra_conf_file"))
-      (deferred:sync!
-        (ycmd--request location `((filepath . ,conf-file))))
+      (ycmd--request location `((filepath . ,conf-file)) :sync t)
       (ycmd--report-status 'unparsed)
       (ycmd-notify-file-ready-to-parse))))
 
