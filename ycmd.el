@@ -1729,7 +1729,11 @@ anything like that.)
          (url (format "http://%s:%s%s"
                       ycmd-host ycmd--server-actual-port location))
          (headers `(("Content-Type" . "application/json")
-                    ("X-Ycm-Hmac" . ,encoded-hmac))))
+                    ("X-Ycm-Hmac" . ,encoded-hmac)))
+         (response-fn (lambda (response)
+                        (let ((data (request-response-data response)))
+                          (ycmd--log-content "HTTP RESPONSE CONTENT" data)
+                          data))))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
     (if sync
@@ -1737,20 +1741,15 @@ anything like that.)
           (request
            url :headers headers :parser parser :data content :type type
            :sync t
-           :success
-           (cl-function
-            (lambda (&key data &allow-other-keys)
-              (ycmd--log-content "HTTP RESPONSE CONTENT" data)
-              (setq result data))))
+           :complete
+           (lambda (&rest args)
+             (setq result (funcall response-fn (plist-get args :response)))))
           result)
       (deferred:$
         (request-deferred
          url :headers headers :parser parser :data content :type type)
         (deferred:nextc it
-          (lambda (req)
-            (let ((content (request-response-data req)))
-              (ycmd--log-content "HTTP RESPONSE CONTENT" content)
-              content)))))))
+          response-fn)))))
 
 (provide 'ycmd)
 
