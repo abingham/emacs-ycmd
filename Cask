@@ -3,9 +3,7 @@
 
 (package-file "ycmd.el")
 
-(files "ycmd.el" "third-party/ycmd-request.el"
-       "third-party/ycmd-request-deferred.el"
-       "contrib/ycmd-next-error.el"
+(files "ycmd.el" "contrib/ycmd-next-error.el"
        "company-ycmd.el" "flycheck-ycmd.el"
        "ycmd-eldoc.el")
 
@@ -13,6 +11,8 @@
 (depends-on "dash")
 (depends-on "deferred")
 (depends-on "popup")
+(depends-on "request")
+(depends-on "request-deferred")
 
 (development
  (depends-on "company")
