@@ -1445,19 +1445,6 @@ functions in `ycmd-file-parse-result-hook'."
             (message "Error sending notification request: %s" err)
             (ycmd--report-status 'errored)))))))
 
-(defun ycmd-display-raw-file-parse-results ()
-  "Request file-parse results and display them in a buffer in raw form.
-
-This is primarily a debug/developer tool."
-  (interactive)
-  (let ((ycmd-file-parse-result-hook
-         `(lambda (content)
-            (pop-to-buffer "*ycmd-file-ready*")
-            (erase-buffer)
-            (insert (pp-to-string content)))))
-    (deferred:sync!
-      (ycmd-notify-file-ready-to-parse))))
-
 (defun ycmd-major-mode-to-file-types (mode)
   "Map a major mode MODE to a list of file-types suitable for ycmd.
 
@@ -1639,6 +1626,13 @@ nil, this uses the current buffer."
 (defvar ycmd--log-enabled nil
   "If non-nil, http content will be logged.
 This is useful for debugging.")
+
+(defun ycmd-toggle-log-enabled ()
+  "Toggle `ycmd--log-enabled' variable."
+  (interactive)
+  (let ((log-enabled (not ycmd--log-enabled)))
+    (message "Ycmd Log %s" (if log-enabled "enabled" "disabled"))
+    (setq ycmd--log-enabled log-enabled)))
 
 (defun ycmd--log-content (header content)
   "Insert log with HEADER and CONTENT in a buffer."
