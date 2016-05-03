@@ -108,7 +108,6 @@
   (require 'let-alist))
 (require 'dash)
 (require 'deferred)
-(require 'f)
 (require 'hmac-def)
 (require 'json)
 (require 'popup)
