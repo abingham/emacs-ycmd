@@ -186,7 +186,9 @@ overloaded functions."
         (setq .insertion_text (s-chop-suffix ":" .insertion_text)))
       (dolist (it (delete-dups items) candidates)
         (let* ((meta (if overloaded-functions it .detailed_info))
-               (params (company-ycmd--extract-params-clang it))
+               (kind (company-ycmd--convert-kind-clang .kind))
+               (params (and (string= kind "fn")
+                            (company-ycmd--extract-params-clang it)))
                (return-type (or (and overloaded-functions
                                      (string-match
                                       (concat "\\(.*\\) "
@@ -194,7 +196,6 @@ overloaded functions."
                                       it)
                                      (match-string 1 it))
                                 .extra_menu_info))
-               (kind (company-ycmd--convert-kind-clang .kind))
                (doc .extra_data.doc_string))
           (setq candidates
                 (cons (propertize .insertion_text 'return_type return-type

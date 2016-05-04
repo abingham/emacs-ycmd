@@ -255,7 +255,7 @@ response."
                 (_ '=))))
     (funcall pred value (get-text-property 0 property item))))
 
-(ert-deftest company-ycmd-test-construct-candidate-clang ()
+(ert-deftest company-ycmd-test-construct-candidate-clang-function ()
   (ycmd-ert-with-temp-buffer 'c++-mode
     (let* ((data '((menu_text . "foo()")
                    (insertion_text . "foo")
@@ -281,6 +281,22 @@ response."
       (should (ycmd-test-has-property-with-value 'return_type "void" candidate-2))
       (should (ycmd-test-has-property-with-value 'params "()" candidate-2))
       (should (ycmd-test-has-property-with-value 'doc "A docstring" candidate-2)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-clang-union ()
+  (ycmd-ert-with-temp-buffer 'c++-mode
+    (let* ((data '((menu_text . "foo")
+                   (insertion_text . "foo")
+                   (detailed_info . "union (anonymous) foo\n")
+                   (extra_menu_info . "union (anonymous)")
+                   (kind . "MEMBER")))
+           (candidate (car (company-ycmd--construct-candidate-clang data))))
+      (should (string= "foo" (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'kind "member" candidate))
+      (should (ycmd-test-has-property-with-value
+               'meta "union (anonymous) foo" candidate))
+      (should-not (get-text-property 0 'params candidate))
+      (should (ycmd-test-has-property-with-value
+               'return_type "union (anonymous)" candidate)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-go ()
   (ycmd-ert-with-temp-buffer 'go-mode
