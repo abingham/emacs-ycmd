@@ -6,7 +6,7 @@
 ;;          Peter Vasil <mail@petervasil.net>
 ;; Version: 0.9.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24.3") (dash "2.12.0") (deferred "0.3.2") (popup "0.5.0") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0"))
+;; Package-Requires: ((emacs "24.3") (dash "2.12.0") (s "1.10.0") (deferred "0.3.2") (popup "0.5.0") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -107,6 +107,7 @@
   (require 'cl-lib)
   (require 'let-alist))
 (require 'dash)
+(require 's)
 (require 'deferred)
 (require 'hmac-def)
 (require 'json)
