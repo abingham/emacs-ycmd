@@ -814,6 +814,29 @@ it might be interesting for some users."
         (erase-buffer)
         (insert (pp-to-string completions))))))
 
+(defun ycmd-complete (&optional _ignored)
+  "Completion candidates at point."
+  (-when-let* ((completions (ycmd-get-completions :sync))
+               (candidates (cdr (assq 'completions completions))))
+    (--map (let* ((text (cdr (assq 'insertion_text it)))
+                  (anno (cdr (assq 'menu_text it))))
+             (when (and anno (string-match (regexp-quote text) anno))
+               (put-text-property
+                0 1 'anno (substring anno (match-end 0)) text))
+             text)
+           (append candidates nil))))
+
+(defun ycmd-complete-at-point ()
+  "Complete symnbol at point."
+  (unless (nth 3 (syntax-ppss)) ;; not in string
+    (let* ((bounds (bounds-of-thing-at-point 'symbol))
+           (beg (or (car bounds) (point)))
+           (end (or (cdr bounds) (point))))
+      (list beg end
+            (completion-table-dynamic #'ycmd-complete)
+            :annotation-function
+            (lambda (arg) (get-text-property 0 'anno arg))))))
+
 (defun ycmd-toggle-force-semantic-completion ()
   "Toggle whether to use always semantic completion.
 

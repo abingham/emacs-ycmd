@@ -83,6 +83,19 @@ you just want to see the possible completions at a point, you can try
 `ycmd-display-completions` which will dump a raw completion struct
 into a buffer. This is more of a debugging tool than anything.
 
+## completion
+
+It is recommended to use `company-mode` for completion, however there is basic support for Emacs' built-in completion mechanism.
+
+``` emacs
+(defun ycmd-setup-completion-at-point-function ()
+  "Setup `completion-at-point-functions' for `ycmd-mode'."
+  (add-hook 'completion-at-point-functions
+            #'ycmd-complete-at-point nil :local))
+
+(add-hook 'ycmd-mode #'ycmd-setup-completion-at-point-function)
+```
+
 ## company-ycmd
 
 [![MELPA](http://melpa.org/packages/company-ycmd-badge.svg)](http://melpa.org/#/company-ycmd)
