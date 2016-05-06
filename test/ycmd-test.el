@@ -144,6 +144,17 @@ response."
                        .completions))
       (should (= .completion_start_column 7)))))
 
+(ycmd-ert-deftest completion-at-point-clang
+    "test-completion-at-point.cpp" 'c++-mode
+  :disabled t
+  :line 8 :column 8
+  (let ((expected (f-read "test-completion-at-point-expected.cpp"))
+        (completion-at-point-functions (list #'ycmd-complete-at-point)))
+    (completion-at-point)
+    (should (string= (buffer-string) expected))
+    (set-buffer-modified-p nil)
+    (set-visited-file-name nil 'no-query)))
+
 (ycmd-ert-deftest goto-declaration "test-goto.cpp" 'c++-mode
   :line 9 :column 7
   (ycmd-with-deferred-request
