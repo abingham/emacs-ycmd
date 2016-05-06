@@ -6,10 +6,7 @@ emacs-ycmd is a client for [ycmd](https://github.com/Valloric/ycmd),
 the code completion system. It takes care of managing a ycmd server
 and fetching completions from that server.
 
-emacs-ycmd comprises a core set of functionality for communicating
-with ycmd as well as integration with emacs completion frameworks like
-[company-mode](http://company-mode.github.io/) and
-[auto-complete-mode](http://auto-complete.org/).
+emacs-ycmd comprises a core set of functionality for communicating with ycmd as well as integration with the Emacs completion framework [company-mode](http://company-mode.github.io/).
 
 A lot of the concepts behind emacs-ycmd are actually concepts from
 ycmd itself, so if you feel lost you might read
