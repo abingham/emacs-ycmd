@@ -396,6 +396,24 @@ in that list.  If nil, ycmd mode is never turned on by
   :group 'ycmd
   :type 'boolean)
 
+(defcustom ycmd-after-exception-hook nil
+  "Function to run if server request resulted in exception.
+
+This hook is run whenever an exception is thrown after a ycmd
+server request.  Two arguments are passed to the function, a
+string with the type of request that triggerd the exception and
+the server response structure which looks like this:
+
+  ((exception
+    (TYPE . \"RuntimeError\"))
+   (traceback . \"long traceback string\")
+   (message . \"Can't jump to definition.\"))
+
+This variable is a normal hook.  See Info node `(elisp)Hooks'."
+  :group 'ycmd
+  :type 'hook
+  :risky t)
+
 (defconst ycmd--diagnostic-file-types
   '("c"
     "cpp"
@@ -929,17 +947,18 @@ and blocks until the request has finished."
        :parser 'json-read
        :sync sync))))
 
-(defun ycmd--handle-exception (results)
-  "Handle exception in completion RESULTS.
+(defun ycmd--handle-exception (request-type result)
+  "Handle exception for REQUEST-TYPE in completion RESULT.
 
 This function handles `UnknownExtraConf', `ValueError' and
 `RuntimeError' exceptions."
-  (let-alist results
+  (let-alist result
     (pcase .exception.TYPE
       ("UnknownExtraConf"
        (ycmd--handle-extra-conf-exception .exception.extra_conf_file))
       ((or "ValueError" "RuntimeError")
-       (ycmd--handle-error-exception .message)))))
+       (ycmd--handle-error-exception .message))))
+  (run-hook-with-args 'ycmd-after-exception-hook request-type result))
 
 (defun ycmd--send-request (type success-handler)
   "Send a request of TYPE to the `ycmd' server.
@@ -956,7 +975,7 @@ SUCCESS-HANDLER is called when for a successful response."
             (when result
               (if (and (not (vectorp result))
                        (assq 'exception result))
-                  (ycmd--handle-exception result)
+                  (ycmd--handle-exception type result)
                 (when success-handler
                   (funcall success-handler result))))))))))
 
@@ -1425,7 +1444,7 @@ Consider reporting this.")
 Otherwise the response is probably an exception."
   (if (and (not (vectorp results))
            (assq 'exception results))
-      (ycmd--handle-exception results)
+      (ycmd--handle-exception "NotifyParse" results)
     (ycmd--report-status 'parsed)
     (run-hook-with-args 'ycmd-file-parse-result-hook results)))
 
