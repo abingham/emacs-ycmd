@@ -400,9 +400,10 @@ in that list.  If nil, ycmd mode is never turned on by
   "Function to run if server request resulted in exception.
 
 This hook is run whenever an exception is thrown after a ycmd
-server request.  Two arguments are passed to the function, a
-string with the type of request that triggerd the exception and
-the server response structure which looks like this:
+server request.  Four arguments are passed to the function, a
+string with the type of request that triggerd the exception, the
+buffer and the point at the time of the request and the server
+response structure which looks like this:
 
   ((exception
     (TYPE . \"RuntimeError\"))
@@ -947,8 +948,8 @@ and blocks until the request has finished."
        :parser 'json-read
        :sync sync))))
 
-(defun ycmd--handle-exception (request-type result)
-  "Handle exception for REQUEST-TYPE in completion RESULT.
+(defun ycmd--handle-exception (result)
+  "Handle exception in completion RESULT.
 
 This function handles `UnknownExtraConf', `ValueError' and
 `RuntimeError' exceptions."
@@ -957,8 +958,7 @@ This function handles `UnknownExtraConf', `ValueError' and
       ("UnknownExtraConf"
        (ycmd--handle-extra-conf-exception .exception.extra_conf_file))
       ((or "ValueError" "RuntimeError")
-       (ycmd--handle-error-exception .message))))
-  (run-hook-with-args 'ycmd-after-exception-hook request-type result))
+       (ycmd--handle-error-exception .message)))))
 
 (defun ycmd--send-request (type success-handler)
   "Send a request of TYPE to the `ycmd' server.
@@ -968,16 +968,22 @@ SUCCESS-HANDLER is called when for a successful response."
     (if (ycmd-parsing-in-progress-p)
         (message "Can't send \"%s\" request while parsing is in progress!"
                  type)
-      (deferred:$
-        (ycmd--send-completer-command-request type)
-        (deferred:nextc it
-          (lambda (result)
-            (when result
-              (if (and (not (vectorp result))
-                       (assq 'exception result))
-                  (ycmd--handle-exception type result)
-                (when success-handler
-                  (funcall success-handler result))))))))))
+      (let ((request-buffer (current-buffer))
+            (request-point (point)))
+        (deferred:$
+          (ycmd--send-completer-command-request type)
+          (deferred:nextc it
+            (lambda (result)
+              (when result
+                (if (and (not (vectorp result))
+                         (assq 'exception result))
+                    (progn
+                      (ycmd--handle-exception result)
+                      (run-hook-with-args
+                       'ycmd-after-exception-hook
+                       type request-buffer request-point result))
+                  (when success-handler
+                    (funcall success-handler result)))))))))))
 
 (defun ycmd--send-completer-command-request (type)
   "Send Go To request of TYPE to BUFFER at POS."
@@ -1444,7 +1450,7 @@ Consider reporting this.")
 Otherwise the response is probably an exception."
   (if (and (not (vectorp results))
            (assq 'exception results))
-      (ycmd--handle-exception "NotifyParse" results)
+      (ycmd--handle-exception results)
     (ycmd--report-status 'parsed)
     (run-hook-with-args 'ycmd-file-parse-result-hook results)))
 
