@@ -939,10 +939,11 @@ If SYNC is non-nil the function does not return a deferred object
 and blocks until the request has finished."
   (when ycmd-mode
     (let* ((buffer (current-buffer))
+           (pos (point))
            (extra-content (and ycmd-force-semantic-completion
                                'force-semantic))
            (content (ycmd--standard-content-with-extras
-                     buffer extra-content)))
+                     buffer pos extra-content)))
       (ycmd--request
        "/completions"
        content
@@ -1467,13 +1468,14 @@ The results of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let* ((buff (current-buffer))
+           (pos (point))
            (extra-content (append (when ycmd-tag-files
                                     (list 'tags))
                                   (when ycmd-seed-identifiers-with-keywords
                                     (list 'syntax-keywords))))
            (content (cons '("event_name" . "FileReadyToParse")
                           (ycmd--standard-content-with-extras
-                           buff extra-content))))
+                           buff pos extra-content))))
       (deferred:$
         ;; try
         (deferred:$
@@ -1635,14 +1637,14 @@ the name of the newly created file."
       s
     (encode-coding-string s 'utf-8 t)))
 
-(defun ycmd--standard-content (&optional buffer pos)
+(defun ycmd--standard-content (buffer pos)
   "Generate the 'standard' content for ycmd posts.
 
-This extracts a bunch of information from BUFFER.  If BUFFER is
-nil, this uses the current buffer."
-  (with-current-buffer (or buffer (current-buffer))
+This extracts a bunch of information from BUFFER at POS.  If
+BUFFER is nil, this uses the current buffer."
+  (with-current-buffer buffer
     (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
-           (line-num (line-number-at-pos (or pos (point))))
+           (line-num (line-number-at-pos pos))
            (full-path (ycmd--encode-string (or (buffer-file-name) "")))
            (file-contents (ycmd--encode-string
                            (buffer-substring-no-properties
@@ -1656,9 +1658,9 @@ nil, this uses the current buffer."
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
 
-(defun ycmd--standard-content-with-extras (buffer &optional extras)
-  "Generate 'standard' content for BUFFER with EXTRAS."
-  (let ((standard-content (ycmd--standard-content buffer)))
+(defun ycmd--standard-content-with-extras (buffer pos &optional extras)
+  "Generate 'standard' content for BUFFER at POS with EXTRAS."
+  (let ((standard-content (ycmd--standard-content buffer pos)))
     (unless (listp extras)
       (setq extras (list extras)))
     (dolist (extra extras standard-content)
@@ -1699,10 +1701,11 @@ This is useful for debugging.")
   "Show debug information."
   (interactive)
   (when ycmd-mode
-    (let ((buffer (current-buffer)))
+    (let ((buffer (current-buffer))
+          (pos (point)))
 
       (deferred:$
-        (let ((content (ycmd--standard-content buffer)))
+        (let ((content (ycmd--standard-content buffer pos)))
           (ycmd--request
            "/debug_info"
            content
