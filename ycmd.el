@@ -846,7 +846,7 @@ it might be interesting for some users."
            (append candidates nil))))
 
 (defun ycmd-complete-at-point ()
-  "Complete symnbol at point."
+  "Complete symbol at point."
   (unless (nth 3 (syntax-ppss)) ;; not in string
     (let* ((bounds (bounds-of-thing-at-point 'symbol))
            (beg (or (car bounds) (point)))
