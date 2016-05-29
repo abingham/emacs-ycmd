@@ -298,6 +298,7 @@ list
     (csharp-mode . ("cs"))
     (d-mode . ("d"))
     (erlang-mode . ("erlang"))
+    (emacs-lisp-mode . ("elisp"))
     (go-mode . ("go"))
     (js-mode . ("javascript"))
     (js2-mode . ("javascript"))
