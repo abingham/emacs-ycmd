@@ -972,7 +972,8 @@ SUCCESS-HANDLER is called when for a successful response."
       (let ((request-buffer (current-buffer))
             (request-point (point)))
         (deferred:$
-          (ycmd--send-completer-command-request type)
+          (ycmd--send-completer-command-request
+           type request-buffer request-point)
           (deferred:nextc it
             (lambda (result)
               (when result
@@ -986,11 +987,12 @@ SUCCESS-HANDLER is called when for a successful response."
                   (when success-handler
                     (funcall success-handler result)))))))))))
 
-(defun ycmd--send-completer-command-request (type)
+(defun ycmd--send-completer-command-request (type &optional buffer pos)
   "Send Go To request of TYPE to BUFFER at POS."
-  (let* ((buffer (current-buffer))
+  (let* ((buffer (or buffer (current-buffer)))
+         (pos (or pos (point)))
          (content (cons (list "command_arguments" type)
-                        (ycmd--standard-content buffer))))
+                        (ycmd--standard-content buffer pos))))
     (ycmd--request
      "/run_completer_command"
      content
@@ -1633,14 +1635,14 @@ the name of the newly created file."
       s
     (encode-coding-string s 'utf-8 t)))
 
-(defun ycmd--standard-content (&optional buffer)
+(defun ycmd--standard-content (&optional buffer pos)
   "Generate the 'standard' content for ycmd posts.
 
 This extracts a bunch of information from BUFFER.  If BUFFER is
 nil, this uses the current buffer."
   (with-current-buffer (or buffer (current-buffer))
     (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
-           (line-num (line-number-at-pos (point)))
+           (line-num (line-number-at-pos (or pos (point))))
            (full-path (ycmd--encode-string (or (buffer-file-name) "")))
            (file-contents (ycmd--encode-string
                            (buffer-substring-no-properties
