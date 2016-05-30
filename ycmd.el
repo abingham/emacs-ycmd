@@ -1640,8 +1640,8 @@ the name of the newly created file."
 (defun ycmd--standard-content (buffer pos)
   "Generate the 'standard' content for ycmd posts.
 
-This extracts a bunch of information from BUFFER at POS.  If
-BUFFER is nil, this uses the current buffer."
+This extracts a bunch of information from BUFFER at POS which
+will be passed to the ycmd server."
   (with-current-buffer buffer
     (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
            (line-num (line-number-at-pos pos))
