@@ -1,5 +1,3 @@
-(require 'pulse)
-
 ;;(setq next-error-hook nil)
 (add-hook 'next-error-hook
           '(lambda ()
@@ -8,8 +6,7 @@
                  (when compilation-buffer
                    (save-excursion
                      (set-buffer "*compilation*")
-                     (move-beginning-of-line nil)
-                     (pulse-line-hook-function)))))))
+                     (move-beginning-of-line nil)))))))
 
 (eval-after-load "ycmd"
   '(add-hook 'ycmd-mode-hook
