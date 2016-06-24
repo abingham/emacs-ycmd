@@ -6,7 +6,7 @@
 ;;          Peter Vasil <mail@petervasil.net>
 ;; version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "0.1") (company "0.8.3") (deferred "0.2.0") (s "1.9.0") (dash "1.2.0") (let-alist "1.0.4"))
+;; Package-Requires: ((ycmd "0.1") (company "0.9.0") (deferred "0.2.0") (s "1.9.0") (dash "1.2.0") (let-alist "1.0.4"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -469,14 +469,7 @@ If CB is non-nil, call it with candidates."
       (setq it (company-ycmd--remove-self-from-function-args it)))
     (insert it)
     (if (string-match "\\`:[^:]" it)
-        ;; The function `company-clang-objc-templatify' has been renamed to
-        ;; `company-template-objc-templatify' in company-mode commit
-        ;; 6bf24912a8a3c2cfc5e72073b8eb0f1137ab7728. Remove check once a new
-        ;; stable version is released.
-        (with-no-warnings
-          (if (fboundp 'company-template-objc-templatify)
-              (company-template-objc-templatify it)
-            (company-clang-objc-templatify it)))
+        (company-template-objc-templatify it)
       (company-template-c-like-templatify
        (concat candidate it)))))
 
