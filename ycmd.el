@@ -682,6 +682,10 @@ Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
   ycmd--maybe-enable-mode
   :init-value nil)
 
+(defun ycmd-unload-function ()
+  "Unload function for ycmd."
+  (global-ycmd-mode -1)
+  (remove-hook 'kill-emacs-hook #'ycmd-close))
 
 (defun ycmd--conditional-parse (&optional condition)
   "Reparse the buffer under CONDITION.
