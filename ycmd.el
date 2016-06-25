@@ -1261,7 +1261,7 @@ MODE is a major mode for fontifaction."
    (ycmd--with-view-buffer
     (->>
      (--group-by (cdr (assq 'filepath it)) result)
-     (--map (ycmd--view-insert-location it mode))))))
+     (mapc (lambda (it) (ycmd--view-insert-location it mode)))))))
 
 (define-button-type 'ycmd--location-button
   'action #'ycmd--view-jump
@@ -1804,5 +1804,4 @@ anything like that.)
 
 ;; Local Variables:
 ;; indent-tabs-mode: nil
-;; byte-compile-warnings: (not mapcar)
 ;; End:
