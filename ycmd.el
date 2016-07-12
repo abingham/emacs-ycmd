@@ -543,6 +543,8 @@ and `delete-process'.")
 (defvar-local ycmd--last-status-change 'unparsed
   "The last status of the current buffer.")
 
+(defvar-local ycmd--buffer-visit-flag nil)
+
 (defvar ycmd--mode-keywords-loaded nil
   "List of modes for which keywords have been loaded.")
 
@@ -550,7 +552,7 @@ and `delete-process'.")
   '((after-save-hook                  . ycmd--on-save)
     (after-change-functions           . ycmd--on-change)
     (window-configuration-change-hook . ycmd--on-window-configuration-change)
-    (kill-buffer-hook                 . ycmd--teardown)
+    (kill-buffer-hook                 . ycmd--close-buffer)
     (before-revert-hook               . ycmd--teardown))
   "Hooks which ycmd hooks in.")
 
@@ -695,6 +697,9 @@ notification should be sent according `ycmd-parse-conditions'."
   (when (and ycmd-mode
              (or (not condition)
                  (memq condition ycmd-parse-conditions)))
+    (unless ycmd--buffer-visit-flag
+      (ycmd--notify-server "BufferVisit")
+      (setq ycmd--buffer-visit-flag t))
     (ycmd-notify-file-ready-to-parse)))
 
 (defun ycmd--on-save ()
@@ -740,6 +745,13 @@ _LEN is ununsed."
        (when ycmd-mode
          ,@body))))
 
+(defun ycmd--close-buffer ()
+  "Notify server that the current buffer is no longer open, and cleanup emacs-ycmd variables."
+  (when (ycmd-running?)
+    (ycmd--notify-server "BufferUnload"
+                         `(("unloaded_buffer" . ,(ycmd--get-full-path-to-current-buffer)))))
+  (ycmd--teardown))
+
 (defun ycmd--teardown ()
   "Teardown ycmd in current buffer."
   (ycmd--kill-timer ycmd--notification-timer)
@@ -749,7 +761,9 @@ _LEN is ununsed."
   "Teardown ycmd in all buffers."
   (ycmd--kill-timer ycmd--on-focus-timer)
   (setq ycmd--mode-keywords-loaded nil)
-  (ycmd--with-all-ycmd-buffers (ycmd--teardown)))
+  (ycmd--with-all-ycmd-buffers
+    (ycmd--teardown)
+    (setq ycmd--buffer-visit-flag nil)))
 
 (defun ycmd-diagnostic-file-types (mode)
   "Find the ycmd file types for MODE which support semantic completion.
@@ -1462,6 +1476,25 @@ Otherwise the response is probably an exception."
     (ycmd--report-status 'parsed)
     (run-hook-with-args 'ycmd-file-parse-result-hook results)))
 
+(defun ycmd--notify-server (event-name &optional event-content-alist)
+  "Send a simple event notification for EVENT-NAME to the
+server, ignoring response. Optionally, include EVENT-CONTENT-ALIST
+as additional content in the request."
+  (let* ((buff (current-buffer))
+         (pos (point))
+         (content (append (cons `("event_name" . ,event-name)
+                                (ycmd--standard-content buff pos))
+                          event-content-alist)))
+    (deferred:$
+      ;; try
+      (ycmd--request "/event_notification"
+                     content
+                     :parser 'json-read)
+      (deferred:error it
+        (lambda (err)
+          (message "Error sending %s request: %s" event-name err)
+          (ycmd--report-status 'errored))))))
+
 (defun ycmd-notify-file-ready-to-parse ()
   "Send a notification to ycmd that the buffer is ready to be parsed.
 
@@ -1641,6 +1674,10 @@ the name of the newly created file."
       s
     (encode-coding-string s 'utf-8 t)))
 
+(defun ycmd--get-full-path-to-current-buffer ()
+  "Get the full (encoded) path to the buffer returned by `current-buffer`, or the empty string."
+  (ycmd--encode-string (or (buffer-file-name) "")))
+
 (defun ycmd--standard-content (buffer pos)
   "Generate the 'standard' content for ycmd posts.
 
@@ -1649,7 +1686,7 @@ will be passed to the ycmd server."
   (with-current-buffer buffer
     (let* ((column-num (+ 1 (ycmd--column-in-bytes)))
            (line-num (line-number-at-pos pos))
-           (full-path (ycmd--encode-string (or (buffer-file-name) "")))
+           (full-path (ycmd--get-full-path-to-current-buffer))
            (file-contents (ycmd--encode-string
                            (buffer-substring-no-properties
                             (point-min) (point-max))))
