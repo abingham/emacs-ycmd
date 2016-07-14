@@ -552,7 +552,7 @@ and `delete-process'.")
   '((after-save-hook                  . ycmd--on-save)
     (after-change-functions           . ycmd--on-change)
     (window-configuration-change-hook . ycmd--on-window-configuration-change)
-    (kill-buffer-hook                 . ycmd--close-buffer)
+    (kill-buffer-hook                 . ycmd--on-close-buffer)
     (before-revert-hook               . ycmd--teardown))
   "Hooks which ycmd hooks in.")
 
@@ -697,9 +697,7 @@ notification should be sent according `ycmd-parse-conditions'."
   (when (and ycmd-mode
              (or (not condition)
                  (memq condition ycmd-parse-conditions)))
-    (unless ycmd--buffer-visit-flag
-      (ycmd--notify-server "BufferVisit")
-      (setq ycmd--buffer-visit-flag t))
+    (ycmd--on-visit-buffer)
     (ycmd-notify-file-ready-to-parse)))
 
 (defun ycmd--on-save ()
@@ -745,7 +743,13 @@ _LEN is ununsed."
        (when ycmd-mode
          ,@body))))
 
-(defun ycmd--close-buffer ()
+(defun ycmd--on-visit-buffer ()
+  "If `ycmd--buffer-visit-flag' is nil send BufferVisit event."
+  (unless ycmd--buffer-visit-flag
+    (ycmd--notify-server "BufferVisit")
+    (setq ycmd--buffer-visit-flag t)))
+
+(defun ycmd--on-close-buffer ()
   "Notify server that the current buffer is no longer open, and cleanup emacs-ycmd variables."
   (when (ycmd-running?)
     (ycmd--notify-server "BufferUnload"
