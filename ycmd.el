@@ -721,10 +721,11 @@ _LEN is ununsed."
               (run-at-time ycmd-idle-change-delay nil
                            #'ycmd--on-idle-change))))))
 
-(defun ycmd--on-unparsed-buffer-focus ()
-  "Function to run when an unparsed buffer gets focus."
+(defun ycmd--on-unparsed-buffer-focus (buffer)
+  "Function to run when an unparsed BUFFER gets focus."
   (ycmd--kill-timer ycmd--on-focus-timer)
-  (ycmd--conditional-parse 'buffer-focus))
+  (with-current-buffer buffer
+    (ycmd--conditional-parse 'buffer-focus)))
 
 (defun ycmd--on-window-configuration-change ()
   "Function to run by `window-configuration-change-hook'."
@@ -732,8 +733,11 @@ _LEN is ununsed."
              (eq ycmd--last-status-change 'unparsed)
              (memq 'buffer-focus ycmd-parse-conditions))
     (ycmd--kill-timer ycmd--on-focus-timer)
-    (setq ycmd--on-focus-timer
-          (run-at-time 1.0 nil #'ycmd--on-unparsed-buffer-focus))))
+    (let ((on-buffer-focus-fn
+           (apply-partially 'ycmd--on-unparsed-buffer-focus
+                            (current-buffer))))
+      (setq ycmd--on-focus-timer
+            (run-at-time 1.0 nil on-buffer-focus-fn)))))
 
 (defmacro ycmd--with-all-ycmd-buffers (&rest body)
   "Execute BODY with each `ycmd-mode' enabled buffer."
