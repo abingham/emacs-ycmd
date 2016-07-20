@@ -158,13 +158,13 @@ Options are:
   :type '(string)
   :group 'ycmd)
 
-;; TODO: Figure out the best default value for this.
-(defcustom ycmd-server-command '("python" "/path/to/ycmd/package/")
+(defcustom ycmd-server-command nil
   "The ycmd server program command.
 
-Note that the default value for this variable is intentionally
-incorrect.  You will almost certainly need to set it to match your
-system installation."
+The value is a list of arguments to run the ycmd server.
+Example value:
+
+\(set-variable 'ycmd-server-command (\"python\" \"/path/to/ycmd/package/\"))"
   :type '(repeat string)
   :group 'ycmd)
 
@@ -794,9 +794,8 @@ control.) The newly started server will have a new HMAC secret."
 
   (let ((hmac-secret (ycmd--generate-hmac-secret)))
     (ycmd--start-server hmac-secret)
-    (setq ycmd--hmac-secret hmac-secret))
-
-  (ycmd--start-keepalive-timer))
+    (setq ycmd--hmac-secret hmac-secret)
+    (ycmd--start-keepalive-timer)))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
@@ -1638,16 +1637,18 @@ the name of the newly created file."
 
 (defun ycmd--start-server (hmac-secret)
   "Start a new server using HMAC-SECRET as its hmac secret."
+  (unless ycmd-server-command
+    (user-error "Error: The variable `ycmd-server-command' is not set.  \
+See the docstring of the variable for an example"))
   (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
       (buffer-disable-undo proc-buff)
       (erase-buffer)
 
       (let* ((options-file (ycmd--create-options-file hmac-secret))
-             (server-command ycmd-server-command)
              (args (apply 'list (concat "--options_file=" options-file)
                           ycmd-server-args))
-             (server-program+args (append server-command args))
+             (server-program+args (append ycmd-server-command args))
              (proc (apply #'start-process ycmd--server-process-name proc-buff
                           server-program+args))
              (cont t)
