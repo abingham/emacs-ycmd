@@ -125,14 +125,12 @@
 
 (defcustom ycmd-global-config nil
   "Path to global extra conf file."
-  :type '(string)
-  :group 'ycmd)
+  :type '(string))
 
 (defcustom ycmd-extra-conf-whitelist nil
   "List of glob expressions which match extra configs.
 Whitelisted configs are loaded without confirmation."
-  :type '(repeat string)
-  :group 'ycmd)
+  :type '(repeat string))
 
 (defcustom ycmd-extra-conf-handler 'ask
   "What to do when an un-whitelisted extra config is encountered.
@@ -147,7 +145,6 @@ Options are:
 
 `ask'
      Ask the user for each unknown extra conf."
-  :group 'ycmd
   :type '(choice (const :tag "Load unknown extra confs" load)
                  (const :tag "Ignore unknown extra confs" ignore)
                  (const :tag "Ask the user" ask))
@@ -155,8 +152,7 @@ Options are:
 
 (defcustom ycmd-host "127.0.0.1"
   "The host on which the ycmd server is running."
-  :type '(string)
-  :group 'ycmd)
+  :type '(string))
 
 (defcustom ycmd-server-command nil
   "The ycmd server program command.
@@ -165,15 +161,13 @@ The value is a list of arguments to run the ycmd server.
 Example value:
 
 \(set-variable 'ycmd-server-command (\"python\" \"/path/to/ycmd/package/\"))"
-  :type '(repeat string)
-  :group 'ycmd)
+  :type '(repeat string))
 
 (defcustom ycmd-server-args '("--log=debug"
                               "--keep_logfile"
                               "--idle_suicide_seconds=10800")
   "Extra arguments to pass to the ycmd server."
-  :type '(repeat string)
-  :group 'ycmd)
+  :type '(repeat string))
 
 (defcustom ycmd-file-parse-result-hook nil
   "Functions to run with file-parse results.
@@ -181,30 +175,25 @@ Example value:
 Each function will be called with with the results returned from
 ycmd when it parses a file in response to
 /event_notification."
-  :group 'ycmd
   :type 'hook
   :risky t)
 
 (defcustom ycmd-idle-change-delay 0.5
   "Number of seconds to wait after buffer modification before
 re-parsing the contents."
-  :group 'ycmd
   :type '(number)
   :safe #'numberp)
 
 (defcustom ycmd-keepalive-period 30
   "Number of seconds between keepalive messages."
-  :group 'ycmd
   :type '(number))
 
 (defcustom ycmd-startup-timeout 3
   "Number of seconds to wait for the server to start."
-  :group 'ycmd
   :type '(number))
 
 (defcustom ycmd-delete-process-delay 3
   "Seconds to wait for the server to finish before killing the process."
-  :group 'ycmd
   :type '(number))
 
 (defcustom ycmd-parse-conditions '(save new-line mode-enabled)
@@ -234,7 +223,6 @@ buffer for new completion:
 
 If nil, never set buffer-needs-parse flag.  For a manual reparse,
 use `ycmd-parse-buffer'."
-  :group 'ycmd
   :type '(set (const :tag "After the buffer was saved" save)
               (const :tag "After a new line was inserted" new-line)
               (const :tag "After a buffer was changed and idle" idle-change)
@@ -244,17 +232,14 @@ use `ycmd-parse-buffer'."
 
 (defcustom ycmd-default-tags-file-name "tags"
   "The default tags file name."
-  :group 'ycmd
   :type 'string)
 
 (defcustom ycmd-force-semantic-completion nil
   "Whether to use always semantic completion."
-  :group 'ycmd
   :type 'boolean)
 
 (defcustom ycmd-hide-url-status t
   "Whether to quash url status messages for ycmd requests."
-  :group 'ycmd
   :type 'boolean)
 
 (defcustom ycmd-bypass-url-proxy-services t
@@ -262,7 +247,6 @@ use `ycmd-parse-buffer'."
 
 If non-nil, bypass the variable `url-proxy-services' in
 `ycmd--request' by setting it to nil."
-  :group 'ycmd
   :type 'boolean)
 
 (defcustom ycmd-tag-files nil
@@ -280,7 +264,6 @@ string
 
 list
     A list of tag file names."
-  :group 'ycmd
   :type '(choice (const :tag "Don't use tag file." nil)
                  (const :tag "Locate tags file automatically" auto)
                  (string :tag "Tag file name")
@@ -316,7 +299,6 @@ list
 
 Used to determine a) which major modes we support and b) how to
 describe them to ycmd."
-  :group 'ycmd
   :type '(alist :key-type symbol :value-type (repeat string)))
 
 (defcustom ycmd-min-num-chars-for-completion 2
@@ -330,47 +312,38 @@ This option is NOT used for semantic completion.
 Setting this it to a high number like 99 effectively turns off
 the identifier completion engine and just leaves the semantic
 engine."
-  :group 'ycmd
   :type 'integer)
 
 (defcustom ycmd-max-num-identifier-candidates 10
   "The maximum number of identifier completion results."
-  :group 'ycmd
   :type 'integer)
 
 (defcustom ycmd-seed-identifiers-with-keywords nil
   "Whether to seed identifier database with keywords."
-  :group 'ycmd
   :type 'boolean)
 
 (defcustom ycmd-get-keywords-function 'ycmd--get-keywords-from-alist
   "Function to get keywords for current mode."
-  :group 'ycmd
   :type 'symbol)
 
 (defcustom ycmd-gocode-binary-path nil
   "Gocode binary path."
-  :group 'ycmd
   :type 'string)
 
 (defcustom ycmd-godef-binary-path nil
   "Godef binary path."
-  :group 'ycmd
   :type 'string)
 
 (defcustom ycmd-rust-src-path nil
   "Rust source path."
-  :group 'ycmd
   :type 'string)
 
 (defcustom ycmd-racerd-binary-path nil
   "Racerd binary path."
-  :group 'ycmd
   :type 'string)
 
 (defcustom ycmd-python-binary-path nil
   "Python binary path."
-  :group 'ycmd
   :type 'string)
 
 (defcustom ycmd-global-modes t
@@ -383,7 +356,6 @@ for all major-modes.  If a list, ycmd mode is turned on for all
 `not', ycmd mode is turned on for all `major-mode' symbols _not_
 in that list.  If nil, ycmd mode is never turned on by
 `global-ycmd-mode'."
-  :group 'ycmd
   :type '(choice (const :tag "none" nil)
                  (const :tag "member in `ycmd-file-type-map'" t)
                  (const :tag "all" all)
@@ -394,7 +366,6 @@ in that list.  If nil, ycmd mode is never turned on by
 
 (defcustom ycmd-confirm-fixit t
   "Whether to confirm when applying fixit on line."
-  :group 'ycmd
   :type 'boolean)
 
 (defcustom ycmd-after-exception-hook nil
@@ -412,7 +383,6 @@ response structure which looks like this:
    (message . \"Can't jump to definition.\"))
 
 This variable is a normal hook.  See Info node `(elisp)Hooks'."
-  :group 'ycmd
   :type 'hook
   :risky t)
 
@@ -591,7 +561,6 @@ explicitly re-define the prefix key:
     (setq ycmd-keymap-prefix (kbd \"C-c ,\"))
     (define-key ycmd-mode-map ycmd-keymap-prefix
                 ycmd-command-map)"
-  :group 'ycmd
   :type 'string
   :risky t
   :set
