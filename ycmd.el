@@ -779,13 +779,13 @@ This does nothing if no server is running."
 (defun ycmd--stop-server ()
   "Stop the ycmd server process.
 
-Call `interrupt-process' for the ycmd server and wait for the
+Send a `shutdown' request to the ycmd server and wait for the
 ycmd server to stop.  If the ycmd server is still running after a
 timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
   (condition-case nil
       (let ((start-time (float-time)))
-        (interrupt-process ycmd--server-process-name)
+        (ycmd--request "/shutdown" nil :parser 'json-read :sync t)
         (while (and (ycmd-running?)
                     (> ycmd-delete-process-delay
                        (- (float-time) start-time)))
