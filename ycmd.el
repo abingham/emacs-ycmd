@@ -1155,7 +1155,7 @@ BUFFER is the buffer."
     (pop-to-buffer fixits-buffer)
     (setq next-error-last-buffer fixits-buffer)))
 
-(define-button-type 'ycmd-fixit-button
+(define-button-type 'ycmd--fixit-button
   'action #'ycmd--apply-fixit
   'face nil)
 
@@ -1164,7 +1164,7 @@ BUFFER is the buffer."
 BUFFER is the buffer to apply the fixit on."
   (insert-text-button
    name
-   'type #'ycmd-fixit-button
+   'type 'ycmd--fixit-button
    'fixit fixit
    'location location
    'buffer buffer))
