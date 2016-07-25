@@ -218,7 +218,7 @@ response."
   (let* ((line (plist-get keys :line))
          (column (plist-get keys :column)))
     `(ycmd-ert-deftest ,name ,(plist-get keys :filename) ,mode
-       :line ,line :column ,column
+       :line ,line :column ,column :disabled ,(plist-get keys :disabled)
        (ycmd-with-deferred-request
            ',(apply-partially
               #'ycmd--send-completer-command-request "FixIt")
