@@ -202,12 +202,13 @@ response."
         (should (string= "Logger" (cdr (assq 'insertion_text c))))
         (should (= .completion_start_column 6))))))
 
-;; TODO rewrite this to avoid using `ycmd--handle-fixit-success'
 (defun ycmd-test-fixit-handler (response file-name)
   (let ((ycmd-confirm-fixit nil)
         (fixits (cdr (assq 'fixits response))))
     (when (and fixits (> (length fixits) 0))
-      (ycmd--handle-fixit-success response)
+      (dolist (fixit (append fixits nil))
+        (--when-let (cdr (assq 'chunks fixit))
+          (ycmd--replace-chunk-list (append it nil))))
       (let ((actual (buffer-string))
             (expected (f-read file-name)))
         (set-buffer-modified-p nil)
@@ -252,10 +253,10 @@ response."
   :filename-expected "test-fixit-cpp11-delete-add-expected.cpp"
   :line 5 :column 3)
 
-;; (ycmd-ert-deftest-fixit fixit-cpp-multiple 'c++-mode
-;;   :filename "test-fixit-cpp11-multiple.cpp"
-;;   :filename-expected "test-fixit-cpp11-multiple-expected.cpp"
-;;   :line 2 :column 15)
+(ycmd-ert-deftest-fixit fixit-cpp-multiple 'c++-mode
+  :filename "test-fixit-cpp11-multiple.cpp"
+  :filename-expected "test-fixit-cpp11-multiple-expected.cpp"
+  :line 2 :column 15)
 
 (ert-deftest ycmd-test-col-line-to-position ()
   (ycmd-ert-with-resource-buffer "test-goto.cpp" 'c++-mode
