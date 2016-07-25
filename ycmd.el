@@ -1126,6 +1126,70 @@ Use BUFFER if non-nil or `current-buffer'."
   (ycmd--send-request
    "GetType" 'ycmd--handle-get-parent-or-type-success))
 
+;;; FixIts
+
+(defmacro ycmd--with-fixit-buffer (multiple &rest body)
+  "Create view buffer and execute BODY in it."
+  (declare (debug t) (indent 1))
+  `(let ((buf (get-buffer-create "*ycmd-fixits*")))
+     (with-current-buffer buf
+       (setq buffer-read-only nil)
+       (erase-buffer)
+       (when ,multiple
+         (let ((title
+                (concat "Multiple FixIts are available for the current context. "
+                        "Which one would you like to apply?\n")))
+           (insert (propertize title 'face 'bold))))
+       ,@body
+       (goto-char (point-min))
+       (when ,multiple
+         (forward-line 1))
+       (ycmd-fixit-mode)
+       buf)))
+
+(defun ycmd--show-fixits (fixit buffer)
+  "Select a buffer and display FIXIT.
+BUFFER is the buffer."
+  (let ((fixit-num 1)
+        (multiple (> (length fixit) 1)))
+    (pop-to-buffer
+     (ycmd--with-fixit-buffer multiple
+       (mapc (lambda (it)
+               (let-alist it
+                 (ycmd--insert-fixit-button
+                  (format "%d: %s\n" fixit-num .text)
+                  .chunks .location buffer))
+               (setq fixit-num (1+ fixit-num)))
+             fixit)))))
+
+(define-button-type 'ycmd-fixit-button
+  'action #'ycmd--apply-fixit
+  'face nil)
+
+(defun ycmd--insert-fixit-button (name fixit location buffer)
+  "Insert a button with NAME and FIXIT for LOCATION.
+BUFFER is the buffer to apply the fixit on."
+  (insert-text-button
+   name
+   'type #'ycmd-fixit-button
+   'fixit fixit
+   'location location
+   'buffer buffer))
+
+(defun ycmd--apply-fixit (button)
+  "Apply BUTTON's FixIt chunk."
+  (-when-let* ((chunk (button-get button 'fixit))
+               (buffer (button-get button 'buffer)))
+    (with-current-buffer buffer
+      (ycmd--replace-chunk-list (append chunk nil)))
+    (quit-window t (get-buffer-window "*ycmd-fixits*"))))
+
+(define-derived-mode ycmd-fixit-mode ycmd-view-mode "ycmd-fixits"
+  "Major mode for viewing and navigation of fixits.
+
+\\{ycmd-view-mode-map}"
+  (local-set-key (kbd "q") (lambda () (interactive) (quit-window t))))
+
 (defun ycmd--replace-chunk (start end replacement-text line-delta char-delta buffer)
   "Replace text between START and END with REPLACEMENT-TEXT.
 
@@ -1205,12 +1269,12 @@ buffer."
   "Handle a successful FixIt response for RESULT."
   (-if-let* ((fixits (cdr (assq 'fixits result)))
              (fixits (append fixits nil)))
-      (let ((use-dialog-box nil))
-        (when (or (not ycmd-confirm-fixit)
-                  (y-or-n-p "Apply FixIts on current line? "))
-          (dolist (fixit fixits)
-            (-when-let (chunks (cdr (assq 'chunks fixit)))
-              (ycmd--replace-chunk-list (append chunks nil))))))
+      (if (and (not ycmd-confirm-fixit)
+               (eq (length fixits) 1))
+          (--when-let (cdr (assq 'chunks (car fixits)))
+            (ycmd--replace-chunk-list (append it nil)))
+        (save-current-buffer
+          (ycmd--show-fixits fixits (current-buffer))))
     (message "No FixIts available")))
 
 (defun ycmd-fixit()
