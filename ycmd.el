@@ -1128,39 +1128,31 @@ Use BUFFER if non-nil or `current-buffer'."
 
 ;;; FixIts
 
-(defmacro ycmd--with-fixit-buffer (multiple &rest body)
-  "Create view buffer and execute BODY in it."
-  (declare (debug t) (indent 1))
-  `(let ((buf (get-buffer-create "*ycmd-fixits*")))
-     (with-current-buffer buf
-       (setq buffer-read-only nil)
-       (erase-buffer)
-       (when ,multiple
-         (let ((title
-                (concat "Multiple FixIts are available for the current context. "
-                        "Which one would you like to apply?\n")))
-           (insert (propertize title 'face 'bold))))
-       ,@body
-       (goto-char (point-min))
-       (when ,multiple
-         (forward-line 1))
-       (ycmd-fixit-mode)
-       buf)))
-
 (defun ycmd--show-fixits (fixit buffer)
   "Select a buffer and display FIXIT.
 BUFFER is the buffer."
   (let ((fixit-num 1)
-        (multiple (> (length fixit) 1)))
-    (pop-to-buffer
-     (ycmd--with-fixit-buffer multiple
-       (mapc (lambda (it)
-               (let-alist it
-                 (ycmd--insert-fixit-button
-                  (format "%d: %s\n" fixit-num .text)
-                  .chunks .location buffer))
-               (setq fixit-num (1+ fixit-num)))
-             fixit)))))
+        (multiple (> (length fixit) 1))
+        (fixits-buffer (get-buffer-create "*ycmd-fixits*")))
+    (with-current-buffer fixits-buffer
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (when multiple
+        (let ((title
+               (concat "Multiple FixIts are available for the current context. "
+                       "Which one would you like to apply?\n")))
+          (insert (propertize title 'face 'bold))))
+      (mapc (lambda (it)
+              (let-alist it
+                (ycmd--insert-fixit-button
+                 (format "%d: %s\n" fixit-num .text)
+                 .chunks .location buffer))
+              (setq fixit-num (1+ fixit-num)))
+            fixit)
+      (goto-char (point-min))
+      (when multiple (forward-line 1))
+      (ycmd-fixit-mode))
+    (pop-to-buffer fixits-buffer)))
 
 (define-button-type 'ycmd-fixit-button
   'action #'ycmd--apply-fixit
@@ -1270,7 +1262,7 @@ buffer."
   (-if-let* ((fixits (cdr (assq 'fixits result)))
              (fixits (append fixits nil)))
       (if (and (not ycmd-confirm-fixit)
-               (eq (length fixits) 1))
+               (<= (length fixits) 1))
           (--when-let (cdr (assq 'chunks (car fixits)))
             (ycmd--replace-chunk-list (append it nil)))
         (save-current-buffer
