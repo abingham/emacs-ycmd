@@ -1130,7 +1130,7 @@ Use BUFFER if non-nil or `current-buffer'."
 
 (defun ycmd--show-fixits (fixit buffer)
   "Select a buffer and display FIXIT.
-BUFFER is the buffer."
+BUFFER is the target buffer for the fixit."
   (let ((fixit-num 1)
         (multiple (> (length fixit) 1))
         (fixits-buffer (get-buffer-create "*ycmd-fixits*")))
