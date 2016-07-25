@@ -1152,7 +1152,8 @@ BUFFER is the buffer."
       (goto-char (point-min))
       (when multiple (forward-line 1))
       (ycmd-fixit-mode))
-    (pop-to-buffer fixits-buffer)))
+    (pop-to-buffer fixits-buffer)
+    (setq next-error-last-buffer fixits-buffer)))
 
 (define-button-type 'ycmd-fixit-button
   'action #'ycmd--apply-fixit
