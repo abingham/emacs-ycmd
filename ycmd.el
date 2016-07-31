@@ -1256,15 +1256,25 @@ buffer."
           (setq line-delta (+ line-delta (car new-deltas)))
           (setq char-delta (+ char-delta (cdr new-deltas))))))))
 
+(defun ycmd--fixits-have-same-location-p (fixits)
+  "Check if mutiple FIXITS have the same location."
+  (let ((fixits-by-location
+         (--group-by (cdr (assq 'location it)) fixits)))
+    (catch 'done
+      (dolist (f fixits-by-location)
+        (when (> (length (cdr f)) 1)
+          (throw 'done t))))))
+
 (defun ycmd--handle-fixit-success (result)
   "Handle a successful FixIt response for RESULT."
   (-if-let* ((fixits (cdr (assq 'fixits result)))
              (fixits (append fixits nil)))
       (let ((buffer (current-buffer)))
         (if (and (not ycmd-confirm-fixit)
-                 (<= (length fixits) 1))
-            (--when-let (cdr (assq 'chunks (car fixits)))
-              (ycmd--replace-chunk-list (append it nil) buffer))
+                 (not (ycmd--fixits-have-same-location-p fixits)))
+            (dolist (fixit fixits)
+              (--when-let (cdr (assq 'chunks fixit))
+                (ycmd--replace-chunk-list (append it nil) buffer)))
           (save-current-buffer
             (ycmd--show-fixits fixits buffer))))
     (message "No FixIts available")))
