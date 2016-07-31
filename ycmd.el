@@ -1173,8 +1173,7 @@ BUFFER is the buffer to apply the fixit on."
   "Apply BUTTON's FixIt chunk."
   (-when-let* ((chunk (button-get button 'fixit))
                (buffer (button-get button 'buffer)))
-    (with-current-buffer buffer
-      (ycmd--replace-chunk-list (append chunk nil)))
+    (ycmd--replace-chunk-list (append chunk nil) buffer)
     (quit-window t (get-buffer-window "*ycmd-fixits*"))))
 
 (define-derived-mode ycmd-fixit-mode ycmd-view-mode "ycmd-fixits"
@@ -1235,13 +1234,12 @@ working buffer."
         (and (= line-num-1 line-num-2)
              (< column-num-1 column-num-2)))))
 
-(defun ycmd--replace-chunk-list (chunks &optional buffer)
+(defun ycmd--replace-chunk-list (chunks buffer)
   "Replace list of CHUNKS.
 
 If BUFFER is spacified use it as working buffer, else use current
 buffer."
   (let ((chunks-sorted (sort chunks 'ycmd--chunk-<))
-        (buf (or buffer (current-buffer)))
         (last-line -1)
         (line-delta 0)
         (char-delta 0))
@@ -1254,7 +1252,7 @@ buffer."
           (setq char-delta 0))
         (let ((new-deltas (ycmd--replace-chunk
                            chunk-start chunk-end replacement-text
-                           line-delta char-delta buf)))
+                           line-delta char-delta buffer)))
           (setq line-delta (+ line-delta (car new-deltas)))
           (setq char-delta (+ char-delta (cdr new-deltas))))))))
 
@@ -1262,12 +1260,13 @@ buffer."
   "Handle a successful FixIt response for RESULT."
   (-if-let* ((fixits (cdr (assq 'fixits result)))
              (fixits (append fixits nil)))
-      (if (and (not ycmd-confirm-fixit)
-               (<= (length fixits) 1))
-          (--when-let (cdr (assq 'chunks (car fixits)))
-            (ycmd--replace-chunk-list (append it nil)))
-        (save-current-buffer
-          (ycmd--show-fixits fixits (current-buffer))))
+      (let ((buffer (current-buffer)))
+        (if (and (not ycmd-confirm-fixit)
+                 (<= (length fixits) 1))
+            (--when-let (cdr (assq 'chunks (car fixits)))
+              (ycmd--replace-chunk-list (append it nil) buffer))
+          (save-current-buffer
+            (ycmd--show-fixits fixits buffer))))
     (message "No FixIts available")))
 
 (defun ycmd-fixit()

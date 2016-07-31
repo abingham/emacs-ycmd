@@ -203,10 +203,11 @@ response."
         (should (= .completion_start_column 6))))))
 
 (defun ycmd-test-fixit-handler (response file-name)
-  (-when-let (fixits (cdr (assq 'fixits response)))
-    (dolist (fixit (append fixits nil))
+  (--when-let (cdr (assq 'fixits response))
+    (dolist (fixit (append it nil))
       (--when-let (cdr (assq 'chunks fixit))
-        (ycmd--replace-chunk-list (append it nil))))
+        (ycmd--replace-chunk-list
+         (append it nil) (current-buffer))))
     (let ((actual (buffer-string))
           (expected (f-read file-name)))
       (set-buffer-modified-p nil)
