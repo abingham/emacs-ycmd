@@ -132,10 +132,11 @@ foo(bar, |baz); -> foo|(bar, baz);"
                     #'ycmd-eldoc--documentation-function)
     (set (make-local-variable 'eldoc-documentation-function)
          'ycmd-eldoc--documentation-function))
+  (add-hook 'ycmd-after-teardown-hook #'ycmd-eldoc--teardown)
   (eldoc-mode +1))
 
-(defadvice ycmd--teardown (after ycmd-teardown-after activate)
-  "Reset ycmd-eldoc--cache on `ycmd--teardown'."
+(defun ycmd-eldoc--teardown ()
+  "Reset `ycmd-eldoc--cache'."
   (setq ycmd-eldoc--cache nil))
 
 (provide 'ycmd-eldoc)
