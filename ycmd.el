@@ -386,6 +386,13 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
   :type 'hook
   :risky t)
 
+(defcustom ycmd-after-teardown-hook nil
+  "Functions to run after execution of `ycmd--teardown'.
+
+This variable is a normal hook.  See Info node `(elisp)Hooks'."
+  :type 'hook
+  :risky t)
+
 (defconst ycmd--diagnostic-file-types
   '("c"
     "cpp"
@@ -732,7 +739,8 @@ _LEN is ununsed."
 (defun ycmd--teardown ()
   "Teardown ycmd in current buffer."
   (ycmd--kill-timer ycmd--notification-timer)
-  (setq ycmd--last-status-change 'unparsed))
+  (setq ycmd--last-status-change 'unparsed)
+  (run-hooks 'ycmd-after-teardown-hook))
 
 (defun ycmd--global-teardown ()
   "Teardown ycmd in all buffers."
