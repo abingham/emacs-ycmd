@@ -1132,16 +1132,16 @@ Use BUFFER if non-nil or `current-buffer'."
   "Select a buffer and display FIXIT.
 BUFFER is the target buffer for the fixit."
   (let ((fixit-num 1)
-        (multiple (> (length fixit) 1))
+        (title
+         (and (> (length fixit) 1)
+              (concat
+               "Multiple FixIts are available for the current context. "
+               "Which one would you like to apply?\n")))
         (fixits-buffer (get-buffer-create "*ycmd-fixits*")))
     (with-current-buffer fixits-buffer
       (setq buffer-read-only nil)
       (erase-buffer)
-      (when multiple
-        (let ((title
-               (concat "Multiple FixIts are available for the current context. "
-                       "Which one would you like to apply?\n")))
-          (insert (propertize title 'face 'bold))))
+      (when title (insert (propertize title 'face 'bold)))
       (mapc (lambda (it)
               (let-alist it
                 (ycmd--insert-fixit-button
@@ -1150,7 +1150,7 @@ BUFFER is the target buffer for the fixit."
               (setq fixit-num (1+ fixit-num)))
             fixit)
       (goto-char (point-min))
-      (when multiple (forward-line 1))
+      (when title (forward-line 1))
       (ycmd-fixit-mode))
     (pop-to-buffer fixits-buffer)
     (setq next-error-last-buffer fixits-buffer)))
