@@ -71,7 +71,7 @@
        :column .location.column_num
        :buffer (current-buffer)
        :filename .location.filepath
-       :message (concat .text (when (eq .fixit_available t) " (FixIt)"))
+       :message (concat .text (when (eq .fixit_available t) " (FixIt available)"))
        :checker checker
        :level (assoc-default .kind flycheck-ycmd--level-map 'string-equal 'error)))))
 
