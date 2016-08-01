@@ -547,6 +547,11 @@ response."
 (ert-deftest ycmd-test-not-running ()
   (should-not (ycmd-running?)))
 
+(ert-deftest ycmd-test-json-encode ()
+  (let ((data '((foo))))
+    (should (string= (ycmd--json-encode data)
+                     "{\"foo\":{}}"))))
+
 (provide 'ycmd-test)
 
 ;;; ycmd-test.el ends here
