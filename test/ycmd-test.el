@@ -511,7 +511,7 @@ response."
   (let ((flycheck-checkers '(ycmd)))
     (flycheck-ert-should-syntax-check
      "test-error.cpp" 'flycheck-ycmd-test-mode
-     '(3 15 error "expected ';' at end of declaration list (FixIt)"
+     '(3 15 error "expected ';' at end of declaration list (FixIt available)"
          :checker ycmd))))
 
 (ert-deftest flycheck-ycmd-test-warning ()
