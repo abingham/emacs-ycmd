@@ -59,7 +59,7 @@
   '(("ERROR" . error)
     ("WARNING" . warning)))
 
-(defvar flycheck-ycmd--cache nil
+(defvar-local flycheck-ycmd--cache nil
   "Cache for parse results.")
 
 (defun flycheck-ycmd--result-to-error (result checker)
@@ -106,12 +106,17 @@ display."
 This adds a hook to watch for ycmd parse results, and it adds the
 ycmd checker to the list of flycheck checkers."
   (add-hook 'ycmd-file-parse-result-hook 'flycheck-ycmd--cache-parse-results)
-  (add-to-list 'flycheck-checkers 'ycmd))
+  (add-to-list 'flycheck-checkers 'ycmd)
+  (add-hook 'ycmd-after-teardown-hook #'flycheck-ycmd--teardown))
 
 (flycheck-define-generic-checker 'ycmd
   "A flycheck checker using parse results from ycmd."
   :start #'flycheck-ycmd--start
   :predicate #'flycheck-ycmd--in-supported-mode)
+
+(defun flycheck-ycmd--teardown ()
+  "Reset `flycheck-ycmd--cache'."
+  (setq flycheck-ycmd--cache nil))
 
 (provide 'flycheck-ycmd)
 
