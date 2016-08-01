@@ -202,16 +202,41 @@ response."
         (should (string= "Logger" (cdr (assq 'insertion_text c))))
         (should (= .completion_start_column 6))))))
 
-(defun ycmd-test-fixit-handler (response file-name)
-  (-when-let (fixits (cdr (assq 'fixits response)))
-    (dolist (fixit (append fixits nil))
-      (--when-let (cdr (assq 'chunks fixit))
-        (ycmd--replace-chunk-list (append it nil))))
-    (let ((actual (buffer-string))
-          (expected (f-read file-name)))
-      (set-buffer-modified-p nil)
-      (set-visited-file-name nil 'no-query)
-      (string= actual expected))))
+(ert-deftest ycmd-test-fixit-same-location-false ()
+  (let ((data '(((chunks . [((replacement_text . "foo"))])
+                 (location (filepath . "test.cpp")
+                           (column_num . 1) (line_num . 2)))
+                ((chunks . [((replacement_text . "bar"))])
+                 (location (filepath . "test.cpp")
+                           (column_num . 3) (line_num . 4))))))
+    (should-not (ycmd--fixits-have-same-location-p data))))
+
+(ert-deftest ycmd-test-fixit-same-location-true ()
+  (let ((data '(((chunks . [((replacement_text . "foo"))])
+                 (location (filepath . "test.cpp")
+                           (column_num . 1) (line_num . 2)))
+                ((chunks . [((replacement_text . "bar"))])
+                 (location (filepath . "test.cpp")
+                           (column_num . 1) (line_num . 2))))))
+    (should (ycmd--fixits-have-same-location-p data))))
+
+(defun ycmd-test-fixit-handler (response file-name expected-num)
+  (when (cdr (assq 'fixits response))
+    (let ((ycmd-confirm-fixit nil))
+      ;; Override ycmd--show-fixits in order to return number of
+      ;; fixits for same location.
+      (cl-letf (((symbol-function 'ycmd--show-fixits)
+                 (lambda (fixits buffer)
+                   (cons :multiple-fixits (length fixits)))))
+        (let ((return-val (ycmd--handle-fixit-success response)))
+          (if (and (consp return-val)
+                   (eq (car return-val) :multiple-fixits))
+              (eq (cdr return-val) expected-num)
+            (let ((actual (buffer-string))
+                  (expected (f-read file-name)))
+              (set-buffer-modified-p nil)
+              (set-visited-file-name nil 'no-query)
+              (string= actual expected))))))))
 
 (defmacro ycmd-ert-deftest-fixit (name mode &rest keys)
   (declare (indent 2) (debug t))
@@ -224,7 +249,9 @@ response."
               #'ycmd--send-completer-command-request "FixIt")
          (should
           (ycmd-test-fixit-handler
-           response ,(plist-get keys :filename-expected)))))))
+           response
+           ,(plist-get keys :filename-expected)
+           ,(plist-get keys :expected-number-fixits)))))))
 
 (ycmd-ert-deftest-fixit fixit-cpp-insert1 'c++-mode
   :filename "test-fixit-cpp11-insert1.cpp"
@@ -255,6 +282,11 @@ response."
   :filename "test-fixit-cpp11-multiple.cpp"
   :filename-expected "test-fixit-cpp11-multiple-expected.cpp"
   :line 2 :column 15)
+
+(ycmd-ert-deftest-fixit fixit-cpp-notes 'c++-mode
+  :filename "test-fixit-cpp11-notes.cpp"
+  :line 4 :column 12
+  :expected-number-fixits 2)
 
 (ert-deftest ycmd-test-col-line-to-position ()
   (ycmd-ert-with-resource-buffer "test-goto.cpp" 'c++-mode
