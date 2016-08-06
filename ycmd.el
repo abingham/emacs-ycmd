@@ -1863,7 +1863,6 @@ anything like that.)
   (let* ((url-show-status (not ycmd-hide-url-status))
          (url-proxy-services (unless ycmd-bypass-url-proxy-services
                                url-proxy-services))
-         (request-backend 'url-retrieve)
          (content (json-encode content))
          (hmac (ycmd--get-request-hmac type location content))
          (encoded-hmac (base64-encode-string hmac 't))
@@ -1879,12 +1878,13 @@ anything like that.)
 
     (if sync
         (let (result)
-          (request
-           url :headers headers :parser parser :data content :type type
-           :sync t
-           :complete
-           (lambda (&rest args)
-             (setq result (funcall response-fn (plist-get args :response)))))
+          (with-local-quit
+            (request
+             url :headers headers :parser parser :data content :type type
+             :sync t
+             :complete
+             (lambda (&rest args)
+               (setq result (funcall response-fn (plist-get args :response))))))
           result)
       (deferred:$
         (request-deferred
