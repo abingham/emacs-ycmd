@@ -1679,42 +1679,53 @@ the name of the newly created file."
       (insert (ycmd--json-encode options)))
     options-file))
 
+(defun ycmd--server-process-sentinel (process _state)
+  "Ycmd server PROCESS sentinel."
+  (when (memq (process-status process) '(exit signal))
+    (let* ((code (process-exit-status process))
+           (status (if (eq code 0) 'unparsed 'errored)))
+      (when (eq status 'errored)
+        (message "Ycmd server finished with exit code %d" code))
+      (ycmd--with-all-ycmd-buffers
+        (ycmd--report-status status)))))
+
 (defun ycmd--start-server (hmac-secret)
-  "Start a new server using HMAC-SECRET as its hmac secret."
+  "Start a new server using HMAC-SECRET."
   (unless ycmd-server-command
     (user-error "Error: The variable `ycmd-server-command' is not set.  \
 See the docstring of the variable for an example"))
   (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
-      (buffer-disable-undo proc-buff)
-      (erase-buffer)
-
-      (let* ((options-file (ycmd--create-options-file hmac-secret))
-             (args (apply 'list (concat "--options_file=" options-file)
-                          ycmd-server-args))
-             (server-program+args (append ycmd-server-command args))
-             (proc (apply #'start-process ycmd--server-process-name proc-buff
-                          server-program+args))
-             (cont t)
-             (start-time (float-time)))
-        (while cont
-          (set-process-query-on-exit-flag proc nil)
-          (accept-process-output proc 0 100 t)
-          (let ((proc-output (with-current-buffer proc-buff
-                               (buffer-string))))
-            (cond
-             ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
-              (progn
-                (set-variable 'ycmd--server-actual-port
-                              (string-to-number (match-string 1 proc-output)))
-                (setq cont nil)
-                (ycmd--with-all-ycmd-buffers (ycmd--report-status 'unparsed))))
-             (t
-              ;; timeout after specified period
-              (when (< ycmd-startup-timeout (- (float-time) start-time))
-                (ycmd--with-all-ycmd-buffers (ycmd--report-status 'errored))
-                (when (ycmd-running?) (ycmd-close))
-                (error "ERROR: Ycmd server timeout"))))))))))
+      (buffer-disable-undo)
+      (erase-buffer))
+    (let* ((options-file (ycmd--create-options-file hmac-secret))
+           (args (apply 'list (concat "--options_file=" options-file)
+                        ycmd-server-args))
+           (server-program+args (append ycmd-server-command args))
+           (proc (apply #'start-process ycmd--server-process-name proc-buff
+                        server-program+args))
+           (server-start-time (float-time))
+           time-since-server-start server-started)
+      (set-process-query-on-exit-flag proc nil)
+      (set-process-sentinel proc #'ycmd--server-process-sentinel)
+      (while (and (not server-started) (process-live-p proc))
+        (accept-process-output proc 0 100 t)
+        (let ((proc-output (with-current-buffer proc-buff
+                             (buffer-string))))
+          (cond
+           ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
+            (setq ycmd--server-actual-port
+                  (string-to-number (match-string 1 proc-output)))
+            (ycmd--with-all-ycmd-buffers (ycmd--report-status 'unparsed))
+            (setq server-started t))
+           (t
+            ;; timeout after specified period
+            (setq time-since-server-start (- (float-time) server-start-time))
+            (when (> time-since-server-start ycmd-startup-timeout)
+              (ycmd-close)
+              (ycmd--with-all-ycmd-buffers
+                (ycmd--report-status 'errored))
+              (error "ERROR: Ycmd server timeout")))))))))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
