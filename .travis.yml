@@ -22,6 +22,7 @@ before_install:
   - cd ..
 
 install:
+  - make clean
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
