@@ -1,7 +1,5 @@
 language: emacs-lisp
-cache:
-  directories:
-    - .cask/
+
 env:
   matrix:
     # Run unit tests against oldest supported stable, latest stable, and trunk
@@ -22,7 +20,6 @@ before_install:
   - cd ..
 
 install:
-  - make clean
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
