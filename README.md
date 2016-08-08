@@ -1,6 +1,7 @@
 # emacs-ycmd
 
-[![MELPA](http://melpa.org/packages/ycmd-badge.svg)](http://melpa.org/#/ycmd)[![Build Status](https://travis-ci.org/abingham/emacs-ycmd.png?branch=master)](https://travis-ci.org/abingham/emacs-ycmd)
+[![MELPA](http://melpa.org/packages/ycmd-badge.svg)](http://melpa.org/#/ycmd)
+[![Build Status](https://travis-ci.org/abingham/emacs-ycmd.png?branch=master)](https://travis-ci.org/abingham/emacs-ycmd)
 
 emacs-ycmd is a client for [ycmd](https://github.com/Valloric/ycmd),
 the code completion system. It takes care of managing a ycmd server
