@@ -1,5 +1,7 @@
 language: emacs-lisp
-
+cache:
+  directories:
+    - .cask/
 env:
   matrix:
     # Run unit tests against oldest supported stable, latest stable, and trunk

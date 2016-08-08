@@ -26,7 +26,7 @@ OBJECTS_ELDOC = $(SRCS_ELDOC:.el=.elc)
 DISTDIR = dist
 BUILDDIR = build
 
-EMACSBATCH = $(EMACS) -Q --batch $(EMACSFLAGS)
+EMACSBATCH = $(CASK) exec $(EMACS) -Q --batch $(EMACSFLAGS)
 
 .PHONY: deps all ycmd company-ycmd flycheck-ycmd ycmd-eldoc dist \
 	test clean clean-elc clobber clobber-dist clobber-deps
@@ -70,4 +70,4 @@ $(PKGDIR) : Cask
 	touch $(PKGDIR)
 
 %.elc : %.el $(PKGDIR)
-	$(CASK) exec $(EMACSBATCH) -L . -f batch-byte-compile $<
+	$(EMACSBATCH) -L . -f batch-byte-compile $<

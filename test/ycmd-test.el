@@ -59,6 +59,8 @@
 (require 'flycheck-ycmd)
 (require 'ycmd-eldoc)
 (require 'macroexp)
+(require 'go-mode)
+(require 'rust-mode)
 
 (eval-and-compile
   (defconst ycmd-test-location
@@ -191,8 +193,6 @@ response."
                           "b" (cdr (assq 'insertion_text c))))
                        .completions))
       (should (= .completion_start_column 3)))))
-
-(declare-function go-mode "go-mode")
 
 (ycmd-ert-deftest get-completions-go "test.go" 'go-mode
   :line 9 :column 10
@@ -379,8 +379,6 @@ response."
                  'filepath .extra_data.location.filepath candidate))
         (should (ycmd-test-has-property-with-value
                  'line_num .extra_data.location.line_num candidate))))))
-
-(declare-function rust-mode "rust-mode")
 
 (ert-deftest company-ycmd-test-construct-candidate-rust ()
   (ycmd-ert-with-temp-buffer 'rust-mode

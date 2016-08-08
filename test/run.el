@@ -27,11 +27,13 @@
 (defun ycmd-runs-this-script-p ()
   t)
 
+(defvar ycmd-runner-file
+  (if load-in-progress load-file-name (buffer-file-name)))
+
 (defun ycmd-run-tests-main ()
   "Main entry point of the test runner."
   (let* ((load-prefer-newer t)
-         (current-file (if load-in-progress load-file-name (buffer-file-name)))
-         (source-directory (locate-dominating-file current-file "Cask"))
+         (source-directory (locate-dominating-file ycmd-runner-file "Cask"))
          (pkg-rel-dir (format ".cask/%s/elpa" emacs-version))
          (python-path (or (executable-find "python2")
                           (executable-find "python"))))
@@ -48,7 +50,7 @@
       (load (expand-file-name "company-ycmd" source-directory))
       (load (expand-file-name "flycheck-ycmd" source-directory))
       (load (expand-file-name "ycmd-eldoc" source-directory))
-      (load (expand-file-name "ycmd-test" (file-name-directory current-file))))
+      (load (expand-file-name "ycmd-test" (file-name-directory ycmd-runner-file))))
 
     (let* ((debug-on-error t)
            (ycmd-path (expand-file-name (pop argv) source-directory))
