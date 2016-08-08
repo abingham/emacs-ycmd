@@ -770,9 +770,9 @@ control.) The newly started server will have a new HMAC secret."
   (ycmd-close)
 
   (let ((hmac-secret (ycmd--generate-hmac-secret)))
-    (ycmd--start-server hmac-secret)
-    (setq ycmd--hmac-secret hmac-secret)
-    (ycmd--start-keepalive-timer)))
+    (when (ycmd--start-server hmac-secret)
+      (setq ycmd--hmac-secret hmac-secret)
+      (ycmd--start-keepalive-timer))))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
@@ -1725,7 +1725,8 @@ See the docstring of the variable for an example"))
               (ycmd-close)
               (ycmd--with-all-ycmd-buffers
                 (ycmd--report-status 'errored))
-              (error "ERROR: Ycmd server timeout")))))))))
+              (error "ERROR: Ycmd server timeout"))))))
+      server-started)))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
