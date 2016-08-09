@@ -295,6 +295,7 @@ response."
 (defun ycmd-test-has-property-with-value (property value item)
   (let ((pred (pcase value
                 ((pred stringp) 'string=)
+                (`nil 'eq)
                 (_ '=))))
     (funcall pred value (get-text-property 0 property item))))
 
@@ -340,6 +341,29 @@ response."
       (should-not (get-text-property 0 'params candidate))
       (should (ycmd-test-has-property-with-value
                'return_type "union (anonymous)" candidate)))))
+
+(ert-deftest company-ycmd-test-construct-candidtate-clang-class ()
+  (ycmd-ert-with-temp-buffer 'c++-mode
+    (let* ((data '((insertion_text . "A")
+                   (detailed_info . " A\n A()\n A( int a )\n A( int a, int b )\n")
+                   (menu_text . "A")
+                   (kind . "CLASS")))
+           (params-expected '(nil "()" "( int a )" "( int a, int b )"))
+           (meta-expected '(" A" " A()" " A( int a )" " A( int a, int b )"))
+           (candidates (company-ycmd--construct-candidate-clang data)))
+      (should (= 4 (length candidates)))
+      (should (every (lambda (expected candidate)
+                       (ycmd-test-has-property-with-value 'params expected candidate))
+                     params-expected (reverse candidates)))
+      (should (every (lambda (expected candidate)
+                       (ycmd-test-has-property-with-value 'meta expected candidate))
+                     meta-expected (reverse candidates)))
+      (should (every (lambda (candidate)
+                       (ycmd-test-has-property-with-value 'return_type "" candidate))
+                     candidates))
+      (should (every (lambda (candidate)
+                       (ycmd-test-has-property-with-value 'kind "class" candidate))
+                     candidates)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-go ()
   (ycmd-ert-with-temp-buffer 'go-mode
