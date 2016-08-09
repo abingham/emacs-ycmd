@@ -1679,13 +1679,31 @@ the name of the newly created file."
       (insert (ycmd--json-encode options)))
     options-file))
 
+(defun ycmd--exit-code-as-string (code)
+  "Return exit status message for CODE."
+  (pcase code
+    (`3 "unexpected error while loading ycm_core.")
+    (`4 (concat "ycm_core library not detected; "
+                "you need to compile it by running the "
+                "build.py script. See the documentation "
+                "for more details."))
+    (`5 (concat "ycm_core library compiled for Python 2 "
+                "but loaded in Python 3."))
+    (`6 (concat "ycm_core library compiled for Python 3 "
+                "but loaded in Python 2."))
+    (`7 (concat "ycm_core library too old; "
+                "PLEASE RECOMPILE by running the build.py "
+                "script. See the documentation for more details."))))
+
 (defun ycmd--server-process-sentinel (process _state)
   "Ycmd server PROCESS sentinel."
   (when (memq (process-status process) '(exit signal))
     (let* ((code (process-exit-status process))
            (status (if (eq code 0) 'unparsed 'errored)))
       (when (eq status 'errored)
-        (message "Ycmd server finished with exit code %d" code))
+        (--if-let (ycmd--exit-code-as-string code)
+            (message "Ycmd error: %s" it)
+          (message "Ycmd server finished with exit code %d" code)))
       (ycmd--with-all-ycmd-buffers
         (ycmd--report-status status)))))
 
