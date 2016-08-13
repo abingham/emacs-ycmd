@@ -1354,6 +1354,17 @@ MODE is a major mode for fontifaction."
    'type 'ycmd--location-button
    'location location))
 
+(defun ycmd--get-line-from-location (location)
+  "Return line from LOCATION."
+  (let-alist location
+    (-when-let (buf (and .filepath
+                         (find-file-noselect .filepath)))
+      (with-current-buffer buf
+        (goto-char (ycmd--col-line-to-position
+                    .column_num .line_num))
+        (back-to-indentation)
+        (buffer-substring (point) (line-end-position))))))
+
 (defun ycmd--view-insert-location (location-group mode)
   "Insert LOCATION-GROUP into `current-buffer' and fontify according MODE.
 LOCATION-GROUP is a cons cell whose car is the filepath and the whose
@@ -1376,8 +1387,10 @@ cdr is a list of location objects."
        (when line-num-format
          (insert (format line-num-format .line_num)))
        (insert "    ")
-       (ycmd--view-insert-button
-        (ycmd--fontify-code .description mode) it)
+       (let ((description (or .description
+                              (ycmd--get-line-from-location it))))
+         (ycmd--view-insert-button
+          (ycmd--fontify-code (or description "") mode) it))
        (insert "\n"))
      (cdr location-group))))
 
