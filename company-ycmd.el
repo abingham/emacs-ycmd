@@ -94,7 +94,7 @@ When 0, do not use synchronous completion request at all."
   :type 'number)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode go-mode objc-mode rust-mode python-mode)
+  '(c++-mode c-mode go-mode objc-mode rust-mode python-mode js-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -309,6 +309,23 @@ with spaces."
                   'filepath filepath 'line_num line-num
                   'column_num column-num))))
 
+(defun company-ycmd--construct-candidate-js (candidate)
+  "Construct completion string from CANDIDATE for js file-types."
+  (company-ycmd--with-destructured-candidate candidate
+    (let* ((kind (or (and (string-match "^fn" .extra_menu_info)
+                          (match-string 0 .extra_menu_info))
+                     .extra_menu_info))
+           (meta .extra_menu_info)
+           (params (and .extra_menu_info
+                        (string-match "^fn\\((.*)\\).*" .extra_menu_info)
+                        (match-string 1 .extra_menu_info)))
+           (return-type (and .extra_menu_info
+                             (string-match "^fn(.*) -> \\(.*\\)" .extra_menu_info)
+                             (match-string 1 .extra_menu_info)))
+           (doc .detailed_info))
+      (propertize .insertion_text 'meta meta 'params params
+                  'return_type return-type 'kind kind 'doc doc))))
+
 (defun company-ycmd--construct-candidate-generic (candidate)
   "Generic function to construct completion string from a CANDIDATE."
   (company-ycmd--with-destructured-candidate candidate .insertion_text))
@@ -353,6 +370,7 @@ candidates list."
     ("go" 'company-ycmd--construct-candidate-go)
     ("python" 'company-ycmd--construct-candidate-python)
     ("rust" 'company-ycmd--construct-candidate-rust)
+    ("javascript" 'company-ycmd--construct-candidate-js)
     (_ 'company-ycmd--construct-candidate-generic)))
 
 (defun company-ycmd--get-candidates (completions prefix &optional cb)
