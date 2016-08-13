@@ -227,7 +227,7 @@ response."
       ;; Override ycmd--show-fixits in order to return number of
       ;; fixits for same location.
       (cl-letf (((symbol-function 'ycmd--show-fixits)
-                 (lambda (fixits buffer)
+                 (lambda (fixits)
                    (cons :multiple-fixits (length fixits)))))
         (let ((return-val (ycmd--handle-fixit-success response)))
           (if (and (consp return-val)
