@@ -1325,11 +1325,13 @@ the documentation."
 (defun ycmd--view (result mode)
   "Select a `ycmd-view-mode' buffer and display RESULT.
 MODE is a major mode for fontifaction."
-  (pop-to-buffer
-   (ycmd--with-view-buffer
-    (->>
-     (--group-by (cdr (assq 'filepath it)) result)
-     (mapc (lambda (it) (ycmd--view-insert-location it mode)))))))
+  (let ((view-buffer
+         (ycmd--with-view-buffer
+          (->>
+           (--group-by (cdr (assq 'filepath it)) result)
+           (mapc (lambda (it) (ycmd--view-insert-location it mode)))))))
+    (pop-to-buffer view-buffer)
+    (setq next-error-last-buffer view-buffer)))
 
 (define-button-type 'ycmd--location-button
   'action #'ycmd--view-jump
