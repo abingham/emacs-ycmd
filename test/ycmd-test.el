@@ -118,7 +118,9 @@ response."
     `(ert-deftest ,full-name ()
        (skip-unless ,(not (plist-get keys :disabled)))
        (ycmd-ert-with-resource-buffer ,filename ,mode
-         (let* ((current-position
+         (let* ((request-backend (or ,(plist-get keys :request-backend)
+                                     request-backend))
+                (current-position
                  (ycmd--col-line-to-position
                   ,(plist-get keys :column)
                   ,(plist-get keys :line)
