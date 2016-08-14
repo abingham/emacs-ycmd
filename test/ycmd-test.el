@@ -293,8 +293,12 @@ response."
   (when (cdr (assq 'fixits response))
     (ycmd--handle-refactor-rename-success response t)
     (every (lambda (f)
-             (let* ((buffer (find-file-noselect (car f)))
-                    (expected (f-read (cdr f))))
+             (let ((buffer
+                    (find-file-noselect
+                     (f-join ycmd-test-resources-location (car f))))
+                   (expected
+                    (f-read
+                     (f-join ycmd-test-resources-location (cdr f)))))
                (with-current-buffer buffer
                  (let ((actual (buffer-string)))
                    (set-buffer-modified-p nil)
@@ -302,34 +306,63 @@ response."
                    (string= actual expected)))))
            file-names-alist)))
 
-(defmacro ycmd-ert-deftest-refactor-rename (name mode &rest keys)
-  (declare (indent 2) (debug t))
-  (let* ((line (plist-get keys :line))
-         (column (plist-get keys :column)))
-    `(ycmd-ert-deftest ,name ,(plist-get keys :filename) ,mode
-       :line ,line :column ,column :disabled ,(plist-get keys :disabled)
-       (ycmd-with-deferred-request
-           ',(apply-partially #'ycmd--send-completer-command-request
-                              (list "RefactorRename"
-                                    (plist-get keys :new-var-name)))
-         (should
-          (ycmd-test-refactor-rename-handler
-           response
-           ,(plist-get keys :filenames-alist)))))))
+(ert-deftest ycmd-test-refactor-rename-simple ()
+  (let* ((file-path (f-join ycmd-test-resources-location "simple_test.js"))
+         (data `((fixits . [((chunks . [((range
+                                          (start (filepath . ,file-path) (column_num . 5) (line_num . 1))
+                                          (end (filepath . ,file-path) (column_num . 22) (line_num . 1)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path) (column_num . 25) (line_num . 13))
+                                          (end (filepath . ,file-path) (column_num . 42) (line_num . 13)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path) (column_num . 24) (line_num . 14))
+                                          (end (filepath . ,file-path) (column_num . 41) (line_num . 14)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path) (column_num . 24) (line_num . 15))
+                                          (end (filepath . ,file-path) (column_num . 41) (line_num . 15)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path) (column_num . 7) (line_num . 21))
+                                          (end (filepath . ,file-path) (column_num . 24) (line_num . 21)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path) (column_num . 28) (line_num . 21))
+                                          (end (filepath . ,file-path) (column_num . 45) (line_num . 21)))
+                                         (replacement_text . "test"))])
+                             (text . "")
+                             (location (filepath . ,file-path) (column_num . 34) (line_num . 15)))]))))
+    (should (ycmd-test-refactor-rename-handler
+             data '(("simple_test.js" . "simple_test-expected.js"))))))
 
-(ycmd-ert-deftest-refactor-rename refactor-rename-simple'js-mode
-  :line 15 :column 34 :new-var-name "test"
-  :filename "simple_test.js"
-  :filenames-alist
-  '(("simple_test.js" . "simple_test-expected.js")))
-
-(ycmd-ert-deftest-refactor-rename refactor-rename-multiple-files 'js-mode
-  :line 3 :column 15 :new-var-name "test"
-  :filename "file1.js"
-  :filenames-alist
-  '(("file1.js" . "file1-expected.js")
-    ("file2.js" . "file2-expected.js")
-    ("file3.js" . "file3-expected.js")))
+(ert-deftest ycmd-test-refactor-rename-multiple-files ()
+  (let* ((file-path-1 (f-join ycmd-test-resources-location "file1.js"))
+         (file-path-2 (f-join ycmd-test-resources-location "file2.js"))
+         (file-path-3 (f-join ycmd-test-resources-location "file3.js"))
+         (data `((fixits . [((chunks . [((range
+                                          (start (filepath . ,file-path-1) (column_num . 5) (line_num . 1))
+                                          (end (filepath . ,file-path-1) (column_num . 11) (line_num . 1)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path-1) (column_num . 14) (line_num . 3))
+                                          (end (filepath . ,file-path-1) (column_num . 20) (line_num . 3)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path-2) (column_num . 14) (line_num . 2))
+                                          (end (filepath . ,file-path-2) (column_num . 20) (line_num . 2)))
+                                         (replacement_text . "test"))
+                                        ((range
+                                          (start (filepath . ,file-path-3) (column_num . 12) (line_num . 3))
+                                          (end (filepath . ,file-path-3) (column_num . 18) (line_num . 3)))
+                                         (replacement_text . "test"))])
+                             (text . "")
+                             (location (filepath . ,file-path-1) (column_num . 5) (line_num . 1)))]))))
+    (should (ycmd-test-refactor-rename-handler
+             data '(("file1.js" . "file1-expected.js")
+                    ("file2.js" . "file2-expected.js")
+                    ("file3.js" . "file3-expected.js"))))))
 
 (ert-deftest ycmd-test-col-line-to-position ()
   (ycmd-ert-with-resource-buffer "test-goto.cpp" 'c++-mode
