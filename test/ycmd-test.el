@@ -289,6 +289,48 @@ response."
   :line 4 :column 12
   :expected-number-fixits 2)
 
+(defun ycmd-test-refactor-rename-handler (response file-names-alist)
+  (when (cdr (assq 'fixits response))
+    (ycmd--handle-refactor-rename-success response t)
+    (every (lambda (f)
+             (let* ((buffer (find-file-noselect (car f)))
+                    (expected (f-read (cdr f))))
+               (with-current-buffer buffer
+                 (let ((actual (buffer-string)))
+                   (set-buffer-modified-p nil)
+                   (set-visited-file-name nil 'no-query)
+                   (string= actual expected)))))
+           file-names-alist)))
+
+(defmacro ycmd-ert-deftest-refactor-rename (name mode &rest keys)
+  (declare (indent 2) (debug t))
+  (let* ((line (plist-get keys :line))
+         (column (plist-get keys :column)))
+    `(ycmd-ert-deftest ,name ,(plist-get keys :filename) ,mode
+       :line ,line :column ,column :disabled ,(plist-get keys :disabled)
+       (ycmd-with-deferred-request
+           ',(apply-partially #'ycmd--send-completer-command-request
+                              (list "RefactorRename"
+                                    (plist-get keys :new-var-name)))
+         (should
+          (ycmd-test-refactor-rename-handler
+           response
+           ,(plist-get keys :filenames-alist)))))))
+
+(ycmd-ert-deftest-refactor-rename refactor-rename-simple'js-mode
+  :line 15 :column 34 :new-var-name "test"
+  :filename "simple_test.js"
+  :filenames-alist
+  '(("simple_test.js" . "simple_test-expected.js")))
+
+(ycmd-ert-deftest-refactor-rename refactor-rename-multiple-files 'js-mode
+  :line 3 :column 15 :new-var-name "test"
+  :filename "file1.js"
+  :filenames-alist
+  '(("file1.js" . "file1-expected.js")
+    ("file2.js" . "file2-expected.js")
+    ("file3.js" . "file3-expected.js")))
+
 (ert-deftest ycmd-test-col-line-to-position ()
   (ycmd-ert-with-resource-buffer "test-goto.cpp" 'c++-mode
     (should (= (ycmd--col-line-to-position 10 2) 23))))

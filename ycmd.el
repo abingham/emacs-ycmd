@@ -1308,7 +1308,7 @@ buffer."
   (interactive)
   (ycmd--send-request "FixIt" 'ycmd--handle-fixit-success))
 
-(defun ycmd--handle-refactor-rename-success (response)
+(defun ycmd--handle-refactor-rename-success (response &optional no-confirm)
   "Handle a successful RenameRefactor RESPONSE."
   (-if-let* ((fixits (cdr (assq 'fixits response)))
              (fixits (append fixits nil)))
@@ -1317,9 +1317,10 @@ buffer."
           (let ((chunks-by-filepath
                  (--group-by (let-alist it .range.start.filepath)
                              (append chunks nil))))
-            (when (y-or-n-p (format "Apply %d renames in %d files? "
-                                    (length chunks)
-                                    (length chunks-by-filepath)))
+            (when (or no-confirm
+                      (y-or-n-p (format "Apply %d renames in %d files? "
+                                        (length chunks)
+                                        (length chunks-by-filepath))))
               (dolist (file-chunks chunks-by-filepath)
                 (ycmd--replace-chunk-list (cdr file-chunks)))))))
     (message "No candidates available to rename.")))
