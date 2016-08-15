@@ -116,7 +116,6 @@ response."
          (body (cadr keys-and-body))
          (keys (car keys-and-body)))
     `(ert-deftest ,full-name ()
-       (skip-unless ,(not (plist-get keys :disabled)))
        (ycmd-ert-with-resource-buffer ,filename ,mode
          (let* ((request-backend (or ,(plist-get keys :request-backend)
                                      request-backend))
@@ -150,8 +149,8 @@ response."
 
 (ycmd-ert-deftest completion-at-point-clang
     "test-completion-at-point.cpp" 'c++-mode
-  :disabled t
   :line 8 :column 8
+  (skip-unless (not (version-list-< (version-to-list emacs-version) '(24 4))))
   (let ((expected (f-read "test-completion-at-point-expected.cpp"))
         (completion-at-point-functions (list #'ycmd-complete-at-point)))
     (completion-at-point)
@@ -182,8 +181,8 @@ response."
         (should (= .line_num 5))))))
 
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
-  :disabled t ;; TODO Find out why this fails sometimes
   :line 7 :column 3
+  (skip-unless nil)
   (let ((response (ycmd-get-completions :sync)))
     (let-alist response
       (should (cl-some (lambda (c)
@@ -527,25 +526,6 @@ response."
     (should (equal (company-ycmd--extract-meta-python data)
                    "foo(self, a, b) -> bar"))))
 
-(defun flycheck-ycmd-test-mode ()
-  (flycheck-ycmd-setup)
-  (ycmd-test-mode))
-
-(ert-deftest flycheck-ycmd-test-error ()
-  (let ((flycheck-checkers '(ycmd)))
-    (flycheck-ert-should-syntax-check
-     "test-error.cpp" 'flycheck-ycmd-test-mode
-     '(3 15 error "expected ';' at end of declaration list (FixIt available)"
-         :checker ycmd))))
-
-(ert-deftest flycheck-ycmd-test-warning ()
-  (let ((flycheck-checkers '(ycmd)))
-    (flycheck-ert-should-syntax-check
-     "test-warning.cpp" 'flycheck-ycmd-test-mode
-     '(5 13 warning "unused variable 'a'" :checker ycmd))))
-
-(flycheck-ert-initialize ycmd-test-resources-location)
-
 (ycmd-ert-deftest eldoc-info-at-point-on-keyword "test-eldoc.cpp" 'c++-mode
   :line 8 :column 8
   (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
@@ -575,6 +555,25 @@ response."
   (let ((data '((foo))))
     (should (string= (ycmd--json-encode data)
                      "{\"foo\":{}}"))))
+
+(defun flycheck-ycmd-test-mode ()
+  (flycheck-ycmd-setup)
+  (ycmd-test-mode))
+
+(ert-deftest flycheck-ycmd-test-error ()
+  (let ((flycheck-checkers '(ycmd)))
+    (flycheck-ert-should-syntax-check
+     "test-error.cpp" 'flycheck-ycmd-test-mode
+     '(3 15 error "expected ';' at end of declaration list (FixIt available)"
+         :checker ycmd))))
+
+(ert-deftest flycheck-ycmd-test-warning ()
+  (let ((flycheck-checkers '(ycmd)))
+    (flycheck-ert-should-syntax-check
+     "test-warning.cpp" 'flycheck-ycmd-test-mode
+     '(5 13 warning "unused variable 'a'" :checker ycmd))))
+
+(flycheck-ert-initialize ycmd-test-resources-location)
 
 (provide 'ycmd-test)
 
