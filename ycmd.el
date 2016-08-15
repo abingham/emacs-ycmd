@@ -551,6 +551,7 @@ and `delete-process'.")
     (define-key map "v" 'ycmd-show-debug-info)
     (define-key map "d" 'ycmd-show-documentation)
     (define-key map "C" 'ycmd-clear-compilation-flag-cache)
+    (define-key map "O" 'ycmd-restart-semantic-server)
     (define-key map "t" 'ycmd-get-type)
     (define-key map "T" 'ycmd-get-parent)
     (define-key map "f" 'ycmd-fixit)
@@ -964,19 +965,19 @@ This function handles `UnknownExtraConf', `ValueError' and
       ((or "ValueError" "RuntimeError")
        (ycmd--handle-error-exception .message)))))
 
-(defun ycmd--send-request (type success-handler)
-  "Send a request of TYPE to the `ycmd' server.
+(defun ycmd--send-request (subcommand success-handler)
+  "Send SUBCOMMAND to the `ycmd' server.
 
 SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
     (if (ycmd-parsing-in-progress-p)
         (message "Can't send \"%s\" request while parsing is in progress!"
-                 type)
+                 subcommand)
       (let ((request-buffer (current-buffer))
             (request-point (point)))
         (deferred:$
           (ycmd--send-completer-command-request
-           type request-buffer request-point)
+           subcommand request-buffer request-point)
           (deferred:nextc it
             (lambda (result)
               (when result
@@ -986,15 +987,19 @@ SUCCESS-HANDLER is called when for a successful response."
                       (ycmd--handle-exception result)
                       (run-hook-with-args
                        'ycmd-after-exception-hook
-                       type request-buffer request-point result))
+                       subcommand request-buffer request-point result))
                   (when success-handler
                     (funcall success-handler result)))))))))))
 
-(defun ycmd--send-completer-command-request (type &optional buffer pos)
-  "Send Go To request of TYPE to BUFFER at POS."
+(defun ycmd--send-completer-command-request (subcommand &optional buffer pos)
+  "Send completer SUBCOMMAND for BUFFER at POS."
   (let* ((buffer (or buffer (current-buffer)))
          (pos (or pos (point)))
-         (content (cons (list "command_arguments" type)
+         (subcommand (if (listp subcommand)
+                         subcommand
+                       (list subcommand)))
+         (content (cons (append (list "command_arguments")
+                                subcommand)
                         (ycmd--standard-content buffer pos))))
     (ycmd--request
      "/run_completer_command"
@@ -1095,6 +1100,18 @@ Use BUFFER if non-nil or `current-buffer'."
   "Clear the compilation flags cache."
   (interactive)
   (ycmd--send-request "ClearCompilationFlagCache" nil))
+
+(defun ycmd-restart-semantic-server (&optional arg)
+  "Send request to restart the semantic completion backend server.
+If ARG is non-nil and current `major-mode' is `python-mode',
+prompt for the Python binary."
+  (interactive "P")
+  (let ((subcommand "RestartServer")
+        (args (and arg (eq major-mode 'python-mode)
+                   (read-string "Python binary: "))))
+    (when (not (s-blank? args))
+      (setq subcommand (list subcommand args)))
+    (ycmd--send-request subcommand nil)))
 
 (cl-defun ycmd--fontify-code (code &optional (mode major-mode))
   "Fontify CODE."
