@@ -33,7 +33,3 @@ matrix:
     # Allow the snapshot build to fail, because Emacs snapshot sometimes fails
     # to build
     - env: EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
-addons:
-  apt:
-    packages:
-      - golang
