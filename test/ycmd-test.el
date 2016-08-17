@@ -543,6 +543,7 @@ response."
 
 (ycmd-ert-deftest eldoc-force-semantic-info "test-eldoc.cpp" 'c++-mode
   :line 8 :column 5
+  (skip-unless (not (version-list-< (version-to-list emacs-version) '(24 4))))
   (let ((ycmd-eldoc-always-semantic-server-query-modes t)
         (ycmd-force-semantic-completion nil))
     (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
