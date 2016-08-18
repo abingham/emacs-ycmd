@@ -182,7 +182,7 @@ response."
 
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   :line 7 :column 3
-  (skip-unless nil)
+  ;; (skip-unless nil)
   (let ((response (ycmd-get-completions :sync)))
     (let-alist response
       (should (cl-some (lambda (c)
