@@ -1758,7 +1758,7 @@ See the docstring of the variable for an example"))
            time-since-server-start server-started)
       (set-process-query-on-exit-flag proc nil)
       (set-process-sentinel proc #'ycmd--server-process-sentinel)
-      (while (and (not server-started) (process-live-p proc))
+      (while (and (not server-started) (ycmd-running?))
         (accept-process-output proc 0 100 t)
         (let ((proc-output (with-current-buffer proc-buff
                              (buffer-string))))
