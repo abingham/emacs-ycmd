@@ -795,15 +795,16 @@ Send a `shutdown' request to the ycmd server and wait for the
 ycmd server to stop.  If the ycmd server is still running after a
 timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
-  (condition-case nil
-      (let ((start-time (float-time)))
-        (ycmd--request "/shutdown" nil :parser 'json-read :sync t)
-        (while (and (ycmd-running?)
-                    (> ycmd-delete-process-delay
-                       (- (float-time) start-time)))
-          (sit-for 0.05))
-        (delete-process ycmd--server-process-name))
-    (error nil)))
+  (let ((start-time (float-time)))
+    (ycmd--request
+     "/shutdown" nil
+     :parser 'json-read :sync t :timeout 0.1)
+    (while (and (ycmd-running?)
+                (> ycmd-delete-process-delay
+                   (- (float-time) start-time)))
+      (sit-for 0.05))
+    (ignore-errors
+      (delete-process ycmd--server-process-name))))
 
 (defun ycmd-running? ()
   "Return t if a ycmd server is already running."
@@ -1770,7 +1771,7 @@ the name of the newly created file."
          (port (process-contact p :service)))
     (when p (delete-process p))
     (unless port
-      (error "Could not retrive unused localhost port"))
+      (error "Could not retrieve unused localhost port"))
     port))
 
 (defun ycmd--exit-code-as-string (code)
@@ -1973,7 +1974,8 @@ This is useful for debugging.")
                          (parser 'buffer-string)
                          (type "POST")
                          (params nil)
-                         (sync nil))
+                         (sync nil)
+                         (timeout request-timeout))
   "Send an asynchronous HTTP request to the ycmd server.
 
 This starts the server if necessary.
@@ -2009,25 +2011,23 @@ anything like that.)
          (response-fn (lambda (response)
                         (let ((data (request-response-data response)))
                           (ycmd--log-content "HTTP RESPONSE CONTENT" data)
-                          data))))
+                          data)))
+         (request-args (list :type type :params params :data content
+                             :parser parser :headers headers
+                             :timeout timeout)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
     (if sync
-        (let (result)
+        (let* (result
+               (cb (cl-function
+                    (lambda (&key response &allow-other-keys)
+                      (setq result (funcall response-fn response))))))
           (with-local-quit
-            (request
-             url :headers headers :parser parser :data content :type type
-             :sync t :params params
-             :complete
-             (lambda (&rest args)
-               (setq result (funcall response-fn (plist-get args :response))))))
+            (apply #'request url :sync t :complete cb request-args))
           result)
       (deferred:$
-        (request-deferred
-         url :headers headers :parser parser :data content :type type
-         :params params)
-        (deferred:nextc it
-          response-fn)))))
+        (apply #'request-deferred url request-args)
+        (deferred:nextc it response-fn)))))
 
 (provide 'ycmd)
 
