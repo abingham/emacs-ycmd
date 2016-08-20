@@ -184,7 +184,7 @@ re-parsing the contents."
   :type '(number)
   :safe #'numberp)
 
-(defcustom ycmd-keepalive-period 30
+(defcustom ycmd-keepalive-period 600
   "Number of seconds between keepalive messages."
   :type '(number))
 
