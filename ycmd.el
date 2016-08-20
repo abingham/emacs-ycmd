@@ -810,11 +810,19 @@ process with `delete-process'."
   (--when-let (get-process ycmd--server-process-name)
     (and (processp it) (process-live-p it) t)))
 
+(defmacro ycmd--ignore-errors (&rest body)
+  "Execute BODY and ignore errors and request errors."
+  `(let ((request-message-level -1)
+         (request-log-level -1))
+     (ignore-errors
+       ,@body)))
+
 (defun ycmd--keepalive ()
   "Sends an unspecified message to the server.
 
 This is simply for keepalive functionality."
-  (ycmd--request "/healthy" nil :type "GET"))
+  (ycmd--ignore-errors
+   (ycmd--request "/healthy" nil :type "GET" :sync t)))
 
 (defun ycmd--server-ready? (&optional include-subserver)
   "Send request for server ready state.
@@ -824,15 +832,13 @@ semantic subserver."
   (let ((file-type
          (and include-subserver
               (car-safe (ycmd-major-mode-to-file-types
-                         major-mode))))
-        (request-message-level -1)
-        (request-log-level -1))
-    (ignore-errors
-      (ycmd--request
-       "/ready" nil
-       :params (and file-type
-                    (list (cons "subserver" file-type)))
-       :type "GET" :parser 'json-read :sync t))))
+                         major-mode)))))
+    (ycmd--ignore-errors
+     (ycmd--request
+      "/ready" nil
+      :params (and file-type
+                   (list (cons "subserver" file-type)))
+      :type "GET" :parser 'json-read :sync t))))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
