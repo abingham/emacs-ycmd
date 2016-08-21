@@ -973,10 +973,10 @@ and blocks until the request has finished."
   (when ycmd-mode
     (let* ((buffer (current-buffer))
            (pos (point))
-           (extra-content (and ycmd-force-semantic-completion
-                               'force-semantic))
-           (content (ycmd--standard-content-with-extras
-                     buffer pos extra-content)))
+           (content
+            (append (ycmd--standard-content buffer pos)
+                    (and ycmd-force-semantic-completion
+                         (list (cons "force_semantic" t))))))
       (ycmd--request
        "/completions"
        content
@@ -1646,13 +1646,15 @@ functions in `ycmd-file-parse-result-hook'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let* ((buff (current-buffer))
            (pos (point))
-           (extra-content (append (when ycmd-tag-files
-                                    (list 'tags))
-                                  (when ycmd-seed-identifiers-with-keywords
-                                    (list 'syntax-keywords))))
-           (content (cons '("event_name" . "FileReadyToParse")
-                          (ycmd--standard-content-with-extras
-                           buff pos extra-content))))
+           (content
+            (append '(("event_name" . "FileReadyToParse"))
+                    (ycmd--standard-content buff pos)
+                    (--when-let (and ycmd-tag-files
+                                     (ycmd--get-tag-files buff))
+                      (list (cons "tag_files" it)))
+                    (--when-let (and ycmd-seed-identifiers-with-keywords
+                                     (ycmd--get-keywords buff))
+                      (list (cons "syntax_keywords" it))))))
       (deferred:$
         ;; try
         (deferred:$
@@ -1895,24 +1897,6 @@ will be passed to the ycmd server."
         ("filepath" . ,full-path)
         ("line_num" . ,line-num)
         ("column_num" . ,column-num)))))
-
-(defun ycmd--standard-content-with-extras (buffer pos &optional extras)
-  "Generate 'standard' content for BUFFER at POS with EXTRAS."
-  (let ((standard-content (ycmd--standard-content buffer pos)))
-    (unless (listp extras)
-      (setq extras (list extras)))
-    (dolist (extra extras standard-content)
-      (--when-let (pcase extra
-                    (`force-semantic
-                     (cons "force_semantic" t))
-                    (`tags
-                     (--when-let (ycmd--get-tag-files buffer)
-                       (cons "tag_files" it)))
-                    (`syntax-keywords
-                     (--when-let (ycmd--get-keywords buffer)
-                       (cons "syntax_keywords" it))))
-        (push it standard-content)))))
-
 
 (defvar ycmd--log-enabled nil
   "If non-nil, http content will be logged.
