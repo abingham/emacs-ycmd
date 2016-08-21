@@ -316,7 +316,7 @@ with spaces."
                   'filepath filepath 'line_num line-num
                   'column_num column-num))))
 
-(defun company-ycmd--construct-candidate-js (candidate)
+(defun company-ycmd--construct-candidate-javascript (candidate)
   "Construct completion string from CANDIDATE for js file-types."
   (company-ycmd--with-destructured-candidate candidate
     (let* ((kind (or (and (string-match "^fn" .extra_menu_info)
@@ -406,7 +406,7 @@ candidates list."
     ("go" 'company-ycmd--construct-candidate-go)
     ("python" 'company-ycmd--construct-candidate-python)
     ("rust" 'company-ycmd--construct-candidate-rust)
-    ("javascript" 'company-ycmd--construct-candidate-js)
+    ("javascript" 'company-ycmd--construct-candidate-javascript)
     ("typescript" 'company-ycmd--construct-candidate-typescript)
     (_ 'company-ycmd--construct-candidate-generic)))
 

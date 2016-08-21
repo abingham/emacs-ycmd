@@ -511,7 +511,7 @@ response."
     (let* ((data '((insertion_text . "a_function")
                    (extra_menu_info . "fn(param: ?) -> string")
                    (detailed_info . "fn(param: ?) -> string\nReturns a string.")))
-           (candidate (company-ycmd--construct-candidate-js data)))
+           (candidate (company-ycmd--construct-candidate-javascript data)))
       (should (string= "a_function" (substring-no-properties candidate)))
       (should (ycmd-test-has-property-with-value 'kind "fn" candidate))
       (should (ycmd-test-has-property-with-value 'meta "fn(param: ?) -> string" candidate))
