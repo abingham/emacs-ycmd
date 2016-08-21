@@ -505,6 +505,20 @@ response."
         (should (ycmd-test-has-property-with-value
                  'column_num .extra_data.location.column_num candidate))))))
 
+(ert-deftest company-ycmd-test-construct-candidate-javascript ()
+  (ycmd-ert-with-temp-buffer 'js-mode
+    (let* ((data '((insertion_text . "a_function")
+                   (extra_menu_info . "fn(param: ?) -> string")
+                   (detailed_info . "fn(param: ?) -> string\nReturns a string.")))
+           (candidate (company-ycmd--construct-candidate-js data)))
+      (should (string= "a_function" (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'kind "fn" candidate))
+      (should (ycmd-test-has-property-with-value 'meta "fn(param: ?) -> string" candidate))
+      (should (ycmd-test-has-property-with-value 'return_type "string" candidate))
+      (should (ycmd-test-has-property-with-value 'params "(param: ?)" candidate))
+      (should (ycmd-test-has-property-with-value
+               'doc "fn(param: ?) -> string\nReturns a string." candidate)))))
+
 (ert-deftest company-ycmd-test-construct-candidate-generic ()
   (ycmd-ert-with-temp-buffer 'c++-mode
     (let* ((data '((insertion_text . "foo")
