@@ -555,6 +555,7 @@ and `delete-process'.")
     (define-key map "t" 'ycmd-get-type)
     (define-key map "T" 'ycmd-get-parent)
     (define-key map "f" 'ycmd-fixit)
+    (define-key map "r" 'ycmd-refactor-rename)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 
@@ -1153,9 +1154,8 @@ prompt for the Python binary."
 
 ;;; FixIts
 
-(defun ycmd--show-fixits (fixit buffer)
-  "Select a buffer and display FIXIT.
-BUFFER is the target buffer for the fixit."
+(defun ycmd--show-fixits (fixit)
+  "Select a buffer and display FIXIT."
   (let ((fixit-num 1)
         (title
          (and (> (length fixit) 1)
@@ -1171,7 +1171,7 @@ BUFFER is the target buffer for the fixit."
               (let-alist it
                 (ycmd--insert-fixit-button
                  (format "%d: %s\n" fixit-num .text)
-                 .chunks .location buffer))
+                 .chunks .location))
               (setq fixit-num (1+ fixit-num)))
             fixit)
       (goto-char (point-min))
@@ -1184,21 +1184,18 @@ BUFFER is the target buffer for the fixit."
   'action #'ycmd--apply-fixit
   'face nil)
 
-(defun ycmd--insert-fixit-button (name fixit location buffer)
-  "Insert a button with NAME and FIXIT for LOCATION.
-BUFFER is the buffer to apply the fixit on."
+(defun ycmd--insert-fixit-button (name fixit location)
+  "Insert a button with NAME and FIXIT for LOCATION."
   (insert-text-button
    name
    'type 'ycmd--fixit-button
    'fixit fixit
-   'location location
-   'buffer buffer))
+   'location location))
 
 (defun ycmd--apply-fixit (button)
   "Apply BUTTON's FixIt chunk."
-  (-when-let* ((chunk (button-get button 'fixit))
-               (buffer (button-get button 'buffer)))
-    (ycmd--replace-chunk-list (append chunk nil) buffer)
+  (-when-let* ((chunk (button-get button 'fixit)))
+    (ycmd--replace-chunk-list (append chunk nil))
     (quit-window t (get-buffer-window "*ycmd-fixits*"))))
 
 (define-derived-mode ycmd-fixit-mode ycmd-view-mode "ycmd-fixits"
@@ -1259,7 +1256,7 @@ working buffer."
         (and (= line-num-1 line-num-2)
              (< column-num-1 column-num-2)))))
 
-(defun ycmd--replace-chunk-list (chunks buffer)
+(defun ycmd--replace-chunk-list (chunks)
   "Replace list of CHUNKS.
 
 If BUFFER is spacified use it as working buffer, else use current
@@ -1269,17 +1266,20 @@ buffer."
         (line-delta 0)
         (char-delta 0))
     (dolist (c chunks-sorted)
-      (-when-let* ((chunk-start (ycmd--get-chunk-start-line-and-column c))
-                   (chunk-end (ycmd--get-chunk-end-line-and-column c))
-                   (replacement-text (cdr (assq 'replacement_text c))))
-        (unless (= (car chunk-start) last-line)
-          (setq last-line (car chunk-end))
-          (setq char-delta 0))
-        (let ((new-deltas (ycmd--replace-chunk
-                           chunk-start chunk-end replacement-text
-                           line-delta char-delta buffer)))
-          (setq line-delta (+ line-delta (car new-deltas)))
-          (setq char-delta (+ char-delta (cdr new-deltas))))))))
+      (let-alist c
+        (-when-let* ((chunk-start (ycmd--get-chunk-start-line-and-column c))
+                     (chunk-end (ycmd--get-chunk-end-line-and-column c))
+                     (replacement-text .replacement_text)
+                     (chunk-filepath .range.start.filepath)
+                     (buffer (find-file-noselect chunk-filepath)))
+          (unless (= (car chunk-start) last-line)
+            (setq last-line (car chunk-end))
+            (setq char-delta 0))
+          (let ((new-deltas (ycmd--replace-chunk
+                             chunk-start chunk-end replacement-text
+                             line-delta char-delta buffer)))
+            (setq line-delta (+ line-delta (car new-deltas)))
+            (setq char-delta (+ char-delta (cdr new-deltas)))))))))
 
 (defun ycmd--fixits-have-same-location-p (fixits)
   "Check if mutiple FIXITS have the same location."
@@ -1294,20 +1294,43 @@ buffer."
   "Handle a successful FixIt response for RESULT."
   (-if-let* ((fixits (cdr (assq 'fixits result)))
              (fixits (append fixits nil)))
-      (let ((buffer (current-buffer)))
-        (if (and (not ycmd-confirm-fixit)
-                 (not (ycmd--fixits-have-same-location-p fixits)))
-            (dolist (fixit fixits)
-              (--when-let (cdr (assq 'chunks fixit))
-                (ycmd--replace-chunk-list (append it nil) buffer)))
-          (save-current-buffer
-            (ycmd--show-fixits fixits buffer))))
+      (if (and (not ycmd-confirm-fixit)
+               (not (ycmd--fixits-have-same-location-p fixits)))
+          (dolist (fixit fixits)
+            (--when-let (cdr (assq 'chunks fixit))
+              (ycmd--replace-chunk-list (append it nil))))
+        (save-current-buffer
+          (ycmd--show-fixits fixits)))
     (message "No FixIts available")))
 
 (defun ycmd-fixit()
   "Get FixIts for current line."
   (interactive)
   (ycmd--send-request "FixIt" 'ycmd--handle-fixit-success))
+
+(defun ycmd--handle-refactor-rename-success (response &optional no-confirm)
+  "Handle a successful RenameRefactor RESPONSE."
+  (-if-let* ((fixits (cdr (assq 'fixits response)))
+             (fixits (append fixits nil)))
+      (dolist (fixit fixits)
+        (-when-let (chunks (cdr (assq 'chunks fixit)))
+          (let ((chunks-by-filepath
+                 (--group-by (let-alist it .range.start.filepath)
+                             (append chunks nil))))
+            (when (or no-confirm
+                      (y-or-n-p (format "Apply %d renames in %d files? "
+                                        (length chunks)
+                                        (length chunks-by-filepath))))
+              (dolist (file-chunks chunks-by-filepath)
+                (ycmd--replace-chunk-list (cdr file-chunks)))))))
+    (message "No candidates available to rename.")))
+
+(defun ycmd-refactor-rename (new-name)
+  "Refactor current context with NEW-NAME."
+  (interactive "MNew variable name: ")
+  (when (not (s-blank? new-name))
+    (ycmd--send-request (list "RefactorRename" new-name)
+                        'ycmd--handle-refactor-rename-success)))
 
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
