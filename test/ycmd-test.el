@@ -61,6 +61,7 @@
 (require 'macroexp)
 (require 'go-mode)
 (require 'rust-mode)
+(require 'typescript-mode)
 
 (eval-and-compile
   (defconst ycmd-test-location
@@ -518,6 +519,46 @@ response."
       (should (ycmd-test-has-property-with-value 'params "(param: ?)" candidate))
       (should (ycmd-test-has-property-with-value
                'doc "fn(param: ?) -> string\nReturns a string." candidate)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-typescript-simple ()
+  (ycmd-ert-with-temp-buffer 'typescript-mode
+    (let* ((data '((insertion_text . "Foo")
+                   (kind . "class")
+                   (extra_data . "class")
+                   (menu_text . "Foo")))
+           (candidate (company-ycmd--construct-candidate-typescript data)))
+      (should (string= "Foo" (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'kind "class" candidate))
+      (should (ycmd-test-has-property-with-value
+               'meta "(class) Foo" candidate))
+      (should (ycmd-test-has-property-with-value 'params nil candidate))
+      (should (ycmd-test-has-property-with-value 'return_type nil candidate)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-typescript-method ()
+  (ycmd-ert-with-temp-buffer 'typescript-mode
+    (let* ((data '((insertion_text . "testMethod")
+                   (kind . "method")
+                   (menu_text . "testMethod (method) Bar.testMethod(): void")))
+           (candidate (company-ycmd--construct-candidate-typescript data)))
+      (should (string= "testMethod" (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'kind "method" candidate))
+      (should (ycmd-test-has-property-with-value
+               'meta "(method) Bar.testMethod(): void" candidate))
+      (should (ycmd-test-has-property-with-value 'params "()" candidate))
+      (should (ycmd-test-has-property-with-value 'return_type "void" candidate)))))
+
+(ert-deftest company-ycmd-test-construct-candidate-typescript-method-2 ()
+  (ycmd-ert-with-temp-buffer 'typescript-mode
+    (let* ((data '((insertion_text . "foo")
+                   (kind . "method")
+                   (menu_text . "foo   (method) Function.foo(thisArg: any, argArray?: any): any")))
+           (candidate (company-ycmd--construct-candidate-typescript data)))
+      (should (string= "foo" (substring-no-properties candidate)))
+      (should (ycmd-test-has-property-with-value 'kind "method" candidate))
+      (should (ycmd-test-has-property-with-value
+               'meta "(method) Function.foo(thisArg: any, argArray?: any): any" candidate))
+      (should (ycmd-test-has-property-with-value 'params "(thisArg: any, argArray?: any)" candidate))
+      (should (ycmd-test-has-property-with-value 'return_type "any" candidate)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-generic ()
   (ycmd-ert-with-temp-buffer 'c++-mode

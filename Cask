@@ -18,4 +18,5 @@
  (depends-on "company")
  (depends-on "flycheck")
  (depends-on "go-mode")
- (depends-on "rust-mode"))
+ (depends-on "rust-mode")
+ (depends-on "typescript-mode"))

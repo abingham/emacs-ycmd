@@ -294,7 +294,8 @@ list
     (ruby-mode . ("ruby"))
     (rust-mode . ("rust"))
     (scala-mode . ("scala"))
-    (tuareg-mode . ("ocaml")))
+    (tuareg-mode . ("ocaml"))
+    (typescript-mode . ("typescript")))
   "Mapping from major modes to ycmd file-type strings.
 
 Used to determine a) which major modes we support and b) how to
@@ -547,6 +548,7 @@ and `delete-process'.")
     (define-key map "gm" 'ycmd-goto-implementation)
     (define-key map "gp" 'ycmd-goto-imprecise)
     (define-key map "gr" 'ycmd-goto-references)
+    (define-key map "gt" 'ycmd-goto-type)
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
     (define-key map "d" 'ycmd-show-documentation)
@@ -1043,6 +1045,11 @@ Useful in case compile-time is considerable."
   (interactive)
   (ycmd--goto "GoToReferences"))
 
+(defun ycmd-goto-type ()
+  "Go to the type of the symbol at the current position."
+  (interactive)
+  (ycmd--goto "GoToType"))
+
 (defun ycmd--save-marker ()
   "Save marker."
   (push-mark)
@@ -1427,7 +1434,8 @@ cdr is a list of location objects."
        (when line-num-format
          (insert (format line-num-format .line_num)))
        (insert "    ")
-       (let ((description (or .description
+       (let ((description (or (and (not (s-blank? .description))
+                                   (s-trim-left .description))
                               (ycmd--get-line-from-location it))))
          (ycmd--view-insert-button
           (ycmd--fontify-code (or description "") mode) it))

@@ -94,7 +94,14 @@ When 0, do not use synchronous completion request at all."
   :type 'number)
 
 (defconst company-ycmd--extended-features-modes
-  '(c++-mode c-mode go-mode objc-mode rust-mode python-mode js-mode)
+  '(c++-mode
+    c-mode
+    go-mode
+    objc-mode
+    rust-mode
+    python-mode
+    js-mode
+    typescript-mode)
   "Major modes which have extended features in `company-ycmd'.")
 
 (defun company-ycmd--extended-features-p ()
@@ -326,6 +333,35 @@ with spaces."
       (propertize .insertion_text 'meta meta 'params params
                   'return_type return-type 'kind kind 'doc doc))))
 
+(defun company-ycmd--construct-candidate-typescript (candidate)
+  "Generic function to construct completion string from a CANDIDATE."
+  (company-ycmd--with-destructured-candidate candidate
+    (let* ((kind .kind)
+           (meta (and .menu_text
+                      (if .extra_data
+                          (concat "(" .extra_data ") " .menu_text)
+                        (if (string-match (concat (regexp-quote .insertion_text)
+                                                  "\s*\\(.*\\)")
+                                          .menu_text)
+                            (match-string 1 .menu_text)
+                          .menu_text))))
+           (base-regexp (concat "^" (regexp-quote .insertion_text)
+                                "\s*(" (regexp-quote .kind) ") "
+                                ".*\." (regexp-quote .insertion_text)))
+           (params (and .menu_text
+                        (string-match (concat base-regexp "\\((.*)\\):.*")
+                                      .menu_text)
+                        (match-string 1 .menu_text)))
+           (return-type (and .menu_text
+                             (string-match
+                              (concat base-regexp
+                                      (and params (regexp-quote params))
+                                      ": \\(.*\\)")
+                              .menu_text)
+                             (match-string 1 .menu_text))))
+      (propertize .insertion_text 'kind kind 'meta meta
+                  'params params 'return_type return-type))))
+
 (defun company-ycmd--construct-candidate-generic (candidate)
   "Generic function to construct completion string from a CANDIDATE."
   (company-ycmd--with-destructured-candidate candidate .insertion_text))
@@ -371,6 +407,7 @@ candidates list."
     ("python" 'company-ycmd--construct-candidate-python)
     ("rust" 'company-ycmd--construct-candidate-rust)
     ("javascript" 'company-ycmd--construct-candidate-js)
+    ("typescript" 'company-ycmd--construct-candidate-typescript)
     (_ 'company-ycmd--construct-candidate-generic)))
 
 (defun company-ycmd--get-candidates (completions prefix &optional cb)
