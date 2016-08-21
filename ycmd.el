@@ -169,6 +169,10 @@ Example value:
   "Extra arguments to pass to the ycmd server."
   :type '(repeat string))
 
+(defcustom ycmd-server-port nil
+  "The ycmd server port.  If nil, use random port."
+  :type '(number))
+
 (defcustom ycmd-file-parse-result-hook nil
   "Functions to run with file-parse results.
 
@@ -493,13 +497,14 @@ Keywords source: https://github.com/auto-complete/auto-complete/tree/master/dict
 
 (defvar ycmd--server-actual-port 0
   "The actual port being used by the ycmd server.
-This is set based on the output from the server itself.")
+This is set based on the value of `ycmd-server-port' or the
+return value of `ycmd--get-unused-port'.")
 
 (defvar ycmd--hmac-secret nil
   "This is populated with the hmac secret of the current connection.
 Users should never need to modify this, hence the defconst.  It is
-not, however, treated as a constant by this code.  This value
-gets set in ycmd-open.")
+not, however, treated as a constant by this code.  This value gets
+set in ycmd-open.")
 
 (defconst ycmd--server-process-name "ycmd-server"
   "The Emacs name of the server process.
@@ -768,15 +773,12 @@ diagnostics) for MODE."
   "Start a new ycmd server.
 
 This kills any ycmd server already running (under ycmd.el's
-control.) The newly started server will have a new HMAC secret."
+control.)."
   (interactive)
-
   (ycmd-close)
-
-  (let ((hmac-secret (ycmd--generate-hmac-secret)))
-    (when (ycmd--start-server hmac-secret)
-      (setq ycmd--hmac-secret hmac-secret)
-      (ycmd--start-keepalive-timer))))
+  (ycmd--start-server)
+  (when (ycmd--wait-until-server-ready)
+    (ycmd--start-keepalive-timer)))
 
 (defun ycmd-close ()
   "Shutdown any running ycmd server.
@@ -795,26 +797,51 @@ Send a `shutdown' request to the ycmd server and wait for the
 ycmd server to stop.  If the ycmd server is still running after a
 timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
-  (condition-case nil
-      (let ((start-time (float-time)))
-        (ycmd--request "/shutdown" nil :parser 'json-read :sync t)
-        (while (and (ycmd-running?)
-                    (> ycmd-delete-process-delay
-                       (- (float-time) start-time)))
-          (sit-for 0.05))
-        (delete-process ycmd--server-process-name))
-    (error nil)))
+  (let ((start-time (float-time)))
+    (ycmd--request
+     "/shutdown" nil
+     :parser 'json-read :sync t :timeout 0.1)
+    (while (and (ycmd-running?)
+                (> ycmd-delete-process-delay
+                   (- (float-time) start-time)))
+      (sit-for 0.05))
+    (ignore-errors
+      (delete-process ycmd--server-process-name))))
 
 (defun ycmd-running? ()
   "Return t if a ycmd server is already running."
   (--when-let (get-process ycmd--server-process-name)
     (and (processp it) (process-live-p it) t)))
 
+(defmacro ycmd--ignore-errors (&rest body)
+  "Execute BODY and ignore errors and request errors."
+  `(let ((request-message-level -1)
+         (request-log-level -1))
+     (ignore-errors
+       ,@body)))
+
 (defun ycmd--keepalive ()
   "Sends an unspecified message to the server.
 
 This is simply for keepalive functionality."
-  (ycmd--request "/healthy" '() :type "GET"))
+  (ycmd--ignore-errors
+   (ycmd--request "/healthy" nil :type "GET" :sync t)))
+
+(defun ycmd--server-ready? (&optional include-subserver)
+  "Send request for server ready state.
+
+If INCLUDE-SUBSERVER is non-nil, also request ready state for
+semantic subserver."
+  (let ((file-type
+         (and include-subserver
+              (car-safe (ycmd-major-mode-to-file-types
+                         major-mode)))))
+    (ycmd--ignore-errors
+     (ycmd--request
+      "/ready" nil
+      :params (and file-type
+                   (list (cons "subserver" file-type)))
+      :type "GET" :parser 'json-read :sync t))))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
@@ -1742,6 +1769,19 @@ the name of the newly created file."
       (insert (ycmd--json-encode options)))
     options-file))
 
+(defun ycmd--get-unused-port ()
+  "Return unused localhost port."
+  (let* ((p (make-network-process
+             :name "get-unused-port"
+             :server t
+             :service t
+             :host "127.0.0.1"))
+         (port (process-contact p :service)))
+    (when p (delete-process p))
+    (unless port
+      (error "Could not retrieve unused localhost port"))
+    port))
+
 (defun ycmd--exit-code-as-string (code)
   "Return exit status message for CODE."
   (pcase code
@@ -1770,8 +1810,8 @@ the name of the newly created file."
       (ycmd--with-all-ycmd-buffers
         (ycmd--report-status status)))))
 
-(defun ycmd--start-server (hmac-secret)
-  "Start a new server using HMAC-SECRET."
+(defun ycmd--start-server ()
+  "Start a new server and return the process."
   (unless ycmd-server-command
     (user-error "Error: The variable `ycmd-server-command' is not set.  \
 See the docstring of the variable for an example"))
@@ -1779,35 +1819,46 @@ See the docstring of the variable for an example"))
     (with-current-buffer proc-buff
       (buffer-disable-undo)
       (erase-buffer))
-    (let* ((options-file (ycmd--create-options-file hmac-secret))
-           (args (apply 'list (concat "--options_file=" options-file)
+    (let* ((port (or (and (numberp ycmd-server-port)
+                          (> ycmd-server-port 0))
+                     (ycmd--get-unused-port)))
+           (hmac-secret (ycmd--generate-hmac-secret))
+           (options-file (ycmd--create-options-file hmac-secret))
+           (args (apply 'list (format "--port=%d" port)
+                        (concat "--options_file=" options-file)
                         ycmd-server-args))
            (server-program+args (append ycmd-server-command args))
            (proc (apply #'start-process ycmd--server-process-name proc-buff
-                        server-program+args))
-           (server-start-time (float-time))
-           time-since-server-start server-started)
+                        server-program+args)))
       (set-process-query-on-exit-flag proc nil)
       (set-process-sentinel proc #'ycmd--server-process-sentinel)
-      (while (and (not server-started) (ycmd-running?))
-        (accept-process-output proc 0 100 t)
-        (let ((proc-output (with-current-buffer proc-buff
-                             (buffer-string))))
-          (cond
-           ((string-match "^serving on http://.*:\\\([0-9]+\\\)$" proc-output)
-            (setq ycmd--server-actual-port
-                  (string-to-number (match-string 1 proc-output)))
-            (ycmd--with-all-ycmd-buffers (ycmd--report-status 'unparsed))
+      (setq ycmd--server-actual-port port)
+      (setq ycmd--hmac-secret hmac-secret)
+      proc)))
+
+(defun ycmd--wait-until-server-ready ()
+  "Wait until server is ready.
+
+Return t when server is ready.  Signal error in case of timeout.
+The timeout can be set with the variable
+`ycmd-startup-timeout'."
+  (let ((server-start-time (float-time))
+         server-started)
+    (while (and (not server-started) (ycmd-running?))
+      (sit-for 0.1)
+      (if (ycmd--server-ready? :include-subserver)
+          (progn
+            (ycmd--with-all-ycmd-buffers
+              (ycmd--report-status 'unparsed))
             (setq server-started t))
-           (t
-            ;; timeout after specified period
-            (setq time-since-server-start (- (float-time) server-start-time))
-            (when (> time-since-server-start ycmd-startup-timeout)
-              (ycmd-close)
-              (ycmd--with-all-ycmd-buffers
-                (ycmd--report-status 'errored))
-              (error "ERROR: Ycmd server timeout"))))))
-      server-started)))
+        ;; timeout after specified period
+        (when (< ycmd-startup-timeout
+                 (- (float-time) server-start-time))
+          (ycmd-close)
+          (ycmd--with-all-ycmd-buffers
+            (ycmd--report-status 'errored))
+          (error "ERROR: Ycmd server timeout"))))
+    server-started))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
@@ -1930,7 +1981,9 @@ This is useful for debugging.")
                          &key
                          (parser 'buffer-string)
                          (type "POST")
-                         (sync nil))
+                         (params nil)
+                         (sync nil)
+                         (timeout request-timeout))
   "Send an asynchronous HTTP request to the ycmd server.
 
 This starts the server if necessary.
@@ -1966,24 +2019,23 @@ anything like that.)
          (response-fn (lambda (response)
                         (let ((data (request-response-data response)))
                           (ycmd--log-content "HTTP RESPONSE CONTENT" data)
-                          data))))
+                          data)))
+         (request-args (list :type type :params params :data content
+                             :parser parser :headers headers
+                             :timeout timeout)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
     (if sync
-        (let (result)
+        (let* (result
+               (cb (cl-function
+                    (lambda (&key response &allow-other-keys)
+                      (setq result (funcall response-fn response))))))
           (with-local-quit
-            (request
-             url :headers headers :parser parser :data content :type type
-             :sync t
-             :complete
-             (lambda (&rest args)
-               (setq result (funcall response-fn (plist-get args :response))))))
+            (apply #'request url :sync t :complete cb request-args))
           result)
       (deferred:$
-        (request-deferred
-         url :headers headers :parser parser :data content :type type)
-        (deferred:nextc it
-          response-fn)))))
+        (apply #'request-deferred url request-args)
+        (deferred:nextc it response-fn)))))
 
 (provide 'ycmd)
 
