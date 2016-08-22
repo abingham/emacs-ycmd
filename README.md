@@ -207,7 +207,11 @@ emacs-ycmd reports found errors through emacs buttons; to integrate those with
 
 ## Making `emacs-ycmd` quieter
 
-In some common configurations `emacs-ycmd` can produce lots of messages, and some people find these noisy and distracting. If you're seeing a lot of messages like `Contacting host: 127.0.0.1:NNNNN` and you'd like to quiet them, set `url-show-status` to `nil`. This can effect non-ycmd-related buffers, so consider using buffer-local settings if this worries you.
+In some common configurations `emacs-ycmd` can produce lots of messages, and
+some people find these noisy and distracting. If you're seeing a lot of messages
+like `Contacting host: 127.0.0.1:NNNNN` and you'd like to quiet them, set
+`url-show-status` to `nil`. This can effect non-ycmd-related buffers, so
+consider using buffer-local settings if this worries you.
 
 You might also see a flurry of messages like this:
 
@@ -216,9 +220,11 @@ REQUEST [error] Error (error) while connecting to http://127.0.0.1:38987/complet
 REQUEST [error] Error (error) while connecting to http://127.0.0.1:38987/event_notification. [26 times]
 ```
 
-These almost never indicate something you need to be concerned about. To quiet them, you can set `request-message-level` to `-1`.
+These almost never indicate something you need to be concerned about. To quiet
+them, you can set `request-message-level` to `-1`.
 
-See [issue #173](https://github.com/abingham/emacs-ycmd/issues/174) for the initial discussion of this topic.
+See [issue #173](https://github.com/abingham/emacs-ycmd/issues/174) for the
+initial discussion of this topic.
 
 ## Running tests
 
