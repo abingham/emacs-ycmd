@@ -30,6 +30,8 @@
 (defvar ycmd-runner-file
   (if load-in-progress load-file-name (buffer-file-name)))
 
+(defvar request-backend)
+
 (defun ycmd-run-tests-main ()
   "Main entry point of the test runner."
   (let* ((load-prefer-newer t)
@@ -55,7 +57,12 @@
     (let* ((debug-on-error t)
            (ycmd-path (expand-file-name (pop argv) source-directory))
            (ycmd-server-command (list python-path ycmd-path))
-           (ert-selector (pop argv)))
+           (ert-selector (pop argv))
+           (ycmd-request-backend (intern (pop argv)))
+           (request-backend (if (memq ycmd-request-backend '(curl url-retrieve))
+                                ycmd-request-backend
+                              request-backend)))
+      (message "request backend: %s" request-backend)
       (unless (f-exists? ycmd-path)
         (error "Ycmd path does not exist"))
       (ert-run-tests-batch-and-exit (and "ycmd-" ert-selector)))))

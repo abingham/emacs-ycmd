@@ -118,13 +118,11 @@ response."
          (keys (car keys-and-body)))
     `(ert-deftest ,full-name ()
        (ycmd-ert-with-resource-buffer ,filename ,mode
-         (let* ((request-backend (or ,(plist-get keys :request-backend)
-                                     request-backend))
-                (current-position
-                 (ycmd--col-line-to-position
-                  ,(plist-get keys :column)
-                  ,(plist-get keys :line)
-                  (current-buffer))))
+         (let ((current-position
+                (ycmd--col-line-to-position
+                 ,(plist-get keys :column)
+                 ,(plist-get keys :line)
+                 (current-buffer))))
            (goto-char current-position)
            ,@body)))))
 

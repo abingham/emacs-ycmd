@@ -25,7 +25,8 @@ install:
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
-  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" test; fi
+  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" REQUEST_BACKEND=url-retrieve test; fi
+  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" REQUEST_BACKEND=curl test; fi
 matrix:
   # Finish the build even if any build with allowed failures are still running
   fast_finish: true
