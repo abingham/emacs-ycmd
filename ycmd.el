@@ -1098,7 +1098,10 @@ Useful in case compile-time is considerable."
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request TYPE."
-  (ycmd--send-request type 'ycmd--handle-goto-success))
+  (save-excursion
+    (--when-let (bounds-of-thing-at-point 'symbol)
+      (goto-char (car it)))
+    (ycmd--send-request type 'ycmd--handle-goto-success)))
 
 (defun ycmd--goto-location (location find-function)
   "Move cursor to LOCATION with FIND-FUNCTION.
