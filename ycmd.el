@@ -1550,7 +1550,9 @@ reasonable visual feedback on the problems found by ycmd."
             (with-silent-modifications
               (ycmd--make-button
                start-pos end-pos
-               btype (concat .kind ": " .text)))))))))
+               btype (concat .kind ": " .text
+                             (when (eq .fixit_available t)
+                               " (FixIt available)"))))))))))
 
 (defun ycmd-decorate-with-parse-results (results)
   "Decorates a buffer using the RESULTS of a file-ready parse list.
