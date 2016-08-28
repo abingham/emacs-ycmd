@@ -490,10 +490,17 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
      "unicode" "unicodedata" "unittest" "urllib" "uu" "uuid" "vars" "venv"
      "warnings" "wave" "weakref" "webbrowser" "while" "winsound" "winreg" "with"
      "wsgiref" "xdrlib" "xml" "xmlrpc" "xrange" "yield" "zip" "zipfile" "zipimport"
-     "zlib"))
+     "zlib")
+    (rust-mode
+     "Self"
+     "as" "box" "break" "const" "continue" "crate" "else" "enum" "extern"
+     "false" "fn" "for" "if" "impl" "in" "let" "loop" "macro" "match" "mod"
+     "move" "mut" "pub" "ref" "return" "self" "static" "struct" "super"
+     "trait" "true" "type" "unsafe" "use" "where" "while"))
   "Alist mapping major-modes to keywords for.
 
-Keywords source: https://github.com/auto-complete/auto-complete/tree/master/dict")
+Keywords source: https://github.com/auto-complete/auto-complete/tree/master/dict
+and `company-keywords'.")
 
 (defvar ycmd--server-actual-port 0
   "The actual port being used by the ycmd server.
