@@ -6,7 +6,7 @@
 ;;          Peter Vasil <mail@petervasil.net>
 ;; Version: 0.9.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24.3") (dash "2.12.1") (s "1.10.0") (deferred "0.3.2") (popup "0.5.0") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0"))
+;; Package-Requires: ((emacs "24.3") (dash "2.12.1") (s "1.10.0") (deferred "0.3.2") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -111,7 +111,6 @@
 (require 'deferred)
 (require 'hmac-def)
 (require 'json)
-(require 'popup)
 (require 'request)
 (require 'request-deferred)
 (require 'etags)
@@ -1508,14 +1507,14 @@ navigation."
   'face '(warning bold underline)
   'button 't)
 
-(defun ycmd--make-button (start end type message)
+(defun ycmd--make-button (start end type msg)
   "Make a button from START to END of TYPE in the current buffer.
 
-When clicked, this will popup MESSAGE."
+When clicked, MSG will be shown in the minibuffer."
   (make-text-button
    start end
    'type type
-   'action (lambda (_) (popup-tip message))))
+   'action (lambda (_) (message msg))))
 
 (defconst ycmd--file-ready-buttons
   '(("ERROR" . ycmd--error-button)
