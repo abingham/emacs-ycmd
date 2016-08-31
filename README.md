@@ -39,6 +39,7 @@ Use the variable `ycmd-server-command` to specify how to run the server. It will
 ```emacs
 (set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
 ```
+If you install YouCompleteMe by following the official manual, the `ycmd-server-command` will be "/home/username/.vim/bundle/YouCompleteMe/third_party/ycmd/ycmd"
 
 If you've got a *global ycmd configuration*, specify that in your
 emacs configuration by setting `ycmd-global-config`:
