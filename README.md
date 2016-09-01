@@ -40,6 +40,10 @@ Use the variable `ycmd-server-command` to specify how to run the server. It will
 (set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
 ```
 
+NB: We do not do filename expansion on the elements of `ycmd-server-command`. As
+a result, paths using "~" to represent the home directory will not work
+properly; you need to expand them yourself.
+
 If you've got a *global ycmd configuration*, specify that in your
 emacs configuration by setting `ycmd-global-config`:
 
