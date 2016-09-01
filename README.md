@@ -40,6 +40,8 @@ Use the variable `ycmd-server-command` to specify how to run the server. It will
 (set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
 ```
 
+If you've already installed YCM for Vim, the path normally would be: `/home/user/.vim/bundle/YouCompleteMe/third_party/ycmd/ycmd`, or if you install the standard alone ycmd, the path will like `/usr/local/ycmd/ycmd` (assume you install ycmd at `/usr/local`)
+
 If you've got a *global ycmd configuration*, specify that in your
 emacs configuration by setting `ycmd-global-config`:
 
