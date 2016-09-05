@@ -126,15 +126,14 @@ response."
            (goto-char current-position)
            ,@body)))))
 
-(defmacro ycmd-with-deferred-request (request-func body)
-  "Run a request with REQUEST-FUNC and eval BODY with response."
+(defmacro ycmd-test-with-completer-command (subcommand body)
+  "Run a request with SUBCOMMAND and eval BODY with response."
   (declare (indent 1))
   `(deferred:sync!
-     (deferred:$
-       (funcall ,request-func)
-       (deferred:nextc it
-         (lambda (response)
-           ,(macroexpand-all body))))))
+     (ycmd--send-request
+      ,subcommand
+      (lambda (response)
+        ,(macroexpand-all body)))))
 
 (ycmd-ert-deftest get-completions-cpp "test.cpp" 'c++-mode
   :line 8 :column 7
@@ -159,9 +158,7 @@ response."
 
 (ycmd-ert-deftest goto-declaration "test-goto.cpp" 'c++-mode
   :line 9 :column 7
-  (ycmd-with-deferred-request
-      (apply-partially #'ycmd--send-completer-command-request
-                       "GoToDeclaration")
+  (ycmd-test-with-completer-command "GoToDeclaration"
     (let-alist response
       (if .exception
           (should nil)
@@ -170,9 +167,7 @@ response."
 
 (ycmd-ert-deftest goto-definition "test-goto.cpp" 'c++-mode
   :line 9 :column 7
-  (ycmd-with-deferred-request
-      (apply-partially #'ycmd--send-completer-command-request
-                       "GoToDefinition")
+  (ycmd-test-with-completer-command "GoToDefinition"
     (let-alist response
       (if .exception
           (should nil)
@@ -244,9 +239,7 @@ response."
          (column (plist-get keys :column)))
     `(ycmd-ert-deftest ,name ,(plist-get keys :filename) ,mode
        :line ,line :column ,column :disabled ,(plist-get keys :disabled)
-       (ycmd-with-deferred-request
-           ',(apply-partially
-              #'ycmd--send-completer-command-request "FixIt")
+       (ycmd-test-with-completer-command "FixIt"
          (should
           (ycmd-test-fixit-handler
            response

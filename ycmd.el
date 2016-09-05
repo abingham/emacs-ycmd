@@ -1009,11 +1009,17 @@ SUCCESS-HANDLER is called when for a successful response."
     (if (ycmd-parsing-in-progress-p)
         (message "Can't send \"%s\" request while parsing is in progress!"
                  subcommand)
-      (let ((request-buffer (current-buffer))
-            (request-point (point)))
+      (let* ((buffer (current-buffer))
+             (pos (point))
+             (subcommand (if (listp subcommand)
+                             subcommand
+                           (list subcommand)))
+             (content (cons (append (list "command_arguments")
+                                    subcommand)
+                            (ycmd--standard-content buffer pos))))
         (deferred:$
-          (ycmd--send-completer-command-request
-           subcommand request-buffer request-point)
+          (ycmd--request "/run_completer_command"
+                         content :parser 'json-read)
           (deferred:nextc it
             (lambda (result)
               (when result
@@ -1021,26 +1027,10 @@ SUCCESS-HANDLER is called when for a successful response."
                          (assq 'exception result))
                     (progn
                       (ycmd--handle-exception result)
-                      (run-hook-with-args
-                       'ycmd-after-exception-hook
-                       subcommand request-buffer request-point result))
+                      (run-hook-with-args 'ycmd-after-exception-hook
+                                          subcommand buffer pos result))
                   (when success-handler
                     (funcall success-handler result)))))))))))
-
-(defun ycmd--send-completer-command-request (subcommand &optional buffer pos)
-  "Send completer SUBCOMMAND for BUFFER at POS."
-  (let* ((buffer (or buffer (current-buffer)))
-         (pos (or pos (point)))
-         (subcommand (if (listp subcommand)
-                         subcommand
-                       (list subcommand)))
-         (content (cons (append (list "command_arguments")
-                                subcommand)
-                        (ycmd--standard-content buffer pos))))
-    (ycmd--request
-     "/run_completer_command"
-     content
-     :parser 'json-read)))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
