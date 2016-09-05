@@ -983,23 +983,24 @@ and blocks until the request has finished."
             (append (ycmd--standard-content buffer pos)
                     (and ycmd-force-semantic-completion
                          (list (cons "force_semantic" t))))))
-      (ycmd--request
-       "/completions"
-       content
-       :parser 'json-read
-       :sync sync))))
+      (ycmd--request "/completions" content
+                     :parser 'json-read :sync sync))))
 
-(defun ycmd--handle-exception (result)
-  "Handle exception in completion RESULT.
+(defun ycmd--handle-exception (response)
+  "Handle exception in completion RESPONSE.
 
 This function handles `UnknownExtraConf', `ValueError' and
 `RuntimeError' exceptions."
-  (let-alist result
+  (let-alist response
     (pcase .exception.TYPE
       ("UnknownExtraConf"
        (ycmd--handle-extra-conf-exception .exception.extra_conf_file))
       ((or "ValueError" "RuntimeError")
        (ycmd--handle-error-exception .message)))))
+
+(defun ycmd--exception? (response)
+  "Check whether RESPONSE is an exception."
+  (and (not (vectorp response)) (assq 'exception response)))
 
 (defun ycmd--send-request (subcommand success-handler)
   "Send SUBCOMMAND to the `ycmd' server.
@@ -1021,16 +1022,15 @@ SUCCESS-HANDLER is called when for a successful response."
           (ycmd--request "/run_completer_command"
                          content :parser 'json-read)
           (deferred:nextc it
-            (lambda (result)
-              (when result
-                (if (and (not (vectorp result))
-                         (assq 'exception result))
+            (lambda (response)
+              (when response
+                (if (ycmd--exception? response)
                     (progn
-                      (ycmd--handle-exception result)
+                      (ycmd--handle-exception response)
                       (run-hook-with-args 'ycmd-after-exception-hook
-                                          subcommand buffer pos result))
+                                          subcommand buffer pos response))
                   (when success-handler
-                    (funcall success-handler result)))))))))))
+                    (funcall success-handler response)))))))))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
@@ -1608,14 +1608,12 @@ Consider reporting this.")
     (message "%s" (concat (when is-error "ERROR: ")
                           (if msg msg "Unknown exception.")))))
 
-(defun ycmd--handle-notify-response (results)
-  "If RESULTS is a vector or nil, the response is an acual parse result.
-Otherwise the response is probably an exception."
-  (if (and (not (vectorp results))
-           (assq 'exception results))
-      (ycmd--handle-exception results)
+(defun ycmd--handle-notify-response (response)
+  "Handle RESPONSE from event notification."
+  (if (ycmd--exception? response)
+      (ycmd--handle-exception response)
     (ycmd--report-status 'parsed)
-    (run-hook-with-args 'ycmd-file-parse-result-hook results)))
+    (run-hook-with-args 'ycmd-file-parse-result-hook response)))
 
 (defun ycmd--notify-server (event-name &optional event-content-alist)
   "Send a simple event notification for EVENT-NAME to the
@@ -1847,7 +1845,7 @@ Return t when server is ready.  Signal error in case of timeout.
 The timeout can be set with the variable
 `ycmd-startup-timeout'."
   (let ((server-start-time (float-time))
-         server-started)
+        server-started)
     (while (and (not server-started) (ycmd-running?))
       (sit-for 0.1)
       (if (ycmd--server-ready? :include-subserver)
