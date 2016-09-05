@@ -1081,16 +1081,16 @@ Useful in case compile-time is considerable."
     (with-no-warnings
       (ring-insert find-tag-marker-ring (point-marker)))))
 
-(defun ycmd--handle-goto-success (result)
-  "Handle a successfull GoTo response for RESULT."
-  (let* ((is-vector (vectorp result))
-         (num-items (if is-vector (length result) 1)))
+(defun ycmd--handle-goto-success (response)
+  "Handle a successfull GoTo RESPONSE."
+  (let* ((is-vector (vectorp response))
+         (num-items (if is-vector (length response) 1)))
     (ycmd--save-marker)
     (when is-vector
-      (setq result (append result nil)))
+      (setq response (append response nil)))
     (if (eq 1 num-items)
-        (ycmd--goto-location result 'find-file)
-      (ycmd--view result major-mode))))
+        (ycmd--goto-location response 'find-file)
+      (ycmd--view response major-mode))))
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request TYPE."
@@ -1163,9 +1163,9 @@ prompt for the Python binary."
          (point-min) (point-max) nil))
       (buffer-string))))
 
-(defun ycmd--handle-get-parent-or-type-success (result)
-  "Handle a successful GetParent or GetType response for RESULT."
-  (--when-let (cdr (assq 'message result))
+(defun ycmd--handle-get-parent-or-type-success (response)
+  "Handle a successful GetParent or GetType RESPONSE."
+  (--when-let (cdr (assq 'message response))
     (message "%s" (pcase it
                     ((or `"Unknown semantic parent"
                          `"Unknown type"
@@ -1323,9 +1323,9 @@ buffer."
         (when (> (length (cdr f)) 1)
           (throw 'done t))))))
 
-(defun ycmd--handle-fixit-success (result)
-  "Handle a successful FixIt response for RESULT."
-  (-if-let* ((fixits (cdr (assq 'fixits result)))
+(defun ycmd--handle-fixit-success (response)
+  "Handle a successful FixIt RESPONSE."
+  (-if-let* ((fixits (cdr (assq 'fixits response)))
              (fixits (append fixits nil)))
       (if (and (not ycmd-confirm-fixit)
                (not (ycmd--fixits-have-same-location-p fixits)))
@@ -1375,9 +1375,9 @@ the documentation."
    (if arg "GetDocQuick" "GetDoc")
    'ycmd--handle-get-doc-success))
 
-(defun ycmd--handle-get-doc-success (result)
-  "Handle successful GetDoc response for RESULT."
-  (let ((documentation (cdr (assq 'detailed_info result))))
+(defun ycmd--handle-get-doc-success (response)
+  "Handle successful GetDoc RESPONSE."
+  (let ((documentation (cdr (assq 'detailed_info response))))
     (if (not (s-blank? documentation))
         (with-help-window (get-buffer-create " *ycmd-documentation*")
           (with-current-buffer standard-output
@@ -1395,13 +1395,13 @@ the documentation."
        (ycmd-view-mode)
        buf)))
 
-(defun ycmd--view (result mode)
-  "Select a `ycmd-view-mode' buffer and display RESULT.
+(defun ycmd--view (response mode)
+  "Select `ycmd-view-mode' buffer and display items from RESPONSE.
 MODE is a major mode for fontifaction."
   (let ((view-buffer
          (ycmd--with-view-buffer
           (->>
-           (--group-by (cdr (assq 'filepath it)) result)
+           (--group-by (cdr (assq 'filepath it)) response)
            (mapc (lambda (it) (ycmd--view-insert-location it mode)))))))
     (pop-to-buffer view-buffer)
     (setq next-error-last-buffer view-buffer)))
@@ -1640,7 +1640,7 @@ as additional content in the request."
 Only one active notification is allowed per buffer, and this
 function enforces that constraint.
 
-The results of the notification are passed to all of the
+The response of the notification are passed to all of the
 functions in `ycmd-file-parse-result-hook'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (let* ((buff (current-buffer))
@@ -1666,9 +1666,9 @@ functions in `ycmd-file-parse-result-hook'."
                          :parser 'json-read)
 
           (deferred:nextc it
-            (lambda (results)
+            (lambda (response)
               (with-current-buffer buff
-                (ycmd--handle-notify-response results)))))
+                (ycmd--handle-notify-response response)))))
 
         ;; catch
         (deferred:error it
