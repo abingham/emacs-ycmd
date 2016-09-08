@@ -230,7 +230,7 @@ overloaded functions."
                   'meta meta 'kind kind 'params params))))
 
 (defun company-ycmd--remove-self-from-function-args (args)
-  "Remove function argument `self' from ARGS list."
+  "Remove function argument `self' from ARGS string."
   (if (s-contains? "self" args)
       (when (string-match "(\\(.*\\))" args)
         (->> (s-split "," (match-string 1 args) t)
@@ -239,6 +239,13 @@ overloaded functions."
              (s-trim-left)
              (s-prepend (substring args 0 (match-beginning 1)))
              (s-append (substring args (match-end 1)))))
+    args))
+
+(defun company-ycmd--remove-template-args-from-function-args (args)
+  "Remove template arguments from ARGS string."
+  (message "%s" args)
+  (if (s-starts-with? "<" args)
+      (substring args (+ 1 (s-index-of ">" args)))
     args))
 
 (defun company-ycmd--extract-params-python (function-sig function-name)
@@ -519,6 +526,8 @@ If CB is non-nil, call it with candidates."
                    (get-text-property 0 'params candidate))
     (when (memq major-mode '(python-mode rust-mode))
       (setq it (company-ycmd--remove-self-from-function-args it)))
+    (when (eq major-mode 'rust-mode)
+      (setq it (company-ycmd--remove-template-args-from-function-args it)))
     (insert it)
     (if (string-match "\\`:[^:]" it)
         (company-template-objc-templatify it)
