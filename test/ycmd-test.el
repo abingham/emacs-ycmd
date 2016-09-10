@@ -81,6 +81,8 @@
     (deferred:sync!
       (ycmd-load-conf-file ycmd-test-extra-conf))
     (deferred:sync!
+      (ycmd--notify-server "BufferVisit"))
+    (deferred:sync!
       (ycmd-notify-file-ready-to-parse))))
 
 (defmacro ycmd-ert-with-temp-buffer (mode &rest body)
@@ -196,6 +198,24 @@ response."
       (let ((c (nth 0 (append .completions nil))))
         (should (string= "Logger" (cdr (assq 'insertion_text c))))
         (should (= .completion_start_column 6))))))
+
+(ycmd-ert-deftest get-completions-javascript "simple_test.js" 'js-mode
+  :line 13 :column 43
+  (let ((response (ycmd-get-completions :sync)))
+    (let-alist response
+      (should (cl-some (lambda (c)
+                         (string-equal
+                          "a_simple_function" (cdr (assq 'insertion_text c))))
+                       .completions)))))
+
+(ycmd-ert-deftest get-completions-typescript "test.ts" 'typescript-mode
+  :line 16 :column 6
+  (let ((response (ycmd-get-completions :sync)))
+    (let-alist response
+      (should (cl-some (lambda (c)
+                         (string-equal
+                          "methodA" (cdr (assq 'insertion_text c))))
+                       .completions)))))
 
 (ert-deftest ycmd-test-fixit-same-location-false ()
   (let ((data '(((chunks . [((replacement_text . "foo"))])

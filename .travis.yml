@@ -18,7 +18,8 @@ before_install:
   # ycmd
   - git clone --depth=1 --recursive https://github.com/Valloric/ycmd
   - cd ycmd
-  - python build.py --clang-completer --gocode-completer
+  - python build.py --clang-completer --gocode-completer --tern-completer
+  - npm install -g typescript
   - cd ..
 
 install:
