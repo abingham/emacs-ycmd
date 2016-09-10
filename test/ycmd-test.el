@@ -602,6 +602,11 @@ response."
     (should (equal (company-ycmd--remove-self-from-function-args data)
                    "(a, b)"))))
 
+(ert-deftest company-ycmd-test-remove-template-args-from-function-args ()
+  (let ((data "<'a, T>(a, b)"))
+    (should (equal (company-ycmd--remove-template-args-from-function-args data)
+                   "(a, b)"))))
+
 (ert-deftest company-ycmd-test-extract-params-python-simple ()
   (let ((data "foo(self, a, b)"))
     (should (equal (company-ycmd--extract-params-python data "foo")
