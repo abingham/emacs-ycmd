@@ -524,9 +524,9 @@ If CB is non-nil, call it with candidates."
                    company-ycmd-insert-arguments
                    (get-text-property 0 'params candidate))
     (when (memq major-mode '(python-mode rust-mode))
-      (setq it (company-ycmd--remove-self-from-function-args it)))
-    (when (eq major-mode 'rust-mode)
-      (setq it (company-ycmd--remove-template-args-from-function-args it)))
+      (setq it (company-ycmd--remove-self-from-function-args it))
+      (when (eq major-mode 'rust-mode)
+        (setq it (company-ycmd--remove-template-args-from-function-args it))))
     (insert it)
     (if (string-match "\\`:[^:]" it)
         (company-template-objc-templatify it)
