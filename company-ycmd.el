@@ -243,7 +243,6 @@ overloaded functions."
 
 (defun company-ycmd--remove-template-args-from-function-args (args)
   "Remove template arguments from ARGS string."
-  (message "%s" args)
   (if (s-starts-with? "<" args)
       (substring args (+ 1 (s-index-of ">" args)))
     args))
