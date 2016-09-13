@@ -1788,15 +1788,16 @@ the name of the newly created file."
                 "PLEASE RECOMPILE by running the build.py "
                 "script. See the documentation for more details."))))
 
-(defun ycmd--server-process-sentinel (process _state)
-  "Ycmd server PROCESS sentinel."
+(defun ycmd--server-process-sentinel (process event)
+  "Handle Ycmd server PROCESS EVENT."
   (when (memq (process-status process) '(exit signal))
     (let* ((code (process-exit-status process))
            (status (if (eq code 0) 'unparsed 'errored)))
       (when (eq status 'errored)
-        (--if-let (ycmd--exit-code-as-string code)
-            (message "Ycmd error: %s" it)
-          (message "Ycmd server finished with exit code %d" code)))
+        (--if-let (and (eq (process-status process) 'exit)
+                       (ycmd--exit-code-as-string code))
+            (message "Ycmd server error: %s" it)
+          (message "Ycmd server %s" (s-replace "\n" "" event))))
       (ycmd--with-all-ycmd-buffers
         (ycmd--report-status status)))))
 
