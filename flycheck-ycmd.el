@@ -112,7 +112,8 @@ ycmd checker to the list of flycheck checkers."
 (flycheck-define-generic-checker 'ycmd
   "A flycheck checker using parse results from ycmd."
   :start #'flycheck-ycmd--start
-  :predicate #'flycheck-ycmd--in-supported-mode)
+  :predicate #'flycheck-ycmd--in-supported-mode
+  :modes '(c++-mode c-mode objc-mode csharp-mode))
 
 (defun flycheck-ycmd--teardown ()
   "Reset `flycheck-ycmd--cache'."
