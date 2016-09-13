@@ -618,6 +618,7 @@ explicitly re-define the prefix key:
   (let ((force-semantic
          (when ycmd-force-semantic-completion "/s"))
         (text (pcase ycmd--last-status-change
+                (`stopped "-")
                 (`unparsed "?")
                 (`parsing "*")
                 (`errored "!")
@@ -794,7 +795,8 @@ This does nothing if no server is running."
   (when (ycmd-running?)
     (ycmd--stop-server))
   (ycmd--global-teardown)
-  (ycmd--kill-timer ycmd--keepalive-timer))
+  (ycmd--kill-timer ycmd--keepalive-timer)
+  (ycmd--report-status 'stopped))
 
 (defun ycmd--stop-server ()
   "Stop the ycmd server process.
