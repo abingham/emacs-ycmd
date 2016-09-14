@@ -840,16 +840,17 @@ This is simply for keepalive functionality."
 
 If INCLUDE-SUBSERVER is non-nil, also request ready state for
 semantic subserver."
-  (let ((file-type
-         (and include-subserver
-              (car-safe (ycmd-major-mode-to-file-types
-                         major-mode)))))
-    (ycmd--ignore-errors
-     (ycmd--request
-      "/ready" nil
-      :params (and file-type
-                   (list (cons "subserver" file-type)))
-      :type "GET" :parser 'json-read :sync t))))
+  (when (ycmd-running?)
+    (let ((file-type
+           (and include-subserver
+                (car-safe (ycmd-major-mode-to-file-types
+                           major-mode)))))
+      (ycmd--ignore-errors
+       (ycmd--request
+        "/ready" nil
+        :params (and file-type
+                     (list (cons "subserver" file-type)))
+        :type "GET" :parser 'json-read :sync t)))))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
