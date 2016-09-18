@@ -299,6 +299,8 @@ with spaces."
                        (if (string= .insertion_text .extra_menu_info)
                            ""
                          (concat " " .extra_menu_info)))
+                      ("StructField"
+                       (concat " " .extra_menu_info))
                       (_
                        (->> .extra_menu_info
                             (funcall (lambda (needle s)
