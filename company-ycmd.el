@@ -290,6 +290,12 @@ with spaces."
       (propertize .insertion_text 'meta meta 'doc .detailed_info 'kind kind
                   'params params 'filepath filepath 'line_num line-num))))
 
+(defun company-ycmd--file-and-parent (path)
+  "Convert PATH /foo/bar/baz/q.txt to baz/q.txt."
+  (let ((file (f-filename path))
+        (parent (f-filename (f-parent path))))
+    (f-join parent file)))
+
 (defun company-ycmd--construct-candidate-rust (candidate)
   "Construct completion string from CANDIDATE for rust file-types."
   (company-ycmd--with-destructured-candidate candidate
@@ -298,7 +304,8 @@ with spaces."
                       ("Module"
                        (if (string= .insertion_text .extra_menu_info)
                            ""
-                         (concat " " .extra_menu_info)))
+                         (concat " " (company-ycmd--file-and-parent
+                                      .extra_menu_info))))
                       ("StructField"
                        (concat " " .extra_menu_info))
                       (_
