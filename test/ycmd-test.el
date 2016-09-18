@@ -492,7 +492,7 @@ response."
         (should (ycmd-test-has-property-with-value
                  'line_num .extra_data.location.line_num candidate))))))
 
-(ert-deftest company-ycmd-test-construct-candidate-rust ()
+(ert-deftest company-ycmd-test-construct-candidate-rust-function ()
   (ycmd-ert-with-temp-buffer 'rust-mode
     (let* ((data '((insertion_text . "foo")
                    (kind . "Function")
@@ -514,6 +514,51 @@ response."
                  'filepath .extra_data.location.filepath candidate))
         (should (ycmd-test-has-property-with-value
                  'line_num .extra_data.location.line_num candidate))
+        (should (ycmd-test-has-property-with-value
+                 'column_num .extra_data.location.column_num candidate))))))
+
+(ert-deftest company-ycmd-test-construct-candidate-rust-struct ()
+  (ycmd-ert-with-temp-buffer 'rust-mode
+    (let* ((data '((insertion_text . "foo")
+                   (kind . "StructField")
+                   (extra_data
+                    (location
+                     (line_num . 40)
+                     (column_num . 8)
+                     (filepath . "/foo/bar.rs")))
+                   (extra_menu_info . "&str")))
+           (candidate (company-ycmd--construct-candidate-rust data)))
+      (let-alist data
+        (should (string= .insertion_text (substring-no-properties candidate)))
+        (should (ycmd-test-has-property-with-value 'meta .extra_menu_info candidate))
+        (should (ycmd-test-has-property-with-value 'kind .kind candidate))
+        (should (ycmd-test-has-property-with-value
+                 'annotation (concat " &str [" .kind "]") candidate))
+        (should (ycmd-test-has-property-with-value
+                 'filepath .extra_data.location.filepath candidate))
+        (should (ycmd-test-has-property-with-value
+                 'line_num .extra_data.location.line_num candidate))
+        (should (ycmd-test-has-property-with-value
+                 'column_num .extra_data.location.column_num candidate))))))
+
+(ert-deftest company-ycmd-test-construct-candidate-rust-module ()
+  (ycmd-ert-with-temp-buffer 'rust-mode
+    (let* ((data '((insertion_text . "foo")
+                   (kind . "Module")
+                   (extra_data
+                    (location
+                     (line_num . 1)
+                     (filepath . "/foobar/bar/foo.rs")))
+                   (extra_menu_info . "/foobar/bar/foo.rs")))
+           (candidate (company-ycmd--construct-candidate-rust data)))
+      (let-alist data
+        (should (string= .insertion_text (substring-no-properties candidate)))
+        (should (ycmd-test-has-property-with-value 'meta .extra_menu_info candidate))
+        (should (ycmd-test-has-property-with-value 'kind .kind candidate))
+        (should (ycmd-test-has-property-with-value
+                 'annotation (concat " bar/foo.rs [" .kind "]") candidate))
+        (should (ycmd-test-has-property-with-value
+                 'filepath .extra_data.location.filepath candidate))
         (should (ycmd-test-has-property-with-value
                  'column_num .extra_data.location.column_num candidate))))))
 
