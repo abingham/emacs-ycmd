@@ -290,11 +290,19 @@ with spaces."
       (propertize .insertion_text 'meta meta 'doc .detailed_info 'kind kind
                   'params params 'filepath filepath 'line_num line-num))))
 
+;; The next two function are taken from racer.el
+;; https://github.com/racer-rust/emacs-racer
 (defun company-ycmd--file-and-parent (path)
   "Convert PATH /foo/bar/baz/q.txt to baz/q.txt."
   (let ((file (f-filename path))
         (parent (f-filename (f-parent path))))
     (f-join parent file)))
+
+(defun company-ycmd--trim-up-to (needle s)
+  "Return content after the occurrence of NEEDLE in S."
+  (-if-let (idx (s-index-of needle s))
+      (substring s (+ idx (length needle)))
+    s))
 
 (defun company-ycmd--construct-candidate-rust (candidate)
   "Construct completion string from CANDIDATE for rust file-types."
@@ -310,11 +318,7 @@ with spaces."
                        (concat " " .extra_menu_info))
                       (_
                        (->> .extra_menu_info
-                            (funcall (lambda (needle s)
-                                       (-if-let (idx (s-index-of needle s))
-                                           (substring s (+ idx (length needle)))
-                                         s))
-                                     .insertion_text)
+                            (company-ycmd--trim-up-to .insertion_text)
                             (s-chop-suffixes '(" {" "," ";"))))))
            (annotation (concat context
                                (when (s-present? .kind)
