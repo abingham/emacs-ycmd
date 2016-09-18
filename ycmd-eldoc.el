@@ -52,7 +52,8 @@ If t, the ycmd server query is always semantic.  If a list, server
 query is semantic for all `major-mode' symbols in that list.  If
 the `car' of the list is `not', server query is sematic for all
 `major-mode' symbols _not_ in that list.  If nil, the server query
-is only semantic after a semantic trigger.")
+is only semantic after a semantic trigger."
+  :type 'list)
 
 (defvar-local ycmd-eldoc--cache nil)
 
