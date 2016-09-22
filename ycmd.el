@@ -114,6 +114,7 @@
 (require 'request)
 (require 'request-deferred)
 (require 'etags)
+(require 'easymenu)
 
 
 (defgroup ycmd nil
@@ -597,6 +598,40 @@ explicitly re-define the prefix key:
     (define-key map ycmd-keymap-prefix ycmd-command-map)
     map)
   "Keymap for `ycmd-mode'.")
+
+(easy-menu-define ycmd-mode-menu ycmd-mode-map
+  "Menu used when `ycmd-mode' is active."
+  '("YCMd"
+    ["Start server" ycmd-open]
+    ["Stop server" ycmd-close]
+    "---"
+    ["Parse buffer" ycmd-parse-buffer]
+    "---"
+    ["GoTo" ycmd-goto]
+    ["GoToDefinition" ycmd-goto-definition]
+    ["GoToDeclaration" ycmd-goto-declaration]
+    ["GoToInclude" ycmd-goto-include]
+    ["GoToImplementation" ycmd-goto-implementation]
+    ["GoToReferences" ycmd-goto-references]
+    ["GoToType" ycmd-goto-type]
+    ["GoToImprecise" ycmd-goto-imprecise]
+    "---"
+    ["Show documentation" ycmd-show-documentation]
+    ["Show type" ycmd-get-type]
+    ["Show parent" ycmd-get-parent]
+    "---"
+    ["FixIt" ycmd-fixit]
+    ["RefactorRename" ycmd-refactor-rename]
+    "---"
+    ["Load extra config" ycmd-load-conf-file]
+    ["Restart semantic server" ycmd-restart-semantic-server]
+    ["Clear compilation flag cache" ycmd-clear-compilation-flag-cache]
+    ["Force semantic completion" ycmd-toggle-force-semantic-completion
+     :style toggle :selected ycmd-force-semantic-completion]
+    "---"
+    ["Show debug info" ycmd-show-debug-info]
+    ["Log enabled" ycmd-toggle-log-enabled
+     :style toggle :selected ycmd--log-enabled]))
 
 (defmacro ycmd--kill-timer (timer)
   "Cancel TIMER."
