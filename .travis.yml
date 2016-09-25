@@ -2,6 +2,10 @@ language: emacs-lisp
 cache:
   directories:
     - .cask/
+    - $HOME/.ccache
+    - $HOME/ycmd
+    - $HOME/.npm  # Node packages from npm
+
 env:
   matrix:
     # Run unit tests against oldest supported stable, latest stable, and trunk
@@ -16,18 +20,14 @@ before_install:
   - if [[ -n $EMACS_VERSION ]]; then emacs --version; fi
 
   # ycmd
-  - git clone --depth=1 --recursive https://github.com/Valloric/ycmd
-  - cd ycmd
-  - python build.py --clang-completer --gocode-completer --tern-completer
-  - npm install -g typescript
-  - cd ..
+  - travis/install_ycmd.sh
 
 install:
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
-  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" REQUEST_BACKEND=url-retrieve test; fi
-  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="ycmd/ycmd" REQUEST_BACKEND=curl test; fi
+  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="$HOME/ycmd/ycmd" REQUEST_BACKEND=url-retrieve test; fi
+  - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="$HOME/ycmd/ycmd" REQUEST_BACKEND=curl test; fi
 matrix:
   # Finish the build even if any build with allowed failures are still running
   fast_finish: true
