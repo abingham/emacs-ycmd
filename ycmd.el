@@ -1215,11 +1215,13 @@ prompt for the Python binary."
   (ycmd--send-request
    "GetParent" 'ycmd--handle-get-parent-or-type-success))
 
-(defun ycmd-get-type ()
-  "Get type for symbol at point."
-  (interactive)
+(defun ycmd-get-type (&optional arg)
+  "Get type for symbol at point.
+If optional ARG is non-nil, get type without reparsing buffer."
+  (interactive "P")
   (ycmd--send-request
-   "GetType" 'ycmd--handle-get-parent-or-type-success))
+   (if arg "GetTypeImprecise" "GetType")
+   #'ycmd--handle-get-parent-or-type-success))
 
 ;;; FixIts
 
@@ -1408,7 +1410,7 @@ If optional ARG is non-nil do not reparse buffer before getting
 the documentation."
   (interactive "P")
   (ycmd--send-request
-   (if arg "GetDocQuick" "GetDoc")
+   (if arg "GetDocImprecise" "GetDoc")
    'ycmd--handle-get-doc-success))
 
 (defun ycmd--handle-get-doc-success (response)
