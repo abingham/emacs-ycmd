@@ -502,10 +502,10 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
 Keywords source: https://github.com/auto-complete/auto-complete/tree/master/dict
 and `company-keywords'.")
 
-(defvar ycmd--server-actual-port 0
+(defvar ycmd--server-actual-port nil
   "The actual port being used by the ycmd server.
-This is set based on the value of `ycmd-server-port' or the
-return value of `ycmd--get-unused-port'.")
+This is set based on the value of `ycmd-server-port' if set, or
+the value from the output of the server itself.")
 
 (defvar ycmd--hmac-secret nil
   "This is populated with the hmac secret of the current connection.
@@ -1799,19 +1799,6 @@ the name of the newly created file."
       (insert (ycmd--json-encode options)))
     options-file))
 
-(defun ycmd--get-unused-port ()
-  "Return unused localhost port."
-  (let* ((p (make-network-process
-             :name "get-unused-port"
-             :server t
-             :service t
-             :host "127.0.0.1"))
-         (port (process-contact p :service)))
-    (when p (delete-process p))
-    (unless port
-      (error "Could not retrieve unused localhost port"))
-    port))
-
 (defun ycmd--exit-code-as-string (code)
   "Return exit status message for CODE."
   (pcase code
@@ -1850,23 +1837,33 @@ See the docstring of the variable for an example"))
     (with-current-buffer proc-buff
       (buffer-disable-undo)
       (erase-buffer))
-    (let* ((port (or (and (numberp ycmd-server-port)
-                          (> ycmd-server-port 0)
-                          ycmd-server-port)
-                     (ycmd--get-unused-port)))
+    (let* ((port (and (numberp ycmd-server-port)
+                      (> ycmd-server-port 0)
+                      ycmd-server-port))
            (hmac-secret (ycmd--generate-hmac-secret))
            (options-file (ycmd--create-options-file hmac-secret))
-           (args (apply 'list (format "--port=%d" port)
-                        (concat "--options_file=" options-file)
+           (args (append (and port (list (format "--port=%d" port)))
+                         (list (concat "--options_file=" options-file))
                         ycmd-server-args))
            (server-program+args (append ycmd-server-command args))
            (proc (apply #'start-process ycmd--server-process-name proc-buff
                         server-program+args)))
       (set-process-query-on-exit-flag proc nil)
       (set-process-sentinel proc #'ycmd--server-process-sentinel)
-      (setq ycmd--server-actual-port port)
       (setq ycmd--hmac-secret hmac-secret)
       proc)))
+
+(defun ycmd--parse-server-port ()
+  "Parse server port from server output."
+  (-when-let* ((proc-buff (get-buffer ycmd--server-buffer-name))
+               (proc (get-process ycmd--server-process-name)))
+    (accept-process-output proc 0.1 nil t)
+    (let ((proc-output (with-current-buffer proc-buff
+                         (buffer-string))))
+      (when (string-match "^serving on http://.*:\\\([0-9]+\\\)$"
+                          proc-output)
+        (setq ycmd--server-actual-port
+              (string-to-number (match-string 1 proc-output)))))))
 
 (defun ycmd--wait-until-server-ready ()
   "Wait until server is ready.
@@ -1874,23 +1871,26 @@ See the docstring of the variable for an example"))
 Return t when server is ready.  Signal error in case of timeout.
 The timeout can be set with the variable
 `ycmd-startup-timeout'."
-  (let ((server-start-time (float-time))
-        server-started)
-    (while (and (not server-started) (ycmd-running?))
-      (sit-for 0.1)
-      (if (ycmd--server-ready? :include-subserver)
-          (progn
+  (catch 'ready
+    (let ((server-start-time (float-time)))
+      (setq ycmd--server-actual-port nil)
+      (while (ycmd-running?)
+        (if (and (or ycmd--server-actual-port
+                     (ycmd--parse-server-port))
+                 (progn
+                   (sit-for 0.1)
+                   (ycmd--server-ready? :include-subserver)))
+            (progn
+              (ycmd--with-all-ycmd-buffers
+                (ycmd--report-status 'unparsed))
+              (throw 'ready t))
+          ;; timeout after specified period
+          (when (< ycmd-startup-timeout
+                   (- (float-time) server-start-time))
+            (ycmd-close)
             (ycmd--with-all-ycmd-buffers
-              (ycmd--report-status 'unparsed))
-            (setq server-started t))
-        ;; timeout after specified period
-        (when (< ycmd-startup-timeout
-                 (- (float-time) server-start-time))
-          (ycmd-close)
-          (ycmd--with-all-ycmd-buffers
-            (ycmd--report-status 'errored))
-          (error "ERROR: Ycmd server timeout"))))
-    server-started))
+              (ycmd--report-status 'errored))
+            (error "ERROR: Ycmd server timeout")))))))
 
 (defun ycmd--column-in-bytes ()
   "Calculate column offset in bytes for the current position and buffer."
