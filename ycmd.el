@@ -920,7 +920,7 @@ it might be interesting for some users."
                (put-text-property
                 0 1 'anno (substring anno (match-end 0)) text))
              text)
-           (append candidates nil))))
+           candidates)))
 
 (defun ycmd-complete-at-point ()
   "Complete symbol at point."
@@ -1034,7 +1034,7 @@ This function handles `UnknownExtraConf', `ValueError' and
 
 (defun ycmd--exception? (response)
   "Check whether RESPONSE is an exception."
-  (and (not (vectorp response)) (assq 'exception response)))
+  (assq 'exception response))
 
 (defun ycmd--send-request (subcommand success-handler)
   "Send SUBCOMMAND to the `ycmd' server.
@@ -1114,16 +1114,18 @@ Useful in case compile-time is considerable."
     (with-no-warnings
       (ring-insert find-tag-marker-ring (point-marker)))))
 
+(defun ycmd--location-data? (response)
+  "Return t if RESPONSE is a GoTo location."
+  (and (assq 'filepath response)
+       (assq 'line_num response)
+       (assq 'column_num response)))
+
 (defun ycmd--handle-goto-success (response)
   "Handle a successfull GoTo RESPONSE."
-  (let* ((is-vector (vectorp response))
-         (num-items (if is-vector (length response) 1)))
-    (ycmd--save-marker)
-    (when is-vector
-      (setq response (append response nil)))
-    (if (eq 1 num-items)
-        (ycmd--goto-location response 'find-file)
-      (ycmd--view response major-mode))))
+  (ycmd--save-marker)
+  (if (ycmd--location-data? response)
+      (ycmd--goto-location response 'find-file)
+    (ycmd--view response major-mode)))
 
 (defun ycmd--goto (type)
   "Implementation of GoTo according to the request TYPE."
@@ -1263,7 +1265,7 @@ If optional ARG is non-nil, get type without reparsing buffer."
 (defun ycmd--apply-fixit (button)
   "Apply BUTTON's FixIt chunk."
   (-when-let* ((chunk (button-get button 'fixit)))
-    (ycmd--replace-chunk-list (append chunk nil))
+    (ycmd--replace-chunk-list chunk)
     (quit-window t (get-buffer-window "*ycmd-fixits*"))))
 
 (define-derived-mode ycmd-fixit-mode ycmd-view-mode "ycmd-fixits"
@@ -1360,13 +1362,12 @@ buffer."
 
 (defun ycmd--handle-fixit-success (response)
   "Handle a successful FixIt RESPONSE."
-  (-if-let* ((fixits (cdr (assq 'fixits response)))
-             (fixits (append fixits nil)))
+  (-if-let (fixits (cdr (assq 'fixits response)))
       (if (and (not ycmd-confirm-fixit)
                (not (ycmd--fixits-have-same-location-p fixits)))
           (dolist (fixit fixits)
             (--when-let (cdr (assq 'chunks fixit))
-              (ycmd--replace-chunk-list (append it nil))))
+              (ycmd--replace-chunk-list it)))
         (save-current-buffer
           (ycmd--show-fixits fixits)))
     (message "No FixIts available")))
@@ -1384,7 +1385,7 @@ buffer."
         (-when-let (chunks (cdr (assq 'chunks fixit)))
           (let ((chunks-by-filepath
                  (--group-by (let-alist it .range.start.filepath)
-                             (append chunks nil))))
+                             chunks)))
             (when (or no-confirm
                       (y-or-n-p (format "Apply %d renames in %d files? "
                                         (length chunks)
@@ -2026,8 +2027,11 @@ anything like that.)
                         (let ((data (request-response-data response)))
                           (ycmd--log-content "HTTP RESPONSE CONTENT" data)
                           data)))
+         (parser (lambda ()
+                   (let ((json-array-type 'list))
+                     (json-read))))
          (request-args (list :type type :params params :data content
-                             :parser 'json-read :headers headers
+                             :parser parser :headers headers
                              :timeout timeout)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 

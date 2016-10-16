@@ -116,8 +116,7 @@ foo(bar, |baz); -> foo|(bar, baz);"
                               (not (-contains?
                                     '("[ID]" "[File]" "[Dir]" "[File&Dir]")
                                     .extra_menu_info))))))
-                 ;; Convert vector to list
-                 (append result nil)))
+                 result))
                (item (car filtered-list))
                (msg (or (cdr (assq 'detailed_info item))
                         (cdr (assq 'extra_menu_info item)))))

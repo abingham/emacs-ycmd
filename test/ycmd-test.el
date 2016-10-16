@@ -195,7 +195,7 @@ response."
   :line 9 :column 10
   (let ((response (ycmd-get-completions :sync)))
     (let-alist response
-      (let ((c (nth 0 (append .completions nil))))
+      (let ((c (nth 0 .completions)))
         (should (string= "Logger" (cdr (assq 'insertion_text c))))
         (should (= .completion_start_column 6))))))
 
@@ -218,19 +218,19 @@ response."
                        .completions)))))
 
 (ert-deftest ycmd-test-fixit-same-location-false ()
-  (let ((data '(((chunks . [((replacement_text . "foo"))])
+  (let ((data '(((chunks . (((replacement_text . "foo"))))
                  (location (filepath . "test.cpp")
                            (column_num . 1) (line_num . 2)))
-                ((chunks . [((replacement_text . "bar"))])
+                ((chunks . (((replacement_text . "bar"))))
                  (location (filepath . "test.cpp")
                            (column_num . 3) (line_num . 4))))))
     (should-not (ycmd--fixits-have-same-location-p data))))
 
 (ert-deftest ycmd-test-fixit-same-location-true ()
-  (let ((data '(((chunks . [((replacement_text . "foo"))])
+  (let ((data '(((chunks . (((replacement_text . "foo"))))
                  (location (filepath . "test.cpp")
                            (column_num . 1) (line_num . 2)))
-                ((chunks . [((replacement_text . "bar"))])
+                ((chunks . (((replacement_text . "bar"))))
                  (location (filepath . "test.cpp")
                            (column_num . 1) (line_num . 2))))))
     (should (ycmd--fixits-have-same-location-p data))))
@@ -320,7 +320,7 @@ response."
 
 (ert-deftest ycmd-test-refactor-rename-simple ()
   (let* ((file-path (f-join ycmd-test-resources-location "simple_test.js"))
-         (data `((fixits . [((chunks . [((range
+         (data `((fixits . (((chunks . (((range
                                           (start (filepath . ,file-path) (column_num . 5) (line_num . 1))
                                           (end (filepath . ,file-path) (column_num . 22) (line_num . 1)))
                                          (replacement_text . "test"))
@@ -343,9 +343,9 @@ response."
                                         ((range
                                           (start (filepath . ,file-path) (column_num . 28) (line_num . 21))
                                           (end (filepath . ,file-path) (column_num . 45) (line_num . 21)))
-                                         (replacement_text . "test"))])
+                                         (replacement_text . "test"))))
                              (text . "")
-                             (location (filepath . ,file-path) (column_num . 34) (line_num . 15)))]))))
+                             (location (filepath . ,file-path) (column_num . 34) (line_num . 15))))))))
     (should (ycmd-test-refactor-rename-handler
              data '(("simple_test.js" . "simple_test-expected.js"))))))
 
@@ -353,7 +353,7 @@ response."
   (let* ((file-path-1 (f-join ycmd-test-resources-location "file1.js"))
          (file-path-2 (f-join ycmd-test-resources-location "file2.js"))
          (file-path-3 (f-join ycmd-test-resources-location "file3.js"))
-         (data `((fixits . [((chunks . [((range
+         (data `((fixits . (((chunks . (((range
                                           (start (filepath . ,file-path-1) (column_num . 5) (line_num . 1))
                                           (end (filepath . ,file-path-1) (column_num . 11) (line_num . 1)))
                                          (replacement_text . "test"))
@@ -368,9 +368,9 @@ response."
                                         ((range
                                           (start (filepath . ,file-path-3) (column_num . 12) (line_num . 3))
                                           (end (filepath . ,file-path-3) (column_num . 18) (line_num . 3)))
-                                         (replacement_text . "test"))])
+                                         (replacement_text . "test"))))
                              (text . "")
-                             (location (filepath . ,file-path-1) (column_num . 5) (line_num . 1)))]))))
+                             (location (filepath . ,file-path-1) (column_num . 5) (line_num . 1))))))))
     (should (ycmd-test-refactor-rename-handler
              data '(("file1.js" . "file1-expected.js")
                     ("file2.js" . "file2-expected.js")
@@ -747,6 +747,11 @@ response."
   (let ((data '((foo))))
     (should (string= (ycmd--json-encode data)
                      "{\"foo\":{}}"))))
+
+(ert-deftest ycmd-test-location-data-predicate ()
+  (let ((data '((filepath . ,file-path) (column_num . 34) (line_num . 15))))
+    (should (ycmd--location-data? data))
+    (should-not (ycmd--location-data? (list data)))))
 
 (defun flycheck-ycmd-test-mode ()
   (flycheck-ycmd-setup)
