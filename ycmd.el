@@ -881,11 +881,12 @@ semantic subserver."
                 (car-safe (ycmd-major-mode-to-file-types
                            major-mode)))))
       (ycmd--ignore-errors
-       (ycmd--request
-        "/ready" nil
-        :params (and file-type
-                     (list (cons "subserver" file-type)))
-        :type "GET" :parser 'json-read :sync t)))))
+       (eq (ycmd--request
+            "/ready" nil
+            :params (and file-type
+                         (list (cons "subserver" file-type)))
+            :type "GET" :parser 'json-read :sync t)
+           t)))))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
