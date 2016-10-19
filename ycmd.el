@@ -841,9 +841,7 @@ ycmd server to stop.  If the ycmd server is still running after a
 timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
   (let ((start-time (float-time)))
-    (ycmd--request
-     "/shutdown" nil
-     :parser 'json-read :sync t :timeout 0.1)
+    (ycmd--request "/shutdown" nil :sync t :timeout 0.1)
     (while (and (ycmd-running?)
                 (> ycmd-delete-process-delay
                    (- (float-time) start-time)))
@@ -885,7 +883,7 @@ semantic subserver."
             "/ready" nil
             :params (and file-type
                          (list (cons "subserver" file-type)))
-            :type "GET" :parser 'json-read :sync t)
+            :type "GET" :sync t)
            t)))))
 
 (defun ycmd-load-conf-file (filename)
@@ -1020,8 +1018,7 @@ and blocks until the request has finished."
            (append (plist-get (ycmd--get-request-data) :content)
                    (and ycmd-force-semantic-completion
                         (list (cons "force_semantic" t))))))
-      (ycmd--request "/completions" content
-                     :parser 'json-read :sync sync))))
+      (ycmd--request "/completions" content :sync sync))))
 
 (defun ycmd--handle-exception (response)
   "Handle exception in completion RESPONSE.
@@ -1055,8 +1052,7 @@ SUCCESS-HANDLER is called when for a successful response."
                                     subcommand)
                             (plist-get data :content))))
         (deferred:$
-          (ycmd--request "/run_completer_command"
-                         content :parser 'json-read)
+          (ycmd--request "/run_completer_command" content)
           (deferred:nextc it
             (lambda (response)
               (when response
@@ -1663,8 +1659,7 @@ HANDLER is the callback function for the response."
     (deferred:$
       ;; try
       (deferred:$
-        (ycmd--request "/event_notification"
-                       content :parser 'json-read)
+        (ycmd--request "/event_notification" content)
         (deferred:nextc it handler))
       (deferred:error it
         (lambda (err)
@@ -1958,9 +1953,7 @@ This is useful for debugging.")
   (when ycmd-mode
     (let ((data (ycmd--get-request-data)))
       (deferred:$
-        (ycmd--request "/debug_info"
-                       (plist-get data :content)
-                       :parser 'json-read)
+        (ycmd--request "/debug_info" (plist-get data :content))
         (deferred:nextc it
           (lambda (res)
             (when res
@@ -1993,7 +1986,6 @@ This is useful for debugging.")
 (cl-defun ycmd--request (location
                          content
                          &key
-                         (parser 'buffer-string)
                          (type "POST")
                          (params nil)
                          (sync nil)
@@ -2035,7 +2027,7 @@ anything like that.)
                           (ycmd--log-content "HTTP RESPONSE CONTENT" data)
                           data)))
          (request-args (list :type type :params params :data content
-                             :parser parser :headers headers
+                             :parser 'json-read :headers headers
                              :timeout timeout)))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
