@@ -448,8 +448,7 @@ If CB is non-nil, call it with candidates."
 
 (defun company-ycmd--get-candidates-synchronously (prefix)
   "Get completion candidates with PREFIX synchronously."
-  (--when-let (and (ycmd-running?)
-                   (ycmd-get-completions :sync))
+  (--when-let (ycmd-get-completions :sync)
     (company-ycmd--get-candidates it prefix)))
 
 (defun company-ycmd--get-candidates-deferred (prefix cb)
@@ -461,8 +460,7 @@ If CB is non-nil, call it with candidates."
     (deferred:$
       (deferred:try
         (deferred:$
-          (when (ycmd-running?)
-            (ycmd-get-completions)))
+          (ycmd-get-completions))
         :catch (lambda (_err) nil))
       (deferred:nextc it
         (lambda (c)
