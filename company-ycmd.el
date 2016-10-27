@@ -386,11 +386,11 @@ with spaces."
   "Generic function to construct completion string from a CANDIDATE."
   (company-ycmd--with-destructured-candidate candidate .insertion_text))
 
-(defun company-ycmd--construct-candidates (completion-vector
+(defun company-ycmd--construct-candidates (completions
                                            prefix
                                            start-col
                                            construct-candidate-fn)
-  "Construct candidates list from COMPLETION-VECTOR.
+  "Construct candidates list from COMPLETIONS.
 
 PREFIX is the prefix we calculated for doing the completion, and
 START-COL is the column on which ycmd indicates we should place
@@ -407,7 +407,7 @@ candidates list."
          (prefix-size (- start-col prefix-start-col))
          (prefix-diff (substring-no-properties prefix 0 prefix-size))
          candidates)
-    (dolist (candidate (append completion-vector nil) (nreverse candidates))
+    (dolist (candidate completions (nreverse candidates))
       (when (s-present? prefix-diff)
         (let ((it (assq 'insertion_text candidate)))
           (setcdr it (concat prefix-diff
