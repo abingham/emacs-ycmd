@@ -76,8 +76,9 @@
 (defun ycmd-test-mode ()
   "Setup `ycmd-mode' for test in current buffer."
   (let ((ycmd-parse-conditions nil))
-    (ycmd-mode)
     (ycmd-open)
+    (ycmd-wait-until-server-is-ready)
+    (ycmd-mode)
     (deferred:sync!
       (ycmd-load-conf-file ycmd-test-extra-conf))
     (deferred:sync!
