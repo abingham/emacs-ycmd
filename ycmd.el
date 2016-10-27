@@ -816,8 +816,7 @@ _LEN is ununsed."
 (defun ycmd--on-close-buffer ()
   "Notify server that the current buffer is no longer open, and cleanup emacs-ycmd variables."
   (when (ycmd-is-server-alive?)
-    (ycmd--notify-server "BufferUnload"
-                         `(("unloaded_buffer" . ,(ycmd--get-full-path-to-current-buffer)))))
+    (ycmd--notify-server "BufferUnload"))
   (ycmd--teardown))
 
 (defun ycmd--teardown ()
@@ -1710,13 +1709,10 @@ HANDLER is the callback function for the response."
           (message "Error sending %s request: %s" event-name err)
           (ycmd--report-status 'errored))))))
 
-(defun ycmd--notify-server (event-name &optional event-content-alist)
-  "Send a simple event notification for EVENT-NAME, ignoring response.
-Optionally, include EVENT-CONTENT-ALIST as additional content in
-the request."
+(defun ycmd--notify-server (event-name)
+  "Send a simple event notification for EVENT-NAME, ignoring response."
   (let* ((data (ycmd--get-request-data))
-         (content (append (plist-get data :content)
-                          event-content-alist)))
+         (content (plist-get data :content)))
     (ycmd--event-notification event-name content)))
 
 (defun ycmd-notify-file-ready-to-parse ()
@@ -1963,10 +1959,6 @@ The timeout can be set with the variable
       s
     (encode-coding-string s 'utf-8 t)))
 
-(defun ycmd--get-full-path-to-current-buffer ()
-  "Get the full (encoded) path to the buffer returned by `current-buffer`, or the empty string."
-  (ycmd--encode-string (or (buffer-file-name) "")))
-
 (defun ycmd--get-request-data ()
   "Generate the 'standard' content for ycmd posts.
 
@@ -1976,7 +1968,7 @@ will be passed to the ycmd server."
          (pos (point))
          (column-num (+ 1 (ycmd--column-in-bytes)))
          (line-num (line-number-at-pos pos))
-         (full-path (ycmd--get-full-path-to-current-buffer))
+         (full-path (ycmd--encode-string (or (buffer-file-name) "")))
          (file-contents (ycmd--encode-string
                          (buffer-substring-no-properties
                           (point-min) (point-max))))
