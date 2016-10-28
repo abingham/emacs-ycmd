@@ -133,7 +133,7 @@ response."
   "Run a request with SUBCOMMAND and eval BODY with response."
   (declare (indent 1))
   `(deferred:sync!
-     (ycmd--send-request
+     (ycmd--run-completer-command
       ,subcommand
       (lambda (response)
         ,(macroexpand-all body)))))

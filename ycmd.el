@@ -1075,7 +1075,7 @@ This function handles `UnknownExtraConf', `ValueError' and
   "Check whether RESPONSE is an exception."
   (assq 'exception response))
 
-(defun ycmd--send-request (subcommand success-handler)
+(defun ycmd--run-completer-command (subcommand success-handler)
   "Send SUBCOMMAND to the `ycmd' server.
 
 SUCCESS-HANDLER is called when for a successful response."
@@ -1171,7 +1171,7 @@ Useful in case compile-time is considerable."
   (save-excursion
     (--when-let (bounds-of-thing-at-point 'symbol)
       (goto-char (car it)))
-    (ycmd--send-request type 'ycmd--handle-goto-success)))
+    (ycmd--run-completer-command type 'ycmd--handle-goto-success)))
 
 (defun ycmd--goto-location (location find-function)
   "Move cursor to LOCATION with FIND-FUNCTION.
@@ -1207,7 +1207,7 @@ Use BUFFER if non-nil or `current-buffer'."
 (defun ycmd-clear-compilation-flag-cache ()
   "Clear the compilation flags cache."
   (interactive)
-  (ycmd--send-request "ClearCompilationFlagCache" nil))
+  (ycmd--run-completer-command "ClearCompilationFlagCache" nil))
 
 (defun ycmd-restart-semantic-server (&optional arg)
   "Send request to restart the semantic completion backend server.
@@ -1219,7 +1219,7 @@ prompt for the Python binary."
                    (read-string "Python binary: "))))
     (when (not (s-blank? args))
       (setq subcommand (list subcommand args)))
-    (ycmd--send-request subcommand nil)))
+    (ycmd--run-completer-command subcommand nil)))
 
 (cl-defun ycmd--fontify-code (code &optional (mode major-mode))
   "Fontify CODE."
@@ -1250,14 +1250,14 @@ prompt for the Python binary."
 (defun ycmd-get-parent ()
   "Get semantic parent for symbol at point."
   (interactive)
-  (ycmd--send-request
+  (ycmd--run-completer-command
    "GetParent" 'ycmd--handle-get-parent-or-type-success))
 
 (defun ycmd-get-type (&optional arg)
   "Get type for symbol at point.
 If optional ARG is non-nil, get type without reparsing buffer."
   (interactive "P")
-  (ycmd--send-request
+  (ycmd--run-completer-command
    (if arg "GetTypeImprecise" "GetType")
    #'ycmd--handle-get-parent-or-type-success))
 
@@ -1414,7 +1414,7 @@ buffer."
 (defun ycmd-fixit()
   "Get FixIts for current line."
   (interactive)
-  (ycmd--send-request "FixIt" 'ycmd--handle-fixit-success))
+  (ycmd--run-completer-command "FixIt" 'ycmd--handle-fixit-success))
 
 (defun ycmd--handle-refactor-rename-success (response &optional no-confirm)
   "Handle a successful RenameRefactor RESPONSE.
@@ -1438,7 +1438,7 @@ If NO-CONFIRM is non-nil, don't ask the user to confirm the rename."
   "Refactor current context with NEW-NAME."
   (interactive "MNew variable name: ")
   (when (not (s-blank? new-name))
-    (ycmd--send-request (list "RefactorRename" new-name)
+    (ycmd--run-completer-command (list "RefactorRename" new-name)
                         'ycmd--handle-refactor-rename-success)))
 
 (defun ycmd-show-documentation (&optional arg)
@@ -1447,7 +1447,7 @@ If NO-CONFIRM is non-nil, don't ask the user to confirm the rename."
 If optional ARG is non-nil do not reparse buffer before getting
 the documentation."
   (interactive "P")
-  (ycmd--send-request
+  (ycmd--run-completer-command
    (if arg "GetDocImprecise" "GetDoc")
    'ycmd--handle-get-doc-success))
 
