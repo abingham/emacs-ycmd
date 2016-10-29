@@ -536,6 +536,7 @@ and `delete-process'.")
   "The last status of the current buffer.")
 
 (defvar-local ycmd--buffer-visit-flag nil)
+(defvar-local ycmd--available-subcommands nil)
 
 (defvar ycmd--mode-keywords-loaded nil
   "List of modes for which keywords have been loaded.")
@@ -546,6 +547,7 @@ and `delete-process'.")
     (window-configuration-change-hook . ycmd--on-window-configuration-change)
     (kill-buffer-hook                 . ycmd--on-close-buffer)
     (before-revert-hook               . ycmd--teardown)
+    (change-major-mode-hook           . ycmd--teardown)
     (window-configuration-change-hook . ycmd--perform-deferred-parse)
     (post-command-hook                . ycmd--perform-deferred-parse))
   "Hooks which ycmd hooks in.")
@@ -824,6 +826,7 @@ _LEN is ununsed."
   (ycmd--kill-timer ycmd--notification-timer)
   (setq ycmd--last-status-change 'unparsed)
   (setq ycmd--deferred-parse nil)
+  (setq ycmd--available-subcommands nil)
   (run-hooks 'ycmd-after-teardown-hook))
 
 (defun ycmd--global-teardown ()
@@ -1075,6 +1078,23 @@ This function handles `UnknownExtraConf', `ValueError' and
   "Check whether RESPONSE is an exception."
   (assq 'exception response))
 
+(defun ycmd--get-defined-subcommands (&optional request-data)
+  "Get available subcommands for current completer.
+If REQUEST-DATA is omitted, retrieve data."
+  (if ycmd--available-subcommands
+      (deferred:next nil ycmd--available-subcommands)
+    (let ((content (or request-data
+                       (plist-get (ycmd--get-request-data)
+                                  :content))))
+      (deferred:$
+        (ycmd--request "/defined_subcommands" content)
+        (deferred:nextc it
+          (lambda (response)
+            (if (not (ycmd--exception? response))
+                (setq ycmd--available-subcommands response)
+              (ycmd--handle-exception response)
+              nil)))))))
+
 (defun ycmd--run-completer-command (subcommand success-handler)
   "Send SUBCOMMAND to the `ycmd' server.
 
@@ -1091,18 +1111,31 @@ SUCCESS-HANDLER is called when for a successful response."
                                     subcommand)
                             (plist-get data :content))))
         (deferred:$
-          (ycmd--request "/run_completer_command" content)
+          ;; Get available subcommands
+          (ycmd--get-defined-subcommands content)
+          ;; Run completer command if subcommand available
           (deferred:nextc it
             (lambda (response)
               (when response
-                (if (ycmd--exception? response)
-                    (progn
-                      (ycmd--handle-exception response)
-                      (run-hook-with-args 'ycmd-after-exception-hook
-                                          subcommand (plist-get data :buffer)
-                                          (plist-get data :pos) response))
-                  (when success-handler
-                    (funcall success-handler response)))))))))))
+                (if (member (car subcommand) response)
+                    (ycmd--request "/run_completer_command" content)
+                  (deferred:next nil 'subcommand-not-available)))))
+          ;; Handle response
+          (deferred:nextc it
+            (lambda (response)
+              (when response
+                (cond
+                 ((eq response 'subcommand-not-available)
+                  (message "%s is not supported by current completer"
+                           (car subcommand)))
+                 ((ycmd--exception? response)
+                  (ycmd--handle-exception response)
+                  (run-hook-with-args 'ycmd-after-exception-hook
+                                      (car subcommand)
+                                      (plist-get data :buffer)
+                                      (plist-get data :pos) response))
+                 (success-handler
+                  (funcall success-handler response)))))))))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."

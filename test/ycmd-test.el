@@ -138,6 +138,48 @@ response."
       (lambda (response)
         ,(macroexpand-all body)))))
 
+(ycmd-ert-deftest get-defined-subcommands-cpp "test.cpp" 'c++-mode
+  :line 1 :column 1
+  (let ((commands '("ClearCompilationFlagCache" "FixIt" "GetDoc"
+                    "GetDocImprecise" "GetParent" "GetType"
+                    "GetTypeImprecise" "GoTo" "GoToDeclaration"
+                    "GoToDefinition" "GoToImprecise" "GoToInclude"))
+        (result (deferred:sync!
+                  (ycmd--get-defined-subcommands))))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-python "test.py" 'python-mode
+  :line 1 :column 1
+  (let ((commands '("GetDoc" "GoTo" "GoToDeclaration" "GoToDefinition"
+                    "GoToReferences" "RestartServer"))
+        (result (deferred:sync!
+                  (ycmd--get-defined-subcommands))))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-go "test.go" 'go-mode
+  :line 1 :column 1
+  (let ((commands '("GoTo" "GoToDeclaration" "GoToDefinition"
+                    "RestartServer"))
+        (result (deferred:sync!
+                  (ycmd--get-defined-subcommands))))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-typescript "test.ts" 'typescript-mode
+  :line 1 :column 1
+  (let ((commands '("GetDoc" "GetType" "GoToDefinition" "GoToReferences"
+                    "GoToType" "RefactorRename" "RestartServer"))
+        (result (deferred:sync!
+                  (ycmd--get-defined-subcommands))))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-javascript "simple_test.js" 'js-mode
+  :line 1 :column 1
+  (let ((commands '("GetDoc" "GetType" "GoTo" "GoToDefinition"
+                    "GoToReferences" "RefactorRename" "RestartServer"))
+        (result (deferred:sync!
+                  (ycmd--get-defined-subcommands))))
+    (should (equal result commands))))
+
 (ycmd-ert-deftest get-completions-cpp "test.cpp" 'c++-mode
   :line 8 :column 7
   (let ((response (ycmd-get-completions :sync)))
@@ -176,6 +218,18 @@ response."
           (should nil)
         (should (= .column_num 11))
         (should (= .line_num 5))))))
+
+(ycmd-ert-deftest goto-references-not-available "test-goto.cpp" 'c++-mode
+  :line 9 :column 7
+  ;; we need to temporarly overwrite `message' in order to
+  ;; check the return string
+  (cl-letf (((symbol-function 'message)
+             (lambda (format-string &rest args)
+              (apply 'format format-string args))))
+    (let ((result (deferred:sync!
+                    (ycmd--run-completer-command "GoToReferences" nil))))
+      (should (string= "GoToReferences is not supported by current completer"
+                       result)))))
 
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   :line 7 :column 3
