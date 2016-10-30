@@ -1419,8 +1419,7 @@ buffer."
 (defun ycmd--handle-refactor-rename-success (response &optional no-confirm)
   "Handle a successful RenameRefactor RESPONSE.
 If NO-CONFIRM is non-nil, don't ask the user to confirm the rename."
-  (-if-let* ((fixits (cdr (assq 'fixits response)))
-             (fixits (append fixits nil)))
+  (-if-let (fixits (cdr (assq 'fixits response)))
       (dolist (fixit fixits)
         (-when-let (chunks (cdr (assq 'chunks fixit)))
           (let ((chunks-by-filepath
