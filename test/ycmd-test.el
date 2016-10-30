@@ -177,6 +177,18 @@ response."
         (should (= .column_num 11))
         (should (= .line_num 5))))))
 
+(ycmd-ert-deftest goto-references-not-available "test-goto.cpp" 'c++-mode
+  :line 9 :column 7
+  ;; we need to temporarly overwrite `message' in order to
+  ;; check the return string
+  (cl-letf (((symbol-function 'message)
+             (lambda (format-string &rest args)
+              (apply 'format format-string args))))
+    (let ((result (deferred:sync!
+                    (ycmd--run-completer-command "GoToReferences" nil))))
+      (should (string= "GoToReferences is not supported by current Completer"
+                       result)))))
+
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   :line 7 :column 3
   ;; (skip-unless nil)
