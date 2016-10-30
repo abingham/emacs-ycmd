@@ -1095,14 +1095,21 @@ SUCCESS-HANDLER is called when for a successful response."
           (deferred:nextc it
             (lambda (response)
               (when response
-                (if (ycmd--exception? response)
-                    (progn
+                (cond
+                 ((ycmd--exception? response)
+                  (let-alist response
+                    (if (and (string= "ValueError" .exception.TYPE)
+                             (or (string-prefix-p "Supported commands are:\n" .message)
+                                 (string= "This Completer has no supported subcommands."
+                                          .message)))
+                        (message "%s is not supported by current Completer"
+                                 (car subcommand))
                       (ycmd--handle-exception response)
                       (run-hook-with-args 'ycmd-after-exception-hook
-                                          subcommand (plist-get data :buffer)
-                                          (plist-get data :pos) response))
-                  (when success-handler
-                    (funcall success-handler response)))))))))))
+                                          (car subcommand) (plist-get data :buffer)
+                                          (plist-get data :pos) response))))
+                 (success-handler
+                  (funcall success-handler response)))))))))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
