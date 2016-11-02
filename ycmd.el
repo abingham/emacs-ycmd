@@ -1286,9 +1286,27 @@ If optional ARG is non-nil, get type without reparsing buffer."
       (mapc (lambda (it)
               (let-alist it
                 (ycmd--insert-fixit-button
-                 (format "%d: %s\n" fixit-num .text)
-                 .chunks .location))
-              (setq fixit-num (1+ fixit-num)))
+                 (format "%d: %s\n" fixit-num .text) .chunks .location)
+                (setq fixit-num (1+ fixit-num))
+                (let* ((buffer (find-file-noselect .location.filepath))
+                       (buffertext (with-current-buffer buffer (buffer-string)))
+                       diff)
+                  (with-temp-buffer
+                    (insert buffertext)
+                    (ycmd--replace-chunk-list .chunks (current-buffer))
+                    (with-current-buffer
+                        (diff-no-select .location.filepath (current-buffer) "-U0" t)
+                      (goto-char (point-min))
+                      (unless (eobp)
+                        (ignore-errors
+                          (diff-beginning-of-hunk t))
+                        (when (looking-at diff-hunk-header-re-unified)
+                          (forward-line)
+                          (let ((beg (point))
+                                (end (diff-end-of-hunk)))
+                            (setq diff (buffer-substring-no-properties beg end)))))))
+                  (when diff
+                    (insert (format "%s\n" (ycmd--fontify-code diff 'diff-mode)))))))
             fixit)
       (goto-char (point-min))
       (when title (forward-line 1))
@@ -1372,11 +1390,11 @@ working buffer."
         (and (= line-num-1 line-num-2)
              (< column-num-1 column-num-2)))))
 
-(defun ycmd--replace-chunk-list (chunks)
+(defun ycmd--replace-chunk-list (chunks &optional buffer)
   "Replace list of CHUNKS.
 
-If BUFFER is spacified use it as working buffer, else use current
-buffer."
+If BUFFER is specified use it as working buffer, else use buffer
+specified in fixit chunk."
   (let ((chunks-sorted (sort chunks 'ycmd--chunk-<))
         (last-line -1)
         (line-delta 0)
@@ -1386,8 +1404,8 @@ buffer."
         (-when-let* ((chunk-start (ycmd--get-chunk-start-line-and-column c))
                      (chunk-end (ycmd--get-chunk-end-line-and-column c))
                      (replacement-text .replacement_text)
-                     (chunk-filepath .range.start.filepath)
-                     (buffer (find-file-noselect chunk-filepath)))
+                     (buffer (or buffer (find-file-noselect
+                                         .range.start.filepath))))
           (unless (= (car chunk-start) last-line)
             (setq last-line (car chunk-end))
             (setq char-delta 0))
