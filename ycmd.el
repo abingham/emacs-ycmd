@@ -115,6 +115,8 @@
 (require 'request-deferred)
 (require 'etags)
 (require 'easymenu)
+(require 'diff)
+(require 'diff-mode)
 
 
 (defgroup ycmd nil
