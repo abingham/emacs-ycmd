@@ -1297,7 +1297,8 @@ If optional ARG is non-nil, get type without reparsing buffer."
                     (insert buffertext)
                     (ycmd--replace-chunk-list .chunks (current-buffer))
                     (with-current-buffer
-                        (diff-no-select .location.filepath (current-buffer) "-U0" t)
+                        (diff-no-select .location.filepath (current-buffer)
+                                        "-U0 --strip-trailing-cr" t)
                       (goto-char (point-min))
                       (unless (eobp)
                         (ignore-errors
