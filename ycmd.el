@@ -1913,7 +1913,8 @@ the name of the newly created file."
       (let ((moving (= (point) (process-mark process))))
         (save-excursion
           (goto-char (process-mark process))
-          (insert-before-markers string)
+          (let ((inhibit-read-only t))
+            (insert-before-markers string))
           (set-marker (process-mark process) (point)))
         (when moving (goto-char (process-mark process))))))
   ;; parse port from server output
@@ -1934,8 +1935,10 @@ the name of the newly created file."
 See the docstring of the variable for an example"))
   (let ((proc-buff (get-buffer-create ycmd--server-buffer-name)))
     (with-current-buffer proc-buff
-      (buffer-disable-undo)
-      (erase-buffer))
+      (setq buffer-read-only t)
+      (let ((inhibit-read-only t))
+        (buffer-disable-undo)
+        (erase-buffer)))
     (let* ((port (and (numberp ycmd-server-port)
                       (> ycmd-server-port 0)
                       ycmd-server-port))
