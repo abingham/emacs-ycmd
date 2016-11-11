@@ -858,12 +858,11 @@ control.)."
   (ycmd--start-keepalive-timer))
 
 (defun ycmd-close (&optional status)
-  "Shutdown any running ycmd server."
+  "Shutdown any running ycmd server.
+STATUS is a status symbol for `ycmd--report-status',
+defaulting to `stopped'."
   (interactive)
-  (if (ycmd-is-server-alive?)
-      (ycmd--stop-server)
-    (ignore-errors
-      (delete-process ycmd--server-process-name)))
+  (ycmd--stop-server)
   (ycmd--global-teardown)
   (ycmd--kill-timer ycmd--keepalive-timer)
   (ycmd--kill-timer ycmd--server-timeout-timer)
@@ -877,14 +876,15 @@ Send a `shutdown' request to the ycmd server and wait for the
 ycmd server to stop.  If the ycmd server is still running after a
 timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
-  (let ((start-time (float-time)))
-    (ycmd--request "/shutdown" nil :sync t :timeout 0.1)
-    (while (and (ycmd-running?)
-                (> ycmd-delete-process-delay
-                   (- (float-time) start-time)))
-      (sit-for 0.05))
-    (ignore-errors
-      (delete-process ycmd--server-process-name))))
+  (when (ycmd-is-server-alive?)
+    (let ((start-time (float-time)))
+      (ycmd--request "/shutdown" nil :sync t :timeout 0.1)
+      (while (and (ycmd-running?)
+                  (> ycmd-delete-process-delay
+                     (- (float-time) start-time)))
+        (sit-for 0.05))))
+  (ignore-errors
+    (delete-process ycmd--server-process-name)))
 
 (defun ycmd-running? ()
   "Return t if a ycmd server is already running."
