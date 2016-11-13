@@ -907,7 +907,7 @@ process with `delete-process'."
 
 This is simply for keepalive functionality."
   (ycmd--ignore-errors
-   (ycmd--request "/healthy" nil :type "GET" :sync t)))
+   (ycmd--request "/healthy" nil :type "GET")))
 
 (defun ycmd--server-ready? (&optional include-subserver)
   "Send request for server ready state.
