@@ -947,9 +947,11 @@ it might be interesting for some users."
     (ycmd-get-completions)
     (deferred:nextc it
       (lambda (completions)
-        (pop-to-buffer "*ycmd-completions*")
-        (erase-buffer)
-        (insert (pp-to-string completions))))))
+        (if (not completions)
+            (message "No completions available")
+          (pop-to-buffer "*ycmd-completions*")
+          (erase-buffer)
+          (insert (pp-to-string completions)))))))
 
 (defun ycmd-complete (&optional _ignored)
   "Completion candidates at point."
@@ -1054,12 +1056,11 @@ To see what the returned structure looks like, you can use
 
 If SYNC is non-nil the function does not return a deferred object
 and blocks until the request has finished."
-  (when (and ycmd-mode (ycmd-is-server-alive?))
-    (let ((content
-           (append (plist-get (ycmd--get-request-data) :content)
-                   (and ycmd-force-semantic-completion
-                        (list (cons "force_semantic" t))))))
-      (ycmd--request "/completions" content :sync sync))))
+  (let ((content
+         (append (plist-get (ycmd--get-request-data) :content)
+                 (and ycmd-force-semantic-completion
+                      (list (cons "force_semantic" t))))))
+    (ycmd--request "/completions" content :sync sync)))
 
 (defun ycmd--handle-exception (response)
   "Handle exception in completion RESPONSE.
@@ -2094,9 +2095,11 @@ PARSER specifies the function that will be used to parse the
 response to the message. Typical values are buffer-string and
 json-read. This function will be passed an the completely
 unmodified contents of the response (i.e. not JSON-decoded or
-anything like that.)
-"
-  (unless (ycmd-is-server-alive?) (cl-return-from ycmd--request))
+anything like that)."
+  (unless (ycmd-is-server-alive?)
+    (message "Ycmd server is not running. Can't send `%s' request!"
+             location)
+    (cl-return-from ycmd--request (unless sync (deferred:next))))
 
   (let* ((url-show-status (not ycmd-hide-url-status))
          (url-proxy-services (unless ycmd-bypass-url-proxy-services
