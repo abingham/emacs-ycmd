@@ -1895,7 +1895,7 @@ the name of the newly created file."
   "Handle Ycmd server PROCESS EVENT."
   (when (memq (process-status process) '(exit signal))
     (let* ((code (process-exit-status process))
-           (status (if (eq code 0) 'unparsed 'errored)))
+           (status (if (eq code 0) 'stopped 'errored)))
       (when (eq status 'errored)
         (--if-let (and (eq (process-status process) 'exit)
                        (ycmd--exit-code-as-string code))
