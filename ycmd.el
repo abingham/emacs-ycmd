@@ -4,9 +4,9 @@
 ;;
 ;; Authors: Austin Bingham <austin.bingham@gmail.com>
 ;;          Peter Vasil <mail@petervasil.net>
-;; Version: 0.9.1
+;; Version: 0.9.2-cvs
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24.3") (dash "2.12.1") (s "1.10.0") (deferred "0.3.2") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0"))
+;; Package-Requires: ((emacs "24.3") (dash "2.12.1") (s "1.10.0") (deferred "0.3.2") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0") (pkg-info "0.4"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -118,6 +118,7 @@
 (require 'diff)
 (require 'diff-mode)
 
+(declare-function pkg-info-version-info "pkg-info" (package))
 
 (defgroup ycmd nil
   "a ycmd emacs client"
@@ -569,6 +570,7 @@ and `delete-process'.")
     (define-key map "gt" 'ycmd-goto-type)
     (define-key map "s" 'ycmd-toggle-force-semantic-completion)
     (define-key map "v" 'ycmd-show-debug-info)
+    (define-key map "V" 'ycmd-version)
     (define-key map "d" 'ycmd-show-documentation)
     (define-key map "C" 'ycmd-clear-compilation-flag-cache)
     (define-key map "O" 'ycmd-restart-semantic-server)
@@ -637,7 +639,8 @@ explicitly re-define the prefix key:
     "---"
     ["Show debug info" ycmd-show-debug-info]
     ["Log enabled" ycmd-toggle-log-enabled
-     :style toggle :selected ycmd--log-enabled]))
+     :style toggle :selected ycmd--log-enabled]
+    ["Show version" ycmd-version t]))
 
 (defmacro ycmd--kill-timer (timer)
   "Cancel TIMER."
@@ -704,6 +707,26 @@ Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
   (dolist (it ycmd-file-type-map)
     (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
 (make-obsolete 'ycmd-setup 'global-ycmd-mode "0.9.1")
+
+(defun ycmd-version (&optional show-version)
+  "Get the `emacs-ycmd' version as string.
+
+If called interactively or if SHOW-VERSION is non-nil, show the
+version in the echo area and the messages buffer.
+
+The returned string includes both, the version from package.el
+and the library version, if both a present and different.
+
+If the version number could not be determined, signal an error,
+if called interactively, or if SHOW-VERSION is non-nil, otherwise
+just return nil."
+  (interactive (list t))
+  (if (require 'pkg-info nil :no-error)
+      (let ((version (pkg-info-version-info 'ycmd)))
+        (when show-version
+          (message "emacs-ycmd version: %s" version))
+        version)
+    (error "Cannot determine version without package pkg-info")))
 
 (defun ycmd--maybe-enable-mode ()
   "Enable `ycmd-mode' according `ycmd-global-modes'."
@@ -2037,29 +2060,51 @@ This is useful for debugging.")
 (defun ycmd-show-debug-info ()
   "Show debug information."
   (interactive)
-  (when ycmd-mode
-    (let ((data (ycmd--get-request-data)))
-      (deferred:$
-        (ycmd--request "/debug_info" (plist-get data :content))
-        (deferred:nextc it
-          (lambda (res)
-            (when res
-              (with-help-window (get-buffer-create " *ycmd-debug-info*")
-                (with-current-buffer standard-output
-                  (princ "ycmd debug information for buffer ")
-                  (insert (propertize (buffer-name (plist-get data :buffer))
-                                      'face 'bold))
-                  (princ " in ")
-                  (let ((mode (buffer-local-value
-                               'major-mode (plist-get data :buffer))))
-                    (insert-button (symbol-name mode)
-                                   'type 'help-function
-                                   'help-args (list mode)))
-                  (princ ":\n\n")
-                  (insert res)
-                  (princ "\n\n")
-                  (insert (format "Server running at: %s:%d"
-                                  ycmd-host ycmd--server-actual-port)))))))))))
+  (let* ((data (ycmd--get-request-data))
+         (buffer (plist-get data :buffer)))
+    (with-help-window (get-buffer-create " *ycmd-debug-info*")
+      (with-current-buffer standard-output
+        (princ "Ycmd debug information for buffer ")
+        (insert (propertize (buffer-name buffer) 'face 'bold))
+        (princ " in ")
+        (let ((mode (buffer-local-value 'major-mode buffer)))
+          (insert-button (symbol-name mode)
+                         'type 'help-function
+                         'help-args (list mode)))
+        (princ ":\n\n")
+        (--if-let (and (ycmd-is-server-alive?)
+                       (deferred:sync!
+                         (deferred:$
+                           (ycmd--request "/debug_info"
+                                          (plist-get data :content))
+                           (deferred:nextc it
+                             (lambda (result)
+                               result)))))
+            (princ it)
+          (princ "No debug info available from server"))
+        (princ "\n\n")
+        (princ "Server is ")
+        (let ((running (ycmd-is-server-alive?)))
+          (insert (propertize (if running "running" "not running")
+                              'face (if running 'success '(warning bold))))
+          (when running
+            (insert
+             (format " at: %s:%d" ycmd-host ycmd--server-actual-port))))
+        (princ "\n\n")
+        (princ "Ycmd Mode is ")
+        (let ((enabled (buffer-local-value 'ycmd-mode buffer)))
+          (insert (propertize (if enabled "enabled" "disabled")
+                              'face (if enabled 'success '(warning bold)))))
+        (save-excursion
+          (let ((end (point)))
+            (backward-paragraph)
+            (fill-region-as-paragraph (point) end)))
+
+        (princ "\n\n--------------------\n\n")
+        (princ (format "Ycmd version:   %s\n" (ignore-errors (ycmd-version))))
+        (princ (format "Emacs version:  %s\n" emacs-version))
+        (princ (format "System:         %s\n" system-configuration))
+        (princ (format "Window system:  %S\n" window-system))))))
 
 (defun ycmd--get-request-hmac (method path body)
   "Generate HMAC for request from METHOD, PATH and BODY."
