@@ -637,9 +637,9 @@ explicitly re-define the prefix key:
      :style toggle :selected ycmd-force-semantic-completion]
     "---"
     ["Show debug info" ycmd-show-debug-info]
+    ["Show version" ycmd-version t]
     ["Log enabled" ycmd-toggle-log-enabled
-     :style toggle :selected ycmd--log-enabled]
-    ["Show version" ycmd-version t]))
+     :style toggle :selected ycmd--log-enabled]))
 
 (defmacro ycmd--kill-timer (timer)
   "Cancel TIMER."
