@@ -549,7 +549,6 @@ and `delete-process'.")
     (window-configuration-change-hook . ycmd--on-window-configuration-change)
     (kill-buffer-hook                 . ycmd--on-close-buffer)
     (before-revert-hook               . ycmd--teardown)
-    (window-configuration-change-hook . ycmd--perform-deferred-parse)
     (post-command-hook                . ycmd--perform-deferred-parse))
   "Hooks which ycmd hooks in.")
 
@@ -662,11 +661,12 @@ explicitly re-define the prefix key:
   (let ((force-semantic
          (when ycmd-force-semantic-completion "/s"))
         (text (pcase ycmd--last-status-change
-                (`stopped "-")
-                (`unparsed "?")
+                (`parsed "")
                 (`parsing "*")
-                (`errored "!")
-                (`parsed ""))))
+                (`unparsed "?")
+                (`stopped "-")
+                (`starting ">")
+                (`errored "!"))))
     (concat " ycmd" force-semantic text)))
 
 ;;;###autoload
@@ -759,13 +759,17 @@ Return t if parsing is to be deferred, or nil otherwise."
       (ycmd-parsing-in-progress-p)
       revert-buffer-in-progress-p))
 
+(defun ycmd--deferred-parse? ()
+  "Return non-nil if current buffer has a deferred parse."
+  ycmd--deferred-parse)
+
 (defun ycmd--parse-deferred ()
   "Defer parse notification for current buffer."
   (setq ycmd--deferred-parse t))
 
 (defun ycmd--perform-deferred-parse ()
   "Perform the deferred parse."
-  (when ycmd--deferred-parse
+  (when (ycmd--deferred-parse?)
     (setq ycmd--deferred-parse nil)
     (ycmd--conditional-parse)))
 
@@ -813,15 +817,18 @@ _LEN is ununsed."
 
 (defun ycmd--on-window-configuration-change ()
   "Function to run by `window-configuration-change-hook'."
-  (when (and ycmd-mode
-             (eq ycmd--last-status-change 'unparsed)
-             (memq 'buffer-focus ycmd-parse-conditions))
-    (ycmd--kill-timer ycmd--on-focus-timer)
-    (let ((on-buffer-focus-fn
-           (apply-partially 'ycmd--on-unparsed-buffer-focus
-                            (current-buffer))))
-      (setq ycmd--on-focus-timer
-            (run-at-time 1.0 nil on-buffer-focus-fn)))))
+  (if (ycmd--deferred-parse?)
+      (ycmd--perform-deferred-parse)
+    (when (and ycmd-mode
+               (pcase ycmd--last-status-change
+                 ((or `unparsed `starting) t))
+               (memq 'buffer-focus ycmd-parse-conditions))
+      (ycmd--kill-timer ycmd--on-focus-timer)
+      (let ((on-buffer-focus-fn
+             (apply-partially 'ycmd--on-unparsed-buffer-focus
+                              (current-buffer))))
+        (setq ycmd--on-focus-timer
+              (run-at-time 1.0 nil on-buffer-focus-fn))))))
 
 (defmacro ycmd--with-all-ycmd-buffers (&rest body)
   "Execute BODY with each `ycmd-mode' enabled buffer."
@@ -1974,6 +1981,8 @@ See the docstring of the variable for an example"))
            (server-program+args (append ycmd-server-command args))
            (proc (apply #'start-process ycmd--server-process-name proc-buff
                         server-program+args)))
+      (ycmd--with-all-ycmd-buffers
+        (ycmd--report-status 'starting))
       (setq ycmd--server-actual-port nil
             ycmd--hmac-secret hmac-secret)
       (set-process-query-on-exit-flag proc nil)
