@@ -37,8 +37,7 @@
   (let* ((load-prefer-newer t)
          (source-directory (locate-dominating-file ycmd-runner-file "Cask"))
          (pkg-rel-dir (format ".cask/%s/elpa" emacs-version))
-         (python-path (or (executable-find "python2")
-                          (executable-find "python"))))
+         (python-path (executable-find "python")))
     (unless python-path
       (error "Python not found"))
     (setq package-user-dir (expand-file-name pkg-rel-dir source-directory))
