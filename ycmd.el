@@ -785,8 +785,10 @@ If FORCE-DEFERRED is non-nil perform parse notification later."
                  (memq condition ycmd-parse-conditions)))
     (if (or force-deferred (ycmd--must-defer-parse))
         (ycmd--parse-deferred)
-      (ycmd--on-visit-buffer)
-      (ycmd-notify-file-ready-to-parse))))
+      (deferred:$
+        (deferred:next #'ycmd--on-visit-buffer)
+        (deferred:nextc it
+          #'ycmd-notify-file-ready-to-parse)))))
 
 (defun ycmd--on-save ()
   "Function to run when the buffer has been saved."
@@ -840,10 +842,16 @@ _LEN is ununsed."
 
 (defun ycmd--on-visit-buffer ()
   "If `ycmd--buffer-visit-flag' is nil send BufferVisit event."
-  (when (and (ycmd-is-server-alive?)
-             (not ycmd--buffer-visit-flag))
-    (ycmd--notify-server "BufferVisit")
-    (setq ycmd--buffer-visit-flag t)))
+  (when (and (not ycmd--buffer-visit-flag)
+             (ycmd-is-server-alive?))
+    (let ((data (ycmd--get-request-data)))
+      (ycmd--event-notification
+       "BufferVisit" (plist-get data :content)
+       (lambda (response)
+         ;; The request is successful if response is nil
+         (unless response
+           (with-current-buffer (plist-get data :buffer)
+             (setq ycmd--buffer-visit-flag t))))))))
 
 (defun ycmd--on-close-buffer ()
   "Notify server that the current buffer is no longer open, and cleanup emacs-ycmd variables."
