@@ -2097,7 +2097,9 @@ This is useful for debugging.")
                            (deferred:nextc it
                              (lambda (result)
                                result)))))
-            (princ it)
+            (princ (with-temp-buffer
+                     (cl-prettyprint it)
+                     (buffer-string)))
           (princ "No debug info available from server"))
         (princ "\n\n")
         (princ "Server is ")
