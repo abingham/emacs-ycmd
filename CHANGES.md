@@ -1,4 +1,4 @@
-# 0.9.2-cvs (unreleased)
+# 1.0 (Nov 21, 2016)
 
 * Server start is non-blocking
 * Support for mode/language keywords

@@ -4,7 +4,7 @@
 ;;
 ;; Authors: Austin Bingham <austin.bingham@gmail.com>
 ;;          Peter Vasil <mail@petervasil.net>
-;; Version: 0.9.2-cvs
+;; Version: 1.0
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Package-Requires: ((emacs "24.3") (dash "2.12.1") (s "1.10.0") (deferred "0.3.2") (cl-lib "0.5") (let-alist "1.0.4") (request "0.2.0") (request-deferred "0.2.0") (pkg-info "0.4"))
 ;;
@@ -706,7 +706,7 @@ Hook `ycmd-mode' into modes in `ycmd-file-type-map'."
   (interactive)
   (dolist (it ycmd-file-type-map)
     (add-hook (intern (format "%s-hook" (symbol-name (car it)))) 'ycmd-mode)))
-(make-obsolete 'ycmd-setup 'global-ycmd-mode "0.9.1")
+(make-obsolete 'ycmd-setup 'global-ycmd-mode "1.0")
 
 (defun ycmd-version (&optional show-version)
   "Get the `emacs-ycmd' version as string.
