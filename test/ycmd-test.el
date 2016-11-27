@@ -148,6 +148,16 @@ response."
                        .completions))
       (should (= .completion_start_column 7)))))
 
+(ycmd-ert-deftest get-completions-cpp-unicode "test-unicode.cpp" 'c++-mode
+  :line 8 :column 7
+  (let ((response (ycmd-get-completions :sync)))
+    (let-alist response
+      (should (cl-some (lambda (c)
+                         (string-equal
+                          "bär" (cdr (assq 'insertion_text c))))
+                       .completions))
+      (should (= .completion_start_column 7)))))
+
 (ycmd-ert-deftest completion-at-point-clang
     "test-completion-at-point.cpp" 'c++-mode
   :line 8 :column 8
