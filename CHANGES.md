@@ -1,6 +1,6 @@
 # 1.1 (unreleased)
 
-
+* Show message for unhandled exceptions in minibuffer
 
 # 1.0 (Nov 21, 2016)
 

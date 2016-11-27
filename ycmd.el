@@ -1110,7 +1110,8 @@ This function handles `UnknownExtraConf', `ValueError' and
       ("UnknownExtraConf"
        (ycmd--handle-extra-conf-exception .exception.extra_conf_file))
       ((or "ValueError" "RuntimeError")
-       (ycmd--handle-error-exception .message)))))
+       (ycmd--handle-error-exception .message))
+      (_ (message "%s: %s" .exception.TYPE .message)))))
 
 (defun ycmd--exception? (response)
   "Check whether RESPONSE is an exception."
