@@ -1504,8 +1504,9 @@ If NO-CONFIRM is non-nil, don't ask the user to confirm the rename."
   "Refactor current context with NEW-NAME."
   (interactive "MNew variable name: ")
   (when (not (s-blank? new-name))
-    (ycmd--run-completer-command (list "RefactorRename" new-name)
-                        'ycmd--handle-refactor-rename-success)))
+    (ycmd--run-completer-command
+     (list "RefactorRename" new-name)
+     'ycmd--handle-refactor-rename-success)))
 
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
@@ -1985,7 +1986,7 @@ See the docstring of the variable for an example"))
            (options-file (ycmd--create-options-file hmac-secret))
            (args (append (and port (list (format "--port=%d" port)))
                          (list (concat "--options_file=" options-file))
-                        ycmd-server-args))
+                         ycmd-server-args))
            (server-program+args (append ycmd-server-command args))
            (proc (apply #'start-process ycmd--server-process-name proc-buff
                         server-program+args)))
