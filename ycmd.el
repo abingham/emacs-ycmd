@@ -785,10 +785,16 @@ If FORCE-DEFERRED is non-nil perform parse notification later."
                  (memq condition ycmd-parse-conditions)))
     (if (or force-deferred (ycmd--must-defer-parse))
         (ycmd--parse-deferred)
-      (deferred:$
-        (deferred:next #'ycmd--on-visit-buffer)
-        (deferred:nextc it
-          #'ycmd-notify-file-ready-to-parse)))))
+      (let ((buffer (current-buffer)))
+        (deferred:$
+          (deferred:next
+            (lambda ()
+              (with-current-buffer buffer
+                (ycmd--on-visit-buffer))))
+          (deferred:nextc it
+            (lambda ()
+              (with-current-buffer buffer
+                (ycmd-notify-file-ready-to-parse)))))))))
 
 (defun ycmd--on-save ()
   "Function to run when the buffer has been saved."

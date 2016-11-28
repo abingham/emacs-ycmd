@@ -1,6 +1,7 @@
 # 1.1 (unreleased)
 
 * Show message for unhandled exceptions in minibuffer
+* Fix `ycmd--conditional-parse`'s current-buffer context for some cases (GoTo)
 
 # 1.0 (Nov 21, 2016)
 
