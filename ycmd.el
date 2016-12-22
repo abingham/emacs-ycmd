@@ -245,6 +245,12 @@ use `ycmd-parse-buffer'."
   "Whether to use always semantic completion."
   :type 'boolean)
 
+(defcustom ycmd-auto-trigger-semantic-completion t
+  "If non-nil, semntic completion is turned off.
+Semanic completion is still available if
+`ycmd-force-semantic-completion' is non-nil."
+  :type 'boolean)
+
 (defcustom ycmd-hide-url-status t
   "Whether to quash url status messages for ycmd requests."
   :type 'boolean)
@@ -1886,9 +1892,10 @@ file."
         (godef-binary-path (or ycmd-godef-binary-path ""))
         (rust-src-path (or ycmd-rust-src-path ""))
         (racerd-binary-path (or ycmd-racerd-binary-path ""))
-        (python-binary-path (or ycmd-python-binary-path "")))
+        (python-binary-path (or ycmd-python-binary-path ""))
+        (auto-trigger (if ycmd-auto-trigger-semantic-completion 1 0)))
     `((filepath_completion_use_working_dir . 0)
-      (auto_trigger . 1)
+      (auto_trigger . ,auto-trigger)
       (min_num_of_chars_for_completion . ,ycmd-min-num-chars-for-completion)
       (min_num_identifier_candidate_chars . 0)
       (semantic_triggers . ())
