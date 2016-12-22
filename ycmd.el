@@ -246,7 +246,7 @@ use `ycmd-parse-buffer'."
   :type 'boolean)
 
 (defcustom ycmd-auto-trigger-semantic-completion t
-  "If non-nil, semntic completion is turned off.
+  "If non-nil, semantic completion is turned off.
 Semanic completion is still available if
 `ycmd-force-semantic-completion' is non-nil."
   :type 'boolean)
