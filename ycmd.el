@@ -1,6 +1,6 @@
 ;;; ycmd.el --- emacs bindings to the ycmd completion server -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2014-2016 Austin Bingham, Peter Vasil
+;; Copyright (c) 2014-2017 Austin Bingham, Peter Vasil
 ;;
 ;; Authors: Austin Bingham <austin.bingham@gmail.com>
 ;;          Peter Vasil <mail@petervasil.net>
@@ -2139,6 +2139,23 @@ This is useful for debugging.")
         (princ (format "Emacs version:  %s\n" emacs-version))
         (princ (format "System:         %s\n" system-configuration))
         (princ (format "Window system:  %S\n" window-system))))))
+
+(defun ycmd-filter-and-sort-candidates (request-data)
+  "Use ycmd to filter and sort identifiers from REQUEST-DATA.
+
+This request allows to use ycmd's filtering and sorting
+mechanism on arbitrary sets of identifiers.
+
+The request data should be something like:
+
+\((candidates \"candidate1\" \"candidate2\")
+ (sort_property . \"\")
+ (query . \"cand\"))
+
+If candidates is a list with identifiers, sort_property should be
+and empty string, however when candidates is a more complex
+structure it is used to specify the sort key."
+  (ycmd--request "/filter_and_sort_candidates" request-data :sync t))
 
 (defun ycmd--get-request-hmac (method path body)
   "Generate HMAC for request from METHOD, PATH and BODY."
