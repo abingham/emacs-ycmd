@@ -4,6 +4,8 @@
 * Fix `ycmd--conditional-parse`'s current-buffer context for some cases (GoTo)
 * New option `ycmd-auto-trigger-semantic-completion` for enabling/disabling
   semantic completion after a semantic trigger.
+* Add function `ycmd-filter-and-sort-candidates` to allow to use ycmd's
+  filtering and sorting mechanism with arbitrary sets of identifiers
 
 # 1.0 (Nov 21, 2016)
 

@@ -1,6 +1,6 @@
 ;;; ycmd-test.el --- tests for ycmd.el -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2014-2016 Austin Bingham, Peter Vasil
+;; Copyright (c) 2014-2017 Austin Bingham, Peter Vasil
 ;;
 ;; Authors: Austin Bingham <austin.bingham@gmail.com>
 ;;          Peter Vasil <mail@petervasil.net>
@@ -103,6 +103,12 @@ evaluating BODY."
      (delay-mode-hooks (funcall ,mode))
      (ycmd-test-mode)
      ,@body
+     (ycmd-close)))
+
+(defmacro with-ycmd-test-mode (body)
+  `(progn
+     (ycmd-test-mode)
+     ,(macroexpand-all body)
      (ycmd-close)))
 
 (defmacro ycmd-ert-deftest (name filename mode &rest keys-and-body)
@@ -338,19 +344,19 @@ response."
 (defun ycmd-test-refactor-rename-handler (response file-names-alist)
   (when (cdr (assq 'fixits response))
     (ycmd--handle-refactor-rename-success response t)
-    (every (lambda (f)
-             (let ((buffer
-                    (find-file-noselect
-                     (f-join ycmd-test-resources-location (car f))))
-                   (expected
-                    (f-read
-                     (f-join ycmd-test-resources-location (cdr f)))))
-               (with-current-buffer buffer
-                 (let ((actual (buffer-string)))
-                   (set-buffer-modified-p nil)
-                   (set-visited-file-name nil 'no-query)
-                   (string= actual expected)))))
-           file-names-alist)))
+    (cl-every (lambda (f)
+                (let ((buffer
+                       (find-file-noselect
+                        (f-join ycmd-test-resources-location (car f))))
+                      (expected
+                       (f-read
+                        (f-join ycmd-test-resources-location (cdr f)))))
+                  (with-current-buffer buffer
+                    (let ((actual (buffer-string)))
+                      (set-buffer-modified-p nil)
+                      (set-visited-file-name nil 'no-query)
+                      (string= actual expected)))))
+              file-names-alist)))
 
 (ert-deftest ycmd-test-refactor-rename-simple ()
   (let* ((file-path (f-join ycmd-test-resources-location "simple_test.js"))
@@ -474,18 +480,18 @@ response."
            (meta-expected '(" A" " A()" " A( int a )" " A( int a, int b )"))
            (candidates (company-ycmd--construct-candidate-clang data)))
       (should (= 4 (length candidates)))
-      (should (every (lambda (expected candidate)
-                       (ycmd-test-has-property-with-value 'params expected candidate))
-                     params-expected (reverse candidates)))
-      (should (every (lambda (expected candidate)
-                       (ycmd-test-has-property-with-value 'meta expected candidate))
-                     meta-expected (reverse candidates)))
-      (should (every (lambda (candidate)
-                       (ycmd-test-has-property-with-value 'return_type "" candidate))
-                     candidates))
-      (should (every (lambda (candidate)
-                       (ycmd-test-has-property-with-value 'kind "class" candidate))
-                     candidates)))))
+      (should (cl-every (lambda (expected candidate)
+                          (ycmd-test-has-property-with-value 'params expected candidate))
+                        params-expected (reverse candidates)))
+      (should (cl-every (lambda (expected candidate)
+                          (ycmd-test-has-property-with-value 'meta expected candidate))
+                        meta-expected (reverse candidates)))
+      (should (cl-every (lambda (candidate)
+                          (ycmd-test-has-property-with-value 'return_type "" candidate))
+                        candidates))
+      (should (cl-every (lambda (candidate)
+                          (ycmd-test-has-property-with-value 'kind "class" candidate))
+                        candidates)))))
 
 (ert-deftest company-ycmd-test-construct-candidate-go ()
   (ycmd-ert-with-temp-buffer 'go-mode
@@ -786,6 +792,29 @@ response."
   (let ((data '((filepath . ,file-path) (column_num . 34) (line_num . 15))))
     (should (ycmd--location-data? data))
     (should-not (ycmd--location-data? (list data)))))
+
+(ert-deftest ycmd-test-filter-and-sort-candidates1 ()
+  (skip-unless (not (version-list-< (version-to-list emacs-version) '(24 4))))
+  (ycmd-ert-with-temp-buffer 'fundamental-mode
+    (with-ycmd-test-mode
+     (let* ((data '(("candidates" . (((prop1 . aoo) (prop2 . bar))
+                                     ((prop1 . bfo) (prop2 . zoo))
+                                     ((prop1 . cfo) (prop2 . moo))))
+                    ("sort_property" . "prop1")
+                    ("query" . "fo")))
+            (result (ycmd-filter-and-sort-candidates data)))
+       (should (string= (cdr (assq 'prop1 (nth 0 result))) "bfo"))
+       (should (string= (cdr (assq 'prop1 (nth 1 result))) "cfo"))))))
+
+(ert-deftest ycmd-test-filter-and-sort-candidates2 ()
+  (ycmd-ert-with-temp-buffer 'fundamental-mode
+    (with-ycmd-test-mode
+     (let* ((data '(("candidates" . (bfo aoo cfo))
+                    ("sort_property" . "")
+                    ("query" . "fo")))
+            (result (ycmd-filter-and-sort-candidates data)))
+       (should (string= (nth 0 result) "bfo"))
+       (should (string= (nth 1 result) "cfo"))))))
 
 (defun flycheck-ycmd-test-mode ()
   (flycheck-ycmd-setup)
