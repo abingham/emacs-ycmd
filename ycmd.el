@@ -1121,7 +1121,7 @@ This function handles `UnknownExtraConf', `ValueError' and
     (pcase .exception.TYPE
       ("UnknownExtraConf"
        (ycmd--handle-extra-conf-exception .exception.extra_conf_file))
-      ((or "ValueError" "RuntimeError")
+      ((or "ValueError" "RuntimeError" "NoExtraConfDetected")
        (ycmd--handle-error-exception .message))
       (_ (message "%s: %s" .exception.TYPE .message)))))
 
@@ -1759,7 +1759,8 @@ Consider reporting this.")
                          "Gocode binary not found."
                          "Gocode returned invalid JSON response."
                          (pred (string-prefix-p "Gocode panicked"))
-                         "Received invalid HMAC for response!")
+                         "Received invalid HMAC for response!"
+                         (pred (string-match-p "No .* file detected,")))
                      t))))
     (when is-error
       (ycmd--report-status 'errored))
