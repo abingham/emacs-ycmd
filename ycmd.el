@@ -1831,7 +1831,7 @@ If there is no established mapping, return nil."
 (defun ycmd--on-server-timeout ()
   "Kill server process due to timeout."
   (ycmd-close 'errored)
-  (message "ERROR: Ycmd server timeout"))
+  (message "ERROR: Ycmd server timeout. If this happens regularly you may need to increase `ycmd-startup-timeout'."))
 
 (defun ycmd--start-server-timeout-timer ()
   "Start the server timeout timer."
