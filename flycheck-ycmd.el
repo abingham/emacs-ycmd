@@ -97,7 +97,7 @@ display."
 
 (defun flycheck-ycmd--in-supported-mode ()
   "Determines if buffer is in `ycmd-mode` and another mode supported by ycmd."
-  (and ycmd-mode (ycmd-diagnostic-file-types major-mode)))
+  (and ycmd-mode (ycmd-file-types-with-diagnostics major-mode)))
 
 ;;;###autoload
 (defun flycheck-ycmd-setup ()
@@ -113,7 +113,7 @@ ycmd checker to the list of flycheck checkers."
   "A flycheck checker using parse results from ycmd."
   :start #'flycheck-ycmd--start
   :predicate #'flycheck-ycmd--in-supported-mode
-  :modes '(c++-mode c-mode objc-mode csharp-mode))
+  :modes (ycmd-major-modes-with-diagnostics))
 
 (defun flycheck-ycmd--teardown ()
   "Reset `flycheck-ycmd--cache'."

@@ -407,13 +407,14 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
   :type 'hook
   :risky t)
 
-(defconst ycmd--diagnostic-file-types
+(defconst ycmd--file-types-with-diagnostics
   '("c"
     "cpp"
     "objc"
     "objcpp"
-    "cs")
-  "A list of ycmd file type strings which support semantic completion.")
+    "cs"
+    "typescript")
+  "A list of ycmd file type strings which support semantic diagnostics.")
 
 (defvar ycmd-keywords-alist
   '((c++-mode
@@ -886,15 +887,22 @@ _LEN is ununsed."
     (ycmd--teardown)
     (setq ycmd--buffer-visit-flag nil)))
 
-(defun ycmd-diagnostic-file-types (mode)
-  "Find the ycmd file types for MODE which support semantic completion.
+(defun ycmd-file-types-with-diagnostics (mode)
+  "Find the ycmd file types for MODE which support semantic diagnostics.
 
 Returns a possibly empty list of ycmd file type strings.  If this
 is empty, then ycmd doesn't support semantic completion (or
 diagnostics) for MODE."
   (-intersection
-   ycmd--diagnostic-file-types
+   ycmd--file-types-with-diagnostics
    (ycmd-major-mode-to-file-types mode)))
+
+(defun ycmd-major-modes-with-diagnostics ()
+  "Return a list with major-modes which support semantic diagnostics."
+  (->>
+   (--filter (member (cadr it) ycmd--file-types-with-diagnostics)
+             ycmd-file-type-map)
+   (--map (car it))))
 
 (defun ycmd-open ()
   "Start a new ycmd server.
