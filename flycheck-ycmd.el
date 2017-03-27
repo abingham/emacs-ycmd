@@ -1,5 +1,5 @@
 ;;; flycheck-ycmd.el --- flycheck integration for ycmd
-;; Copyright (c) 2014-2016 Austin Bingham
+;; Copyright (c) 2014-2017 Austin Bingham
 ;;
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
