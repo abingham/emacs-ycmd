@@ -412,7 +412,8 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
     "cpp"
     "objc"
     "objcpp"
-    "cs")
+    "cs"
+    "typescript")
   "A list of ycmd file type strings which support semantic diagnostics.")
 
 (defvar ycmd-keywords-alist
