@@ -6,6 +6,7 @@
   semantic completion after a semantic trigger.
 * Add function `ycmd-filter-and-sort-candidates` to allow to use ycmd's
   filtering and sorting mechanism with arbitrary sets of identifiers
+* Enable semantic diagnostics for typescript
 
 # 1.0 (Nov 21, 2016)
 
