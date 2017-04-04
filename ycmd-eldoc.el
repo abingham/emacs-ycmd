@@ -60,8 +60,15 @@ is only semantic after a semantic trigger."
 (defun ycmd-eldoc--documentation-function ()
   "Eldoc function for `ycmd-mode'."
   (when ycmd-mode
-    (--when-let (ycmd-eldoc--info-at-point)
-      (eldoc-message it))))
+    (deferred:$
+      (deferred:next
+        (lambda ()
+          (ycmd-eldoc--info-at-point)))
+      (deferred:nextc it
+        (lambda (text)
+          (eldoc-message text))))
+    ;; Don't show deferred object as ElDoc message
+    nil))
 
 (defun ycmd-eldoc-always-semantic-server-query-p ()
   "Check whether server query should be semantic."
@@ -77,17 +84,23 @@ is only semantic after a semantic trigger."
     (-when-let (symbol (symbol-at-point))
       (if (eq symbol (car ycmd-eldoc--cache))
           (cadr ycmd-eldoc--cache)
-        (-when-let* ((completions
-                      (let ((ycmd-force-semantic-completion
-                             (or ycmd-force-semantic-completion
-                                 (ycmd-eldoc-always-semantic-server-query-p))))
-                        (ycmd-get-completions :sync)))
-                     (candidates (cdr (assq 'completions completions)))
-                     (text (ycmd-eldoc--generate-message
-                            (symbol-name symbol) candidates)))
-          (setq text (ycmd--fontify-code text))
-          (setq ycmd-eldoc--cache (list symbol text))
-          text)))))
+        (deferred:$
+          (deferred:next
+            (lambda ()
+              (save-excursion
+                (ycmd-eldoc--goto-func-name)
+                (let ((ycmd-force-semantic-completion
+                       (or ycmd-force-semantic-completion
+                           (ycmd-eldoc-always-semantic-server-query-p))))
+                  (ycmd-get-completions)))))
+          (deferred:nextc it
+            (lambda (completions)
+              (-when-let* ((candidates (cdr (assq 'completions completions)))
+                           (text (ycmd-eldoc--generate-message
+                                  (symbol-name symbol) candidates)))
+                (setq text (ycmd--fontify-code text))
+                (setq ycmd-eldoc--cache (list symbol text))
+                text))))))))
 
 ;; Source: https://github.com/racer-rust/emacs-racer/blob/master/racer.el
 (defun ycmd-eldoc--goto-func-name ()
@@ -136,7 +149,7 @@ foo(bar, |baz); -> foo|(bar, baz);"
 
 ;;;###autoload
 (define-minor-mode ycmd-eldoc-mode
-  "Toggle eldoc mode."
+  "Toggle ycmd eldoc mode."
   :lighter ""
   (if ycmd-eldoc-mode
       (progn
