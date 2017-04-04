@@ -4,7 +4,7 @@
 
 ;; Author: Peter Vasil <mail@petervasil.net>
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((ycmd "0.1") (deferred "0.2.0") (s "1.9.0") (dash "2.12.1") (cl-lib "0.5") (let-alist "1.0.4"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -127,17 +127,28 @@ foo(bar, |baz); -> foo|(bar, baz);"
 (defun ycmd-eldoc-setup ()
   "Setup eldoc for `ycmd-mode'."
   (interactive)
-  (if (eval-when-compile (fboundp 'add-function))
-      (add-function :before-until (local 'eldoc-documentation-function)
-                    #'ycmd-eldoc--documentation-function)
-    (set (make-local-variable 'eldoc-documentation-function)
-         'ycmd-eldoc--documentation-function))
-  (add-hook 'ycmd-after-teardown-hook #'ycmd-eldoc--teardown)
-  (eldoc-mode +1))
+  (ycmd-eldoc-mode +1))
+(make-obsolete 'ycmd-eldoc-setup 'ycmd-eldoc-mode "0.2")
 
 (defun ycmd-eldoc--teardown ()
   "Reset `ycmd-eldoc--cache'."
   (setq ycmd-eldoc--cache nil))
+
+;;;###autoload
+(define-minor-mode ycmd-eldoc-mode
+  "Toggle eldoc mode."
+  :lighter ""
+  (if ycmd-eldoc-mode
+      (progn
+        (set (make-local-variable 'eldoc-documentation-function)
+             'ycmd-eldoc--documentation-function)
+        (eldoc-mode +1)
+        (add-hook 'ycmd-after-teardown-hook
+                  #'ycmd-eldoc--teardown nil 'local))
+    (kill-local-variable 'eldoc-documentation-function)
+    (eldoc-mode -1)
+    (remove-hook 'ycmd-after-teardown-hook
+                 #'ycmd-eldoc--teardown 'local)))
 
 (provide 'ycmd-eldoc)
 
