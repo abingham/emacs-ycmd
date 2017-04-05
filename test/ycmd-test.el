@@ -757,27 +757,32 @@ response."
     (should (equal (company-ycmd--extract-meta-python data)
                    "foo(self, a, b) -> bar"))))
 
+(defun ycmd-test-eldoc-func ()
+  (deferred:sync!
+    (deferred:next
+      (lambda () (or (ycmd-eldoc--info-at-point) "")))))
+
 (ycmd-ert-deftest eldoc-info-at-point-on-keyword "test-eldoc.cpp" 'c++-mode
   :line 8 :column 8
-  (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
+  (should (equal (substring-no-properties (ycmd-test-eldoc-func))
                  "void bar( int x )")))
 (ycmd-ert-deftest eldoc-info-at-point-between-par "test-eldoc.cpp" 'c++-mode
   :line 8 :column 11
-  (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
+  (should (equal (substring-no-properties (ycmd-test-eldoc-func))
                  "void bar( int x )")))
 
 (ycmd-ert-deftest eldoc-force-semantic-info-fail "test-eldoc.cpp" 'c++-mode
   :line 8 :column 5
   (let ((ycmd-eldoc-always-semantic-server-query-modes nil)
         (ycmd-force-semantic-completion nil))
-    (should-not (ycmd-eldoc--info-at-point))))
+    (should-not (ycmd-test-eldoc-func))))
 
 (ycmd-ert-deftest eldoc-force-semantic-info "test-eldoc.cpp" 'c++-mode
   :line 8 :column 5
   (skip-unless (not (version-list-< (version-to-list emacs-version) '(24 4))))
   (let ((ycmd-eldoc-always-semantic-server-query-modes t)
         (ycmd-force-semantic-completion nil))
-    (should (equal (substring-no-properties (ycmd-eldoc--info-at-point))
+    (should (equal (substring-no-properties (ycmd-test-eldoc-func))
                    "Foo l"))))
 
 (ert-deftest ycmd-test-not-running ()

@@ -4,7 +4,7 @@
 
 ;; Author: Peter Vasil <mail@petervasil.net>
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((ycmd "0.1") (deferred "0.2.0") (s "1.9.0") (dash "2.12.1") (cl-lib "0.5") (let-alist "1.0.4"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -60,8 +60,15 @@ is only semantic after a semantic trigger."
 (defun ycmd-eldoc--documentation-function ()
   "Eldoc function for `ycmd-mode'."
   (when ycmd-mode
-    (--when-let (ycmd-eldoc--info-at-point)
-      (eldoc-message it))))
+    (deferred:$
+      (deferred:next
+        (lambda ()
+          (ycmd-eldoc--info-at-point)))
+      (deferred:nextc it
+        (lambda (text)
+          (eldoc-message text))))
+    ;; Don't show deferred object as ElDoc message
+    nil))
 
 (defun ycmd-eldoc-always-semantic-server-query-p ()
   "Check whether server query should be semantic."
@@ -77,17 +84,23 @@ is only semantic after a semantic trigger."
     (-when-let (symbol (symbol-at-point))
       (if (eq symbol (car ycmd-eldoc--cache))
           (cadr ycmd-eldoc--cache)
-        (-when-let* ((completions
-                      (let ((ycmd-force-semantic-completion
-                             (or ycmd-force-semantic-completion
-                                 (ycmd-eldoc-always-semantic-server-query-p))))
-                        (ycmd-get-completions :sync)))
-                     (candidates (cdr (assq 'completions completions)))
-                     (text (ycmd-eldoc--generate-message
-                            (symbol-name symbol) candidates)))
-          (setq text (ycmd--fontify-code text))
-          (setq ycmd-eldoc--cache (list symbol text))
-          text)))))
+        (deferred:$
+          (deferred:next
+            (lambda ()
+              (save-excursion
+                (ycmd-eldoc--goto-func-name)
+                (let ((ycmd-force-semantic-completion
+                       (or ycmd-force-semantic-completion
+                           (ycmd-eldoc-always-semantic-server-query-p))))
+                  (ycmd-get-completions)))))
+          (deferred:nextc it
+            (lambda (completions)
+              (-when-let* ((candidates (cdr (assq 'completions completions)))
+                           (text (ycmd-eldoc--generate-message
+                                  (symbol-name symbol) candidates)))
+                (setq text (ycmd--fontify-code text))
+                (setq ycmd-eldoc--cache (list symbol text))
+                text))))))))
 
 ;; Source: https://github.com/racer-rust/emacs-racer/blob/master/racer.el
 (defun ycmd-eldoc--goto-func-name ()
@@ -127,17 +140,28 @@ foo(bar, |baz); -> foo|(bar, baz);"
 (defun ycmd-eldoc-setup ()
   "Setup eldoc for `ycmd-mode'."
   (interactive)
-  (if (eval-when-compile (fboundp 'add-function))
-      (add-function :before-until (local 'eldoc-documentation-function)
-                    #'ycmd-eldoc--documentation-function)
-    (set (make-local-variable 'eldoc-documentation-function)
-         'ycmd-eldoc--documentation-function))
-  (add-hook 'ycmd-after-teardown-hook #'ycmd-eldoc--teardown)
-  (eldoc-mode +1))
+  (ycmd-eldoc-mode +1))
+(make-obsolete 'ycmd-eldoc-setup 'ycmd-eldoc-mode "0.2")
 
 (defun ycmd-eldoc--teardown ()
   "Reset `ycmd-eldoc--cache'."
   (setq ycmd-eldoc--cache nil))
+
+;;;###autoload
+(define-minor-mode ycmd-eldoc-mode
+  "Toggle ycmd eldoc mode."
+  :lighter ""
+  (if ycmd-eldoc-mode
+      (progn
+        (set (make-local-variable 'eldoc-documentation-function)
+             'ycmd-eldoc--documentation-function)
+        (eldoc-mode +1)
+        (add-hook 'ycmd-after-teardown-hook
+                  #'ycmd-eldoc--teardown nil 'local))
+    (kill-local-variable 'eldoc-documentation-function)
+    (eldoc-mode -1)
+    (remove-hook 'ycmd-after-teardown-hook
+                 #'ycmd-eldoc--teardown 'local)))
 
 (provide 'ycmd-eldoc)
 
