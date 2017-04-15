@@ -2,6 +2,7 @@ language: emacs-lisp
 cache:
   directories:
     - .cask/
+    - $HOME/emacs
     - $HOME/.ccache
     - $HOME/ycmd
     - $HOME/.npm  # Node packages from npm
