@@ -1137,23 +1137,28 @@ This function handles `UnknownExtraConf', `ValueError' and
   "Check whether RESPONSE is an exception."
   (assq 'exception response))
 
+(defun ycmd--send-subcommand-request (subcommand request-data)
+  "Send SUBCOMMAND request for REQUEST-DATA.
+Run HANDLER with reponse."
+  (let* ((subcommand (if (listp subcommand)
+                         subcommand
+                       (list subcommand)))
+         (content (cons (append (list "command_arguments")
+                                subcommand)
+                        (plist-get request-data :content))))
+    (ycmd--request "/run_completer_command" content)))
+
 (defun ycmd--run-completer-command (subcommand success-handler)
   "Send SUBCOMMAND to the `ycmd' server.
 
 SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
-    (if (ycmd-parsing-in-progress-p)
-        (message "Can't send \"%s\" request while parsing is in progress!"
-                 subcommand)
-      (let* ((data (ycmd--get-request-data))
-             (subcommand (if (listp subcommand)
-                             subcommand
-                           (list subcommand)))
-             (content (cons (append (list "command_arguments")
-                                    subcommand)
-                            (plist-get data :content))))
+    (let ((data (ycmd--get-request-data)))
+      (if (ycmd-parsing-in-progress-p)
+          (message "Can't send \"%s\" request while parsing is in progress!"
+                   subcommand)
         (deferred:$
-          (ycmd--request "/run_completer_command" content)
+          (ycmd--send-subcommand-request subcommand data)
           (deferred:nextc it
             (lambda (response)
               (when response
@@ -1165,10 +1170,10 @@ SUCCESS-HANDLER is called when for a successful response."
                                  (string= "This Completer has no supported subcommands."
                                           .message)))
                         (message "%s is not supported by current Completer"
-                                 (car subcommand))
+                                 subcommand)
                       (ycmd--handle-exception response)
                       (run-hook-with-args 'ycmd-after-exception-hook
-                                          (car subcommand) (plist-get data :buffer)
+                                          subcommand (plist-get data :buffer)
                                           (plist-get data :pos) response))))
                  (success-handler
                   (funcall success-handler response)))))))))))
