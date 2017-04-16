@@ -86,26 +86,33 @@ is only semantic after a semantic trigger."
 
 (defun ycmd-eldoc--info-at-point ()
   "Get function info at point."
-  (ycmd-eldoc--with-point-at-func-name
-    (-when-let (symbol (symbol-at-point))
-      (if (eq symbol (car ycmd-eldoc--cache))
-          (cadr ycmd-eldoc--cache)
-        (deferred:$
-          (deferred:next
-            (lambda ()
+  (let ((symbol (ycmd-eldoc--with-point-at-func-name (symbol-at-point))))
+    (if (and symbol (eq symbol (car ycmd-eldoc--cache)))
+        (cadr ycmd-eldoc--cache)
+      (deferred:$
+        (deferred:next
+          (lambda ()
+            (when symbol
               (ycmd-eldoc--with-point-at-func-name
                 (let ((ycmd-force-semantic-completion
                        (or ycmd-force-semantic-completion
                            (ycmd-eldoc-always-semantic-server-query-p))))
-                  (ycmd-get-completions)))))
-          (deferred:nextc it
-            (lambda (completions)
-              (-when-let* ((candidates (cdr (assq 'completions completions)))
-                           (text (ycmd-eldoc--generate-message
-                                  (symbol-name symbol) candidates)))
-                (setq text (ycmd--fontify-code text))
-                (setq ycmd-eldoc--cache (list symbol text))
-                text))))))))
+                  (ycmd-get-completions))))))
+        (deferred:nextc it
+          (lambda (completions)
+            (-when-let (candidates (cdr (assq 'completions completions)))
+              (ycmd-eldoc--generate-message
+               (symbol-name symbol) candidates))))
+        (deferred:nextc it
+          (lambda (text)
+            (or text (ycmd-eldoc--get-type))))
+        (deferred:nextc it
+          (lambda (text)
+            (when text
+              (setq text (ycmd--fontify-code text))
+              (when symbol
+                (setq ycmd-eldoc--cache (list symbol text)))
+              text)))))))
 
 ;; Source: https://github.com/racer-rust/emacs-racer/blob/master/racer.el
 (defun ycmd-eldoc--goto-func-name ()
@@ -140,6 +147,17 @@ foo(bar, |baz); -> foo|(bar, baz);"
                         (cdr (assq 'extra_menu_info item)))))
     (unless (s-blank? msg)
       (car (s-split-up-to "\n" msg 1)))))
+
+(defun ycmd-eldoc--get-type ()
+  "Get type at current position."
+  (let ((data (ycmd--get-request-data)))
+    (deferred:$
+      (ycmd--send-subcommand-request "GetType" data)
+      (deferred:nextc it
+        (lambda (response)
+          (--when-let (and (not (ycmd--unsupported-subcommand? response))
+                           (ycmd--get-parent-or-type response))
+            (when (cdr it) (car it))))))))
 
 ;;;###autoload
 (defun ycmd-eldoc-setup ()
