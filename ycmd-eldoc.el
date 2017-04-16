@@ -77,18 +77,23 @@ is only semantic after a semantic trigger."
     (`(not . ,modes) (not (memq major-mode modes)))
     (modes (memq major-mode modes))))
 
+(defmacro ycmd-eldoc--with-point-at-func-name (body)
+  "Move cursor to function name and evluate BODY."
+  (declare (indent 0))
+  `(save-excursion
+     (ycmd-eldoc--goto-func-name)
+     ,body))
+
 (defun ycmd-eldoc--info-at-point ()
   "Get function info at point."
-  (save-excursion
-    (ycmd-eldoc--goto-func-name)
+  (ycmd-eldoc--with-point-at-func-name
     (-when-let (symbol (symbol-at-point))
       (if (eq symbol (car ycmd-eldoc--cache))
           (cadr ycmd-eldoc--cache)
         (deferred:$
           (deferred:next
             (lambda ()
-              (save-excursion
-                (ycmd-eldoc--goto-func-name)
+              (ycmd-eldoc--with-point-at-func-name
                 (let ((ycmd-force-semantic-completion
                        (or ycmd-force-semantic-completion
                            (ycmd-eldoc-always-semantic-server-query-p))))
