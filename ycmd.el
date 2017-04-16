@@ -1137,41 +1137,50 @@ This function handles `UnknownExtraConf', `ValueError' and
   "Check whether RESPONSE is an exception."
   (assq 'exception response))
 
+(defun ycmd--send-subcommand-request (subcommand request-data)
+  "Send SUBCOMMAND request for REQUEST-DATA.
+Run HANDLER with reponse."
+  (let* ((subcommand (if (listp subcommand)
+                         subcommand
+                       (list subcommand)))
+         (content (cons (append (list "command_arguments")
+                                subcommand)
+                        (plist-get request-data :content))))
+    (ycmd--request "/run_completer_command" content)))
+
 (defun ycmd--run-completer-command (subcommand success-handler)
   "Send SUBCOMMAND to the `ycmd' server.
 
 SUCCESS-HANDLER is called when for a successful response."
   (when ycmd-mode
-    (if (ycmd-parsing-in-progress-p)
-        (message "Can't send \"%s\" request while parsing is in progress!"
-                 subcommand)
-      (let* ((data (ycmd--get-request-data))
-             (subcommand (if (listp subcommand)
-                             subcommand
-                           (list subcommand)))
-             (content (cons (append (list "command_arguments")
-                                    subcommand)
-                            (plist-get data :content))))
+    (let ((data (ycmd--get-request-data)))
+      (if (ycmd-parsing-in-progress-p)
+          (message "Can't send \"%s\" request while parsing is in progress!"
+                   subcommand)
         (deferred:$
-          (ycmd--request "/run_completer_command" content)
+          (ycmd--send-subcommand-request subcommand data)
           (deferred:nextc it
             (lambda (response)
               (when response
                 (cond
                  ((ycmd--exception? response)
-                  (let-alist response
-                    (if (and (string= "ValueError" .exception.TYPE)
-                             (or (string-prefix-p "Supported commands are:\n" .message)
-                                 (string= "This Completer has no supported subcommands."
-                                          .message)))
-                        (message "%s is not supported by current Completer"
-                                 (car subcommand))
-                      (ycmd--handle-exception response)
-                      (run-hook-with-args 'ycmd-after-exception-hook
-                                          (car subcommand) (plist-get data :buffer)
-                                          (plist-get data :pos) response))))
+                  (if (ycmd--unsupported-subcommand? response)
+                      (message "%s is not supported by current Completer"
+                               subcommand)
+                    (ycmd--handle-exception response)
+                    (run-hook-with-args 'ycmd-after-exception-hook
+                                        subcommand (plist-get data :buffer)
+                                        (plist-get data :pos) response)))
                  (success-handler
                   (funcall success-handler response)))))))))))
+
+(defun ycmd--unsupported-subcommand? (response)
+  "Return t if RESPONSE is an unsupported subcommand exception."
+  (let-alist response
+    (and (string= "ValueError" .exception.TYPE)
+         (or (string-prefix-p "Supported commands are:\n" .message)
+             (string= "This Completer has no supported subcommands."
+                      .message)))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
@@ -1306,15 +1315,25 @@ prompt for the Python binary."
          (point-min) (point-max) nil))
       (buffer-string))))
 
+(defun ycmd--get-parent-or-type (response)
+  "Extract type or parent from RESPONSE.
+Return a cons cell with the type or parent as car. If cdr is
+non-nil, the result is a valid type or parent."
+  (--when-let (cdr (assq 'message response))
+    (pcase it
+      ((or `"Unknown semantic parent"
+           `"Unknown type"
+           `"Internal error: cursor not valid"
+           `"Internal error: no translation unit")
+       (cons it nil))
+      (_ (cons it t)))))
+
 (defun ycmd--handle-get-parent-or-type-success (response)
   "Handle a successful GetParent or GetType RESPONSE."
-  (--when-let (cdr (assq 'message response))
-    (message "%s" (pcase it
-                    ((or `"Unknown semantic parent"
-                         `"Unknown type"
-                         `"Internal error: cursor not valid"
-                         `"Internal error: no translation unit") it)
-                    (_ (ycmd--fontify-code it))))))
+  (--when-let (ycmd--get-parent-or-type response)
+    (message "%s" (if (cdr it)
+                      (ycmd--fontify-code (car it))
+                    (car it)))))
 
 (defun ycmd-get-parent ()
   "Get semantic parent for symbol at point."
