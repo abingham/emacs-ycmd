@@ -1315,15 +1315,25 @@ prompt for the Python binary."
          (point-min) (point-max) nil))
       (buffer-string))))
 
+(defun ycmd--get-parent-or-type (response)
+  "Extract type or parent from RESPONSE.
+Return a cons cell with the type or parent as car. If cdr is
+non-nil, the result is a valid type or parent."
+  (--when-let (cdr (assq 'message response))
+    (pcase it
+      ((or `"Unknown semantic parent"
+           `"Unknown type"
+           `"Internal error: cursor not valid"
+           `"Internal error: no translation unit")
+       (cons it nil))
+      (_ (cons it t)))))
+
 (defun ycmd--handle-get-parent-or-type-success (response)
   "Handle a successful GetParent or GetType RESPONSE."
-  (--when-let (cdr (assq 'message response))
-    (message "%s" (pcase it
-                    ((or `"Unknown semantic parent"
-                         `"Unknown type"
-                         `"Internal error: cursor not valid"
-                         `"Internal error: no translation unit") it)
-                    (_ (ycmd--fontify-code it))))))
+  (--when-let (ycmd--get-parent-or-type response)
+    (message "%s" (if (cdr it)
+                      (ycmd--fontify-code (car it))
+                    (car it)))))
 
 (defun ycmd-get-parent ()
   "Get semantic parent for symbol at point."
