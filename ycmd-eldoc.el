@@ -59,7 +59,7 @@ is only semantic after a semantic trigger."
 
 (defun ycmd-eldoc--documentation-function ()
   "Eldoc function for `ycmd-mode'."
-  (when ycmd-mode
+  (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (deferred:$
       (deferred:next
         (lambda ()
