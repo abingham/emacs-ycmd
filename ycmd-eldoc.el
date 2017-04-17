@@ -55,7 +55,7 @@ the `car' of the list is `not', server query is sematic for all
 is only semantic after a semantic trigger."
   :type 'list)
 
-(defvar-local ycmd-eldoc--cache nil)
+(defvar-local ycmd-eldoc--cache (make-vector 2 nil))
 
 (defvar-local ycmd-eldoc--get-type-supported-p t)
 
@@ -81,7 +81,7 @@ is only semantic after a semantic trigger."
 
 (defmacro ycmd-eldoc--with-point-at-func-name (body)
   "Move cursor to function name and evluate BODY."
-  (declare (indent 0))
+  (declare (indent 0) (debug t))
   `(save-excursion
      (ycmd-eldoc--goto-func-name)
      ,body))
@@ -89,8 +89,8 @@ is only semantic after a semantic trigger."
 (defun ycmd-eldoc--info-at-point ()
   "Get function info at point."
   (let ((symbol (ycmd-eldoc--with-point-at-func-name (symbol-at-point))))
-    (if (and symbol (eq symbol (car ycmd-eldoc--cache)))
-        (cadr ycmd-eldoc--cache)
+    (if (and symbol (eq symbol (aref ycmd-eldoc--cache 0)))
+        (aref ycmd-eldoc--cache 1)
       (deferred:$
         (deferred:next
           (lambda ()
@@ -113,9 +113,14 @@ is only semantic after a semantic trigger."
           (lambda (text)
             (when text
               (setq text (ycmd--fontify-code text))
-              (when symbol
-                (setq ycmd-eldoc--cache (list symbol text)))
-              text)))))))
+              (ycmd-eldoc--cache-store symbol text))))))))
+
+(defun ycmd-eldoc--cache-store (symbol text)
+  "Store SYMBOL and TEXT to `ycmd-eldoc--cache'."
+  (aset ycmd-eldoc--cache 0 symbol)
+  ;; Store text only if we have a symbol for lookup
+  (aset ycmd-eldoc--cache 1 (and symbol text))
+  text)
 
 ;; Source: https://github.com/racer-rust/emacs-racer/blob/master/racer.el
 (defun ycmd-eldoc--goto-func-name ()
@@ -172,7 +177,7 @@ foo(bar, |baz); -> foo|(bar, baz);"
 
 (defun ycmd-eldoc--teardown ()
   "Reset `ycmd-eldoc--cache'."
-  (setq ycmd-eldoc--cache nil)
+  (ycmd-eldoc--cache-store nil nil)
   (setq ycmd-eldoc--get-type-supported-p t))
 
 ;;;###autoload
