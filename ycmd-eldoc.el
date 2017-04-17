@@ -57,6 +57,8 @@ is only semantic after a semantic trigger."
 
 (defvar-local ycmd-eldoc--cache nil)
 
+(defvar-local ycmd-eldoc--get-type-supported-p t)
+
 (defun ycmd-eldoc--documentation-function ()
   "Eldoc function for `ycmd-mode'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
@@ -105,7 +107,8 @@ is only semantic after a semantic trigger."
                (symbol-name symbol) candidates))))
         (deferred:nextc it
           (lambda (text)
-            (or text (ycmd-eldoc--get-type))))
+            (or text (and ycmd-eldoc--get-type-supported-p
+                          (ycmd-eldoc--get-type)))))
         (deferred:nextc it
           (lambda (text)
             (when text
@@ -155,9 +158,10 @@ foo(bar, |baz); -> foo|(bar, baz);"
       (ycmd--send-subcommand-request "GetType" data)
       (deferred:nextc it
         (lambda (response)
-          (--when-let (and (not (ycmd--unsupported-subcommand? response))
-                           (ycmd--get-parent-or-type response))
-            (when (cdr it) (car it))))))))
+          (if (ycmd--unsupported-subcommand? response)
+              (setq ycmd-eldoc--get-type-supported-p nil)
+            (--when-let (ycmd--get-parent-or-type response)
+              (when (cdr it) (car it)))))))))
 
 ;;;###autoload
 (defun ycmd-eldoc-setup ()
@@ -168,7 +172,8 @@ foo(bar, |baz); -> foo|(bar, baz);"
 
 (defun ycmd-eldoc--teardown ()
   "Reset `ycmd-eldoc--cache'."
-  (setq ycmd-eldoc--cache nil))
+  (setq ycmd-eldoc--cache nil)
+  (setq ycmd-eldoc--get-type-supported-p t))
 
 ;;;###autoload
 (define-minor-mode ycmd-eldoc-mode

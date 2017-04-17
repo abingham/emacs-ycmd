@@ -758,6 +758,7 @@ response."
                    "foo(self, a, b) -> bar"))))
 
 (defun ycmd-test-eldoc-func ()
+  (ycmd-eldoc--cache-store nil nil)
   (deferred:sync!
     (deferred:next
       (lambda () (or (ycmd-eldoc--info-at-point) "")))))
@@ -774,7 +775,8 @@ response."
 (ycmd-ert-deftest eldoc-force-semantic-info-fail "test-eldoc.cpp" 'c++-mode
   :line 8 :column 5
   (let ((ycmd-eldoc-always-semantic-server-query-modes nil)
-        (ycmd-force-semantic-completion nil))
+        (ycmd-force-semantic-completion nil)
+        (ycmd-eldoc--get-type-supported-p nil))
     (should-not (ycmd-test-eldoc-func))))
 
 (ycmd-ert-deftest eldoc-force-semantic-info "test-eldoc.cpp" 'c++-mode
