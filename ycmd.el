@@ -547,6 +547,8 @@ and `delete-process'.")
 
 (defvar-local ycmd--buffer-visit-flag nil)
 
+(defvar ycmd--available-completers (make-hash-table :test 'eq))
+
 (defvar ycmd--mode-keywords-loaded nil
   "List of modes for which keywords have been loaded.")
 
@@ -883,6 +885,7 @@ _LEN is ununsed."
   "Teardown ycmd in all buffers."
   (ycmd--kill-timer ycmd--on-focus-timer)
   (setq ycmd--mode-keywords-loaded nil)
+  (clrhash ycmd--available-completers)
   (ycmd--with-all-ycmd-buffers
     (ycmd--teardown)
     (setq ycmd--buffer-visit-flag nil)))
@@ -2184,6 +2187,30 @@ If candidates is a list with identifiers, sort_property should be
 and empty string, however when candidates is a more complex
 structure it is used to specify the sort key."
   (ycmd--request "/filter_and_sort_candidates" request-data :sync t))
+
+(defun ycmd--send-completer-available-request (&optional mode sync)
+  "Send request to check if a semantic completer exists for MODE.
+Response is non-nil if semantic complettion is available. If
+optional SYNC is non-nil, send a synchronous request."
+  (let* ((data (ycmd--get-request-data))
+         (request-data (plist-get data :content)))
+    (when mode
+      (let* ((buffer (plist-get data :buffer))
+             (full-path (ycmd--encode-string (or (buffer-file-name buffer) "")))
+             (file-types (assoc "filetypes" (assoc full-path
+                                                   (assoc "file_data"
+                                                          request-data)))))
+        (when (consp file-types)
+          (setcdr file-types (ycmd-major-mode-to-file-types mode))))
+    (ycmd--request "/semantic_completion_available"
+                   request-data :sync sync))))
+
+(defun ycmd-semantic-completer-available? ()
+  "Return t if a semantic completer is available for current `major-mode'."
+  (let ((mode major-mode))
+    (or (gethash mode ycmd--available-completers)
+        (--when-let (ycmd--send-completer-available-request mode 'sync)
+          (puthash mode (or (eq it t) 'none) ycmd--available-completers)))))
 
 (defun ycmd--get-request-hmac (method path body)
   "Generate HMAC for request from METHOD, PATH and BODY."

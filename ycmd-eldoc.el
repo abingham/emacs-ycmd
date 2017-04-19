@@ -63,14 +63,30 @@ is only semantic after a semantic trigger."
   "Eldoc function for `ycmd-mode'."
   (when (and ycmd-mode (not (ycmd-parsing-in-progress-p)))
     (deferred:$
-      (deferred:next
-        (lambda ()
-          (ycmd-eldoc--info-at-point)))
+      (ycmd-eldoc--check-if-semantic-completer-exists-for-mode)
+      (deferred:nextc it
+        (lambda (response)
+          (when response
+            (ycmd-eldoc--info-at-point))))
       (deferred:nextc it
         (lambda (text)
           (eldoc-message text))))
     ;; Don't show deferred object as ElDoc message
     nil))
+
+(defun ycmd-eldoc--check-if-semantic-completer-exists-for-mode ()
+  "Return a deferred object whose return value is t if semantic completer exists."
+  (deferred:$
+    (deferred:next
+      (lambda ()
+        (ycmd-semantic-completer-available?)))
+    (deferred:nextc it
+      (lambda (response)
+        (when (and response (eq response 'none))
+          (message "No semantic completer exists for major-mode: `%s'."
+                   major-mode)
+          (ycmd-eldoc-mode -1))
+        (eq response t)))))
 
 (defun ycmd-eldoc-always-semantic-server-query-p ()
   "Check whether server query should be semantic."
