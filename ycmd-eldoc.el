@@ -83,7 +83,8 @@ is only semantic after a semantic trigger."
     (deferred:nextc it
       (lambda (response)
         (when (and response (eq response 'none))
-          (message "No semantic completer exists for major-mode: `%s'."
+          (message (concat "No semantic completer exists for major-mode: `%s'."
+                           " Ycmd ELDoc mode disabled in current buffer.")
                    major-mode)
           (ycmd-eldoc-mode -1))
         (eq response t)))))
