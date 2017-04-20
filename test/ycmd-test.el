@@ -787,6 +787,14 @@ response."
     (should (equal (substring-no-properties (ycmd-test-eldoc-func))
                    "Foo l"))))
 
+(ycmd-ert-deftest semantic-completer-available "test-eldoc.cpp" 'c++-mode
+  :line 8 :column 5
+  (should (eq (ycmd-semantic-completer-available?) t)))
+
+(ycmd-ert-deftest semantic-completer-not-available "test-eldoc.el" 'emacs-lisp-mode
+  :line 1 :column 3
+  (should (eq (ycmd-semantic-completer-available?) 'none)))
+
 (ert-deftest ycmd-test-not-running ()
   (should-not (ycmd-running?)))
 
