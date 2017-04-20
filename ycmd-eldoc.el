@@ -210,7 +210,8 @@ foo(bar, |baz); -> foo|(bar, baz);"
     (kill-local-variable 'eldoc-documentation-function)
     (eldoc-mode -1)
     (remove-hook 'ycmd-after-teardown-hook
-                 #'ycmd-eldoc--teardown 'local)))
+                 #'ycmd-eldoc--teardown 'local)
+    (ycmd-eldoc--teardown)))
 
 (provide 'ycmd-eldoc)
 
