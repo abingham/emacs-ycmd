@@ -6,6 +6,8 @@
   request has not returned anything.
 * `ycmd-eldoc` gets automatically disabled if there is not semantic completer
   support for major mode. This prevents error messages in minibuffer.
+* `*ymcd-fixits` buffer can now also show responses from `RefactorRename`
+  requests
 
 # 1.1 (Mar 29, 2017)
 

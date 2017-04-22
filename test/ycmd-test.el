@@ -281,9 +281,9 @@ response."
       ;; Override ycmd--show-fixits in order to return number of
       ;; fixits for same location.
       (cl-letf (((symbol-function 'ycmd--show-fixits)
-                 (lambda (fixits)
+                 (lambda (fixits &optional title)
                    (cons :multiple-fixits (length fixits)))))
-        (let ((return-val (ycmd--handle-fixit-success response)))
+        (let ((return-val (ycmd--handle-fixit-response response)))
           (if (and (consp return-val)
                    (eq (car return-val) :multiple-fixits))
               (eq (cdr return-val) expected-num)
@@ -343,20 +343,21 @@ response."
 
 (defun ycmd-test-refactor-rename-handler (response file-names-alist)
   (when (cdr (assq 'fixits response))
-    (ycmd--handle-refactor-rename-success response t)
-    (cl-every (lambda (f)
-                (let ((buffer
-                       (find-file-noselect
-                        (f-join ycmd-test-resources-location (car f))))
-                      (expected
-                       (f-read
-                        (f-join ycmd-test-resources-location (cdr f)))))
-                  (with-current-buffer buffer
-                    (let ((actual (buffer-string)))
-                      (set-buffer-modified-p nil)
-                      (set-visited-file-name nil 'no-query)
-                      (string= actual expected)))))
-              file-names-alist)))
+    (let ((ycmd-confirm-fixit nil))
+      (ycmd--handle-fixit-response response)
+      (cl-every (lambda (f)
+                  (let ((buffer
+                         (find-file-noselect
+                          (f-join ycmd-test-resources-location (car f))))
+                        (expected
+                         (f-read
+                          (f-join ycmd-test-resources-location (cdr f)))))
+                    (with-current-buffer buffer
+                      (let ((actual (buffer-string)))
+                        (set-buffer-modified-p nil)
+                        (set-visited-file-name nil 'no-query)
+                        (string= actual expected)))))
+                file-names-alist))))
 
 (ert-deftest ycmd-test-refactor-rename-simple ()
   (let* ((file-path (f-join ycmd-test-resources-location "simple_test.js"))
