@@ -1,6 +1,11 @@
 # 1.2 (unreleased)
 
-
+* New `ycmd-eldoc-mode`.
+* `ycmd-eldoc` mode retrieves eldoc message asynchronously.
+* `ycmd-eldoc` sends a `GetDoc` request as fallback if the completion
+  request has not returned anything.
+* `ycmd-eldoc` gets automatically disabled if there is not semantic completer
+  support for major mode. This prevents error messages in minibuffer.
 
 # 1.1 (Mar 29, 2017)
 
