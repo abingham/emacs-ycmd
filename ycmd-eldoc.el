@@ -178,10 +178,11 @@ foo(bar, |baz); -> foo|(bar, baz);"
       (ycmd--send-subcommand-request "GetType" data)
       (deferred:nextc it
         (lambda (response)
-          (if (ycmd--unsupported-subcommand? response)
-              (setq ycmd-eldoc--get-type-supported-p nil)
-            (--when-let (ycmd--get-parent-or-type response)
-              (when (cdr it) (car it)))))))))
+          (cond ((ycmd--unsupported-subcommand? response)
+                 (setq ycmd-eldoc--get-type-supported-p nil))
+                ((not (ycmd--exception? response))
+                 (--when-let (ycmd--get-parent-or-type response)
+                   (when (cdr it) (car it))))))))))
 
 ;;;###autoload
 (defun ycmd-eldoc-setup ()
