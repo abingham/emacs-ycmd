@@ -1384,9 +1384,11 @@ Optional TITLE is shown on first line."
             (-when-let (diffs (ycmd--get-fixit-diff .chunks))
               (dolist (diff diffs)
                 (let ((diff-text (ycmd--fontify-code (nth 0 diff) 'diff-mode))
-                      (diff-path (nth 1 diff)))
+                      (diff-path (nth 1 diff))
+                      (show-path (nth 2 diff)))
                   (setq button-diff
-                        (concat button-diff (when (> (length diffs) 1)
+                        (concat button-diff (when (or (s-blank-str? .text)
+                                                      show-path)
                                               (format "%s\n" diff-path))
                                 diff-text "\n")))))
             (ycmd--insert-fixit-button
@@ -1421,7 +1423,9 @@ Optional TITLE is shown on first line."
                   (let* ((beg (point))
                          (end (diff-end-of-hunk))
                          (diff (buffer-substring-no-properties beg end)))
-                    (setq diffs (cons (list diff filepath) diffs))))))))))))
+                    (setq diffs (cons (list diff filepath
+                                            (> (length chunks-by-filepath) 1))
+                                      diffs))))))))))))
 
 (define-button-type 'ycmd--fixit-button
   'action #'ycmd--apply-fixit
