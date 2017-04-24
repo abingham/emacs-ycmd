@@ -1361,7 +1361,7 @@ turn. The structure of `it' is a cons cell (FILEPATH CHUNK-LIST).
 Then evaluate RESULT to get return value, default nil.
 
 \(fn (FIXIT-CHUNKS [RESULT]) BODY...)"
-  (declare (indent 1) (debug ((symbolp form &optional form) body)))
+  (declare (indent 1) (debug ((form &optional form) body)))
   `(let ((chunks-by-filepath
           (--group-by (let-alist it .range.start.filepath)
                       ,(car spec))))
