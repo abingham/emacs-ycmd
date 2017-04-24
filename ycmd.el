@@ -1354,50 +1354,62 @@ If optional ARG is non-nil, get type without reparsing buffer."
 
 ;;; FixIts
 
-(defun ycmd--show-fixits (fixit)
-  "Select a buffer and display FIXIT."
-  (let ((fixit-num 1)
-        (title
-         (and (> (length fixit) 1)
-              (concat
-               "Multiple FixIts are available for the current context. "
-               "Which one would you like to apply?\n")))
-        (fixits-buffer (get-buffer-create "*ycmd-fixits*")))
+(defun ycmd--show-fixits (fixits &optional title)
+  "Select a buffer and display FIXITS.
+Optional TITLE is shown on first line."
+  (let ((fixits-buffer (get-buffer-create "*ycmd-fixits*"))
+        (fixit-num 1))
     (with-current-buffer fixits-buffer
       (setq buffer-read-only nil)
       (erase-buffer)
       (when title (insert (propertize title 'face 'bold)))
-      (mapc (lambda (it)
-              (let-alist it
-                (ycmd--insert-fixit-button
-                 (format "%d: %s\n" fixit-num .text) .chunks .location)
-                (setq fixit-num (1+ fixit-num))
-                (let* ((buffer (find-file-noselect .location.filepath))
-                       (buffertext (with-current-buffer buffer (buffer-string)))
-                       diff)
-                  (with-temp-buffer
-                    (insert buffertext)
-                    (ycmd--replace-chunk-list .chunks (current-buffer))
-                    (with-current-buffer
-                        (diff-no-select .location.filepath (current-buffer)
-                                        "-U0 --strip-trailing-cr" t)
-                      (goto-char (point-min))
-                      (unless (eobp)
-                        (ignore-errors
-                          (diff-beginning-of-hunk t))
-                        (when (looking-at diff-hunk-header-re-unified)
-                          (forward-line)
-                          (let ((beg (point))
-                                (end (diff-end-of-hunk)))
-                            (setq diff (buffer-substring-no-properties beg end)))))))
-                  (when diff
-                    (insert (format "%s\n" (ycmd--fontify-code diff 'diff-mode)))))))
-            fixit)
+      (dolist (fixit fixits)
+        (let-alist fixit
+          (let (button-diff)
+            (-when-let (diffs (ycmd--get-fixit-diff .chunks))
+              (dolist (diff diffs)
+                (let ((diff-text (ycmd--fontify-code (nth 0 diff) 'diff-mode))
+                      (diff-path (nth 1 diff)))
+                  (setq button-diff
+                        (concat button-diff (when (> (length diffs) 1)
+                                              (format "%s\n" diff-path))
+                                diff-text "\n")))))
+            (ycmd--insert-fixit-button
+             (concat (format "%d: %s\n" fixit-num .text) button-diff)
+             .chunks .location.filepath)
+            (cl-incf fixit-num))))
       (goto-char (point-min))
       (when title (forward-line 1))
       (ycmd-fixit-mode))
     (pop-to-buffer fixits-buffer)
     (setq next-error-last-buffer fixits-buffer)))
+
+(defun ycmd--get-fixit-diff (chunks)
+  "Return diff string for CHUNKS."
+  (let ((chunks-by-filepath
+         (--group-by (let-alist it .range.start.filepath)
+                     chunks))
+        diffs)
+    (dolist (file-chunk chunks-by-filepath (nreverse diffs))
+      (let* ((filepath (car file-chunk))
+             (chunk (cdr file-chunk))
+             (buffer (find-file-noselect filepath))
+             (buffertext (with-current-buffer buffer (buffer-string))))
+        (with-temp-buffer
+          (insert buffertext)
+          (ycmd--replace-chunk-list chunk (current-buffer))
+          (let ((diff-buffer (diff-no-select filepath (current-buffer)
+                                             "-U0 --strip-trailing-cr" t)))
+            (with-current-buffer diff-buffer
+              (goto-char (point-min))
+              (unless (eobp)
+                (ignore-errors
+                  (diff-beginning-of-hunk t))
+                (while (looking-at diff-hunk-header-re-unified)
+                  (let* ((beg (point))
+                         (end (diff-end-of-hunk))
+                         (diff (buffer-substring-no-properties beg end)))
+                    (setq diffs (cons (list diff filepath) diffs))))))))))))
 
 (define-button-type 'ycmd--fixit-button
   'action #'ycmd--apply-fixit
@@ -1509,47 +1521,55 @@ specified in fixit chunk."
         (when (> (length (cdr f)) 1)
           (throw 'done t))))))
 
-(defun ycmd--handle-fixit-success (response)
-  "Handle a successful FixIt RESPONSE."
+(defun ycmd--handle-fixit-response (response)
+  "Handle a fixit RESPONSE."
   (-if-let (fixits (cdr (assq 'fixits response)))
-      (if (and (not ycmd-confirm-fixit)
-               (not (ycmd--fixits-have-same-location-p fixits)))
-          (dolist (fixit fixits)
-            (--when-let (cdr (assq 'chunks fixit))
-              (ycmd--replace-chunk-list it)))
-        (save-current-buffer
-          (ycmd--show-fixits fixits)))
-    (message "No FixIts available")))
+      (let ((multiple-fixits-p
+             (and (> (length fixits) 1)
+                  (ycmd--fixits-have-same-location-p fixits))))
+        (if (and (not ycmd-confirm-fixit)
+                 (not multiple-fixits-p))
+            (let ((num-changes-applied 0)
+                  files-changed)
+              (dolist (fixit fixits)
+                (-when-let (chunks (cdr (assq 'chunks fixit)))
+                  (let ((chunks-sorted
+                         (--group-by (let-alist it .range.start.filepath)
+                                     chunks)))
+                    (dolist (chunk chunks-sorted)
+                      (ycmd--replace-chunk-list (cdr chunk))
+                      (cl-incf num-changes-applied (length (cdr chunk)))
+                      (unless (member (car chunk) files-changed)
+                        (setq files-changed (append (list (car chunk))
+                                                    files-changed)))))))
+              (when (> num-changes-applied 0)
+                (let* ((num-files-changed (length files-changed))
+                       (text
+                        (concat (format "Applied %d changes" num-changes-applied)
+                                (when (> num-files-changed 1)
+                                  (format " in %d files" num-files-changed)))))
+                  (message text))))
+          (save-current-buffer
+            (ycmd--show-fixits
+             fixits (and multiple-fixits-p
+                         (concat
+                          "Multiple FixIt suggestions are available at this location."
+                          "Which one would you like to apply?\n"))))))
+    (message "No fixits found for current line")))
 
 (defun ycmd-fixit()
   "Get FixIts for current line."
   (interactive)
-  (ycmd--run-completer-command "FixIt" 'ycmd--handle-fixit-success))
-
-(defun ycmd--handle-refactor-rename-success (response &optional no-confirm)
-  "Handle a successful RenameRefactor RESPONSE.
-If NO-CONFIRM is non-nil, don't ask the user to confirm the rename."
-  (-if-let (fixits (cdr (assq 'fixits response)))
-      (dolist (fixit fixits)
-        (-when-let (chunks (cdr (assq 'chunks fixit)))
-          (let ((chunks-by-filepath
-                 (--group-by (let-alist it .range.start.filepath)
-                             chunks)))
-            (when (or no-confirm
-                      (y-or-n-p (format "Apply %d renames in %d files? "
-                                        (length chunks)
-                                        (length chunks-by-filepath))))
-              (dolist (file-chunks chunks-by-filepath)
-                (ycmd--replace-chunk-list (cdr file-chunks)))))))
-    (message "No candidates available to rename.")))
+  (ycmd--run-completer-command
+    "FixIt" #'ycmd--handle-fixit-response))
 
 (defun ycmd-refactor-rename (new-name)
   "Refactor current context with NEW-NAME."
   (interactive "MNew variable name: ")
   (when (not (s-blank? new-name))
     (ycmd--run-completer-command
-     (list "RefactorRename" new-name)
-     'ycmd--handle-refactor-rename-success)))
+      (list "RefactorRename" new-name)
+      #'ycmd--handle-fixit-response)))
 
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
