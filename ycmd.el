@@ -1425,8 +1425,12 @@ Optional TITLE is shown on first line."
 
 (defun ycmd--apply-fixit (button)
   "Apply BUTTON's FixIt chunk."
-  (-when-let* ((chunk (button-get button 'fixit)))
-    (ycmd--replace-chunk-list chunk)
+  (-when-let* ((chunks (button-get button 'fixit)))
+    (let ((chunks-by-filepath
+           (--group-by (let-alist it .range.start.filepath)
+                       chunks)))
+      (dolist (file-chunks chunks-by-filepath)
+        (ycmd--replace-chunk-list (cdr file-chunks))))
     (quit-window t (get-buffer-window "*ycmd-fixits*"))))
 
 (define-derived-mode ycmd-fixit-mode ycmd-view-mode "ycmd-fixits"
