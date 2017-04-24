@@ -1354,6 +1354,21 @@ If optional ARG is non-nil, get type without reparsing buffer."
 
 ;;; FixIts
 
+(defmacro ycmd--loop-chunks-by-filename (spec &rest body)
+  "Loop over an alist of fixit chunks grouped by filepath.
+Evaluate BODY with `it' bound to each car from FIXIT-CHUNKS, in
+turn. The structure of `it' is a cons cell (FILEPATH CHUNK-LIST).
+Then evaluate RESULT to get return value, default nil.
+
+\(fn (FIXIT-CHUNKS [RESULT]) BODY...)"
+  (declare (indent 1) (debug ((symbolp form &optional form) body)))
+  `(let ((chunks-by-filepath
+          (--group-by (let-alist it .range.start.filepath)
+                      ,(car spec))))
+     (dolist (it chunks-by-filepath)
+       ,@body)
+     ,@(cdr spec)))
+
 (defun ycmd--show-fixits (fixits &optional title)
   "Select a buffer and display FIXITS.
 Optional TITLE is shown on first line."
@@ -1386,13 +1401,10 @@ Optional TITLE is shown on first line."
 
 (defun ycmd--get-fixit-diff (chunks)
   "Return diff string for CHUNKS."
-  (let ((chunks-by-filepath
-         (--group-by (let-alist it .range.start.filepath)
-                     chunks))
-        diffs)
-    (dolist (file-chunk chunks-by-filepath (nreverse diffs))
-      (let* ((filepath (car file-chunk))
-             (chunk (cdr file-chunk))
+  (let (diffs)
+    (ycmd--loop-chunks-by-filename (chunks (nreverse diffs))
+      (let* ((filepath (car it))
+             (chunk (cdr it))
              (buffer (find-file-noselect filepath))
              (buffertext (with-current-buffer buffer (buffer-string))))
         (with-temp-buffer
@@ -1426,11 +1438,8 @@ Optional TITLE is shown on first line."
 (defun ycmd--apply-fixit (button)
   "Apply BUTTON's FixIt chunk."
   (-when-let* ((chunks (button-get button 'fixit)))
-    (let ((chunks-by-filepath
-           (--group-by (let-alist it .range.start.filepath)
-                       chunks)))
-      (dolist (file-chunks chunks-by-filepath)
-        (ycmd--replace-chunk-list (cdr file-chunks))))
+    (ycmd--loop-chunks-by-filename (chunks)
+      (ycmd--replace-chunk-list (cdr it)))
     (quit-window t (get-buffer-window "*ycmd-fixits*"))))
 
 (define-derived-mode ycmd-fixit-mode ycmd-view-mode "ycmd-fixits"
@@ -1537,14 +1546,13 @@ specified in fixit chunk."
                   files-changed)
               (dolist (fixit fixits)
                 (-when-let (chunks (cdr (assq 'chunks fixit)))
-                  (let ((chunks-sorted
-                         (--group-by (let-alist it .range.start.filepath)
-                                     chunks)))
-                    (dolist (chunk chunks-sorted)
-                      (ycmd--replace-chunk-list (cdr chunk))
-                      (cl-incf num-changes-applied (length (cdr chunk)))
-                      (unless (member (car chunk) files-changed)
-                        (setq files-changed (append (list (car chunk))
+                  (ycmd--loop-chunks-by-filename (chunks)
+                    (let ((chunk-path (car it))
+                          (chunk (cdr it)))
+                      (ycmd--replace-chunk-list chunk)
+                      (cl-incf num-changes-applied (length chunk))
+                      (unless (member chunk-path files-changed)
+                        (setq files-changed (append (list chunk-path)
                                                     files-changed)))))))
               (when (> num-changes-applied 0)
                 (let* ((num-files-changed (length files-changed))
