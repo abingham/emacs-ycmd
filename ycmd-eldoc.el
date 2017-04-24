@@ -181,7 +181,7 @@ foo(bar, |baz); -> foo|(bar, baz);"
           (cond ((ycmd--unsupported-subcommand? response)
                  (setq ycmd-eldoc--get-type-supported-p nil))
                 ((not (ycmd--exception? response))
-                 (--when-let (ycmd--get-parent-or-type response)
+                 (--when-let (ycmd--get-message response)
                    (when (cdr it) (car it))))))))))
 
 ;;;###autoload

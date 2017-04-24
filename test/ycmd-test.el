@@ -139,10 +139,46 @@ response."
   "Run a request with SUBCOMMAND and eval BODY with response."
   (declare (indent 1))
   `(deferred:sync!
-     (ycmd--run-completer-command
-      ,subcommand
-      (lambda (response)
-        ,(macroexpand-all body)))))
+     (ycmd--run-completer-command ,subcommand
+       (lambda (response)
+         ,(macroexpand-all body)))))
+
+(ycmd-ert-deftest get-defined-subcommands-cpp "test.cpp" 'c++-mode
+  :line 1 :column 1
+  (let ((commands '("ClearCompilationFlagCache" "FixIt" "GetDoc"
+                    "GetDocImprecise" "GetParent" "GetType"
+                    "GetTypeImprecise" "GoTo" "GoToDeclaration"
+                    "GoToDefinition" "GoToImprecise" "GoToInclude"))
+        (result (ycmd--get-defined-subcommands)))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-python "test.py" 'python-mode
+  :line 1 :column 1
+  (let ((commands '("GetDoc" "GoTo" "GoToDeclaration" "GoToDefinition"
+                    "GoToReferences" "RestartServer"))
+        (result (ycmd--get-defined-subcommands)))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-go "test.go" 'go-mode
+  :line 1 :column 1
+  (let ((commands '("GoTo" "GoToDeclaration" "GoToDefinition"
+                    "RestartServer"))
+        (result (ycmd--get-defined-subcommands)))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-typescript "test.ts" 'typescript-mode
+  :line 1 :column 1
+  (let ((commands '("GetDoc" "GetType" "GoToDefinition" "GoToReferences"
+                    "GoToType" "RefactorRename" "RestartServer"))
+        (result (ycmd--get-defined-subcommands)))
+    (should (equal result commands))))
+
+(ycmd-ert-deftest get-defined-subcommands-javascript "simple_test.js" 'js-mode
+  :line 1 :column 1
+  (let ((commands '("GetDoc" "GetType" "GoTo" "GoToDefinition"
+                    "GoToReferences" "RefactorRename" "RestartServer"))
+        (result (ycmd--get-defined-subcommands)))
+    (should (equal result commands))))
 
 (ycmd-ert-deftest get-completions-cpp "test.cpp" 'c++-mode
   :line 8 :column 7

@@ -407,6 +407,17 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
   :type 'hook
   :risky t)
 
+(defcustom ycmd-completing-read-function #'completing-read
+  "Function to read from minibuffer with completion.
+
+The function must be compatible to the built-in `completing-read'
+function."
+  :type '(choice (const :tag "Default" completing-read)
+                 (const :tag "IDO" ido-completing-read)
+                 (function :tag "Custom function"))
+  :risky t
+  :package-version '(ycmd . "1.2"))
+
 (defconst ycmd--file-types-with-diagnostics
   '("c"
     "cpp"
@@ -586,6 +597,7 @@ and `delete-process'.")
     (define-key map "T" 'ycmd-get-parent)
     (define-key map "f" 'ycmd-fixit)
     (define-key map "r" 'ycmd-refactor-rename)
+    (define-key map "x" 'ycmd-completer)
     map)
   "Keymap for `ycmd-mode' interactive commands.")
 
@@ -1155,11 +1167,12 @@ Run HANDLER with reponse."
   "Send SUBCOMMAND to the `ycmd' server.
 
 SUCCESS-HANDLER is called when for a successful response."
+  (declare (indent 1))
   (when ycmd-mode
-    (let ((data (ycmd--get-request-data)))
+    (let ((data (ycmd--get-request-data))
+          (cmd (or (car-safe subcommand) subcommand)))
       (if (ycmd-parsing-in-progress-p)
-          (message "Can't send \"%s\" request while parsing is in progress!"
-                   subcommand)
+          (message "Can't send \"%s\" request while parsing is in progress!" cmd)
         (deferred:$
           (ycmd--send-subcommand-request subcommand data)
           (deferred:nextc it
@@ -1168,11 +1181,10 @@ SUCCESS-HANDLER is called when for a successful response."
                 (cond
                  ((ycmd--exception? response)
                   (if (ycmd--unsupported-subcommand? response)
-                      (message "%s is not supported by current Completer"
-                               subcommand)
+                      (message "%s is not supported by current Completer" cmd)
                     (ycmd--handle-exception response)
                     (run-hook-with-args 'ycmd-after-exception-hook
-                                        subcommand (plist-get data :buffer)
+                                        cmd (plist-get data :buffer)
                                         (plist-get data :pos) response)))
                  (success-handler
                   (funcall success-handler response)))))))))))
@@ -1184,6 +1196,55 @@ SUCCESS-HANDLER is called when for a successful response."
          (or (string-prefix-p "Supported commands are:\n" .message)
              (string= "This Completer has no supported subcommands."
                       .message)))))
+
+(defun ycmd--get-defined-subcommands ()
+  "Get available subcommands for current completer.
+This is."
+  (let* ((content (plist-get (ycmd--get-request-data) :content))
+         (response (ycmd--request "/defined_subcommands" content :sync t)))
+    (if (ycmd--exception? response)
+        (progn (ycmd--handle-exception response) nil)
+      response)))
+
+(defun ycmd--get-prompt-for-subcommand (subcommand)
+  "Return promp for SUBCOMMAND that requires arguments."
+  (pcase subcommand
+    (`"RefactorRename"
+     "New name: ")
+    ((pred (and "RestartServer" (eq major-mode 'python-mode)))
+     "Python binary: ")))
+
+(defun ycmd--read-subcommand ()
+  "Read subcommand from minibuffer."
+  (--when-let (ycmd--get-defined-subcommands)
+    (funcall ycmd-completing-read-function
+             "Subcommand: " it nil t)))
+
+(defun ycmd-completer (subcommand)
+  "Run SUBCOMMAND for current completer."
+  (interactive
+   (list (-when-let (cmd (ycmd--read-subcommand))
+           (--when-let (ycmd--get-prompt-for-subcommand cmd)
+             (let ((arg (read-string it)))
+               (unless (s-blank-str? arg)
+                 (setq cmd (list cmd arg)))))
+           cmd)))
+  (when subcommand
+    (ycmd--run-completer-command subcommand
+      (lambda (response)
+        (cond ((not (listp response))
+               ;; If not a list, the response is necessarily a scalar:
+               ;; boolean, number, string, etc. In this case, we print it to
+               ;; the user.
+               (message "%s" response))
+              ((assq 'fixits response)
+               (ycmd--handle-fixit-response response))
+              ((assq 'message response)
+               (ycmd--handle-message-response response))
+              ((assq 'detailed_info response)
+               (ycmd--handle-detailed-info-response response))
+              (t
+               (ycmd--handle-goto-response response)))))))
 
 (defun ycmd-goto ()
   "Go to the definition or declaration of the symbol at current position."
@@ -1240,7 +1301,7 @@ Useful in case compile-time is considerable."
        (assq 'line_num response)
        (assq 'column_num response)))
 
-(defun ycmd--handle-goto-success (response)
+(defun ycmd--handle-goto-response (response)
   "Handle a successfull GoTo RESPONSE."
   (ycmd--save-marker)
   (if (ycmd--location-data? response)
@@ -1252,7 +1313,7 @@ Useful in case compile-time is considerable."
   (save-excursion
     (--when-let (bounds-of-thing-at-point 'symbol)
       (goto-char (car it)))
-    (ycmd--run-completer-command type 'ycmd--handle-goto-success)))
+    (ycmd-completer type)))
 
 (defun ycmd--goto-location (location find-function)
   "Move cursor to LOCATION with FIND-FUNCTION.
@@ -1288,19 +1349,20 @@ Use BUFFER if non-nil or `current-buffer'."
 (defun ycmd-clear-compilation-flag-cache ()
   "Clear the compilation flags cache."
   (interactive)
-  (ycmd--run-completer-command "ClearCompilationFlagCache" nil))
+  (ycmd-completer "ClearCompilationFlagCache"))
 
 (defun ycmd-restart-semantic-server (&optional arg)
   "Send request to restart the semantic completion backend server.
 If ARG is non-nil and current `major-mode' is `python-mode',
 prompt for the Python binary."
-  (interactive "P")
-  (let ((subcommand "RestartServer")
-        (args (and arg (eq major-mode 'python-mode)
-                   (read-string "Python binary: "))))
-    (when (not (s-blank? args))
-      (setq subcommand (list subcommand args)))
-    (ycmd--run-completer-command subcommand nil)))
+  (interactive
+   (list (and current-prefix-arg
+              (eq major-mode 'python-mode)
+              (read-string "Python binary: "))))
+  (let ((subcommand "RestartServer"))
+    (unless (s-blank-str? arg)
+      (setq subcommand (list subcommand arg)))
+    (ycmd-completer subcommand)))
 
 (cl-defun ycmd--fontify-code (code &optional (mode major-mode))
   "Fontify CODE."
@@ -1318,8 +1380,8 @@ prompt for the Python binary."
          (point-min) (point-max) nil))
       (buffer-string))))
 
-(defun ycmd--get-parent-or-type (response)
-  "Extract type or parent from RESPONSE.
+(defun ycmd--get-message (response)
+  "Extract message from RESPONSE.
 Return a cons cell with the type or parent as car. If cdr is
 non-nil, the result is a valid type or parent."
   (--when-let (cdr (assq 'message response))
@@ -1331,9 +1393,9 @@ non-nil, the result is a valid type or parent."
        (cons it nil))
       (_ (cons it t)))))
 
-(defun ycmd--handle-get-parent-or-type-success (response)
+(defun ycmd--handle-message-response (response)
   "Handle a successful GetParent or GetType RESPONSE."
-  (--when-let (ycmd--get-parent-or-type response)
+  (--when-let (ycmd--get-message response)
     (message "%s" (if (cdr it)
                       (ycmd--fontify-code (car it))
                     (car it)))))
@@ -1341,16 +1403,13 @@ non-nil, the result is a valid type or parent."
 (defun ycmd-get-parent ()
   "Get semantic parent for symbol at point."
   (interactive)
-  (ycmd--run-completer-command
-   "GetParent" 'ycmd--handle-get-parent-or-type-success))
+  (ycmd-completer "GetParent"))
 
 (defun ycmd-get-type (&optional arg)
   "Get type for symbol at point.
 If optional ARG is non-nil, get type without reparsing buffer."
   (interactive "P")
-  (ycmd--run-completer-command
-   (if arg "GetTypeImprecise" "GetType")
-   #'ycmd--handle-get-parent-or-type-success))
+  (ycmd-completer (if arg "GetTypeImprecise" "GetType")))
 
 ;;; FixIts
 
@@ -1576,16 +1635,15 @@ specified in fixit chunk."
 (defun ycmd-fixit()
   "Get FixIts for current line."
   (interactive)
-  (ycmd--run-completer-command
-    "FixIt" #'ycmd--handle-fixit-response))
+  (ycmd-completer "FixIt"))
 
 (defun ycmd-refactor-rename (new-name)
   "Refactor current context with NEW-NAME."
   (interactive "MNew variable name: ")
-  (when (not (s-blank? new-name))
-    (ycmd--run-completer-command
-      (list "RefactorRename" new-name)
-      #'ycmd--handle-fixit-response)))
+  (let ((subcommand "RefactorRename"))
+    (unless (s-blank-str? new-name)
+      (setq subcommand (list subcommand new-name)))
+    (ycmd-completer subcommand)))
 
 (defun ycmd-show-documentation (&optional arg)
   "Show documentation for current point in buffer.
@@ -1593,11 +1651,9 @@ specified in fixit chunk."
 If optional ARG is non-nil do not reparse buffer before getting
 the documentation."
   (interactive "P")
-  (ycmd--run-completer-command
-   (if arg "GetDocImprecise" "GetDoc")
-   'ycmd--handle-get-doc-success))
+  (ycmd-completer (if arg "GetDocImprecise" "GetDoc")))
 
-(defun ycmd--handle-get-doc-success (response)
+(defun ycmd--handle-detailed-info-response (response)
   "Handle successful GetDoc RESPONSE."
   (let ((documentation (cdr (assq 'detailed_info response))))
     (if (not (s-blank? documentation))
