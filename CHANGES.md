@@ -8,6 +8,7 @@
   support for major mode. This prevents error messages in minibuffer.
 * `*ymcd-fixits` buffer can now also show responses from `RefactorRename`
   requests
+* Add `ycmd-completer` command and new variable `ycmd-completing-read-function`
 
 # 1.1 (Mar 29, 2017)
 
