@@ -105,10 +105,10 @@ evaluating BODY."
      ,@body
      (ycmd-close)))
 
-(defmacro with-ycmd-test-mode (body)
+(defmacro with-ycmd-test-mode (&rest body)
   `(progn
      (ycmd-test-mode)
-     ,(macroexpand-all body)
+     ,@body
      (ycmd-close)))
 
 (defmacro ycmd-ert-deftest (name filename mode &rest keys-and-body)
@@ -135,13 +135,13 @@ response."
            (goto-char current-position)
            ,@body)))))
 
-(defmacro ycmd-test-with-completer-command (subcommand body)
+(defmacro ycmd-test-with-completer-command (subcommand &rest body)
   "Run a request with SUBCOMMAND and eval BODY with response."
   (declare (indent 1))
   `(deferred:sync!
      (ycmd--run-completer-command ,subcommand
        (lambda (response)
-         ,(macroexpand-all body)))))
+         ,@body))))
 
 (ycmd-ert-deftest get-defined-subcommands-cpp "test.cpp" 'c++-mode
   :line 1 :column 1
