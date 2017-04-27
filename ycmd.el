@@ -1850,10 +1850,18 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
 (defun ycmd-parse-buffer ()
   "Parse buffer."
   (interactive)
-  (if (not (ycmd-is-server-alive?))
-      (ycmd--parse-deferred)
-    (ycmd--report-status 'unparsed)
-    (ycmd--conditional-parse)))
+  (if (not (ycmd-semantic-completer-available?))
+      (message "Native filetype completion not supported for current file, \
+cannot send parse request")
+    (when (ycmd-is-server-alive?)
+      (ycmd--report-status 'unparsed)
+      (deferred:$
+        (deferred:next
+          (lambda ()
+            (message "Parsing buffer...")
+            (ycmd--conditional-parse)))
+        (deferred:nextc it
+          (lambda () (message "Parsing buffer done")))))))
 
 (defun ycmd--handle-extra-conf-exception (conf-file)
   "Handle an exception of type `UnknownExtraConf'.
