@@ -2170,11 +2170,10 @@ The timeout can be set with the variable
   (- (position-bytes (point))
      (position-bytes (line-beginning-position))))
 
-(defun ycmd--encode-string (s)
-  "Encode string S."
-  (if (version-list-< (version-to-list emacs-version) '(25))
-      s
-    (encode-coding-string s 'utf-8 t)))
+;; https://github.com/abingham/emacs-ycmd/issues/165
+(if (version-list-< (version-to-list emacs-version) '(25))
+    (defun ycmd--encode-string (s) s)
+  (defun ycmd--encode-string (s) (encode-coding-string s 'utf-8 t)))
 
 (defun ycmd--get-request-data ()
   "Generate the 'standard' content for ycmd posts.
