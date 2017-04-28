@@ -556,6 +556,9 @@ and `delete-process'.")
 (defvar-local ycmd--last-status-change 'unparsed
   "The last status of the current buffer.")
 
+(defvar-local ycmd--last-modified-tick nil
+  "The BUFFER's last FileReadyToParse tick counter.")
+
 (defvar-local ycmd--buffer-visit-flag nil)
 
 (defvar ycmd--available-completers (make-hash-table :test 'eq))
@@ -815,7 +818,10 @@ If FORCE-DEFERRED is non-nil perform parse notification later."
           (deferred:nextc it
             (lambda ()
               (with-current-buffer buffer
-                (ycmd-notify-file-ready-to-parse)))))))))
+                (let ((tick (buffer-chars-modified-tick)))
+                  (unless (equal tick ycmd--last-modified-tick)
+                    (setq ycmd--last-modified-tick tick)
+                    (ycmd-notify-file-ready-to-parse)))))))))))
 
 (defun ycmd--on-save ()
   "Function to run when the buffer has been saved."
@@ -886,10 +892,14 @@ _LEN is ununsed."
     (ycmd--notify-server "BufferUnload"))
   (ycmd--teardown))
 
+(defun ycmd--reset-parse-status ()
+  (ycmd--report-status 'unparsed)
+  (setq ycmd--last-modified-tick nil))
+
 (defun ycmd--teardown ()
   "Teardown ycmd in current buffer."
   (ycmd--kill-timer ycmd--notification-timer)
-  (setq ycmd--last-status-change 'unparsed)
+  (ycmd--reset-parse-status)
   (setq ycmd--deferred-parse nil)
   (run-hooks 'ycmd-after-teardown-hook))
 
@@ -1854,11 +1864,11 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
       (message "Native filetype completion not supported for current file, \
 cannot send parse request")
     (when (ycmd-is-server-alive?)
-      (ycmd--report-status 'unparsed)
       (deferred:$
         (deferred:next
           (lambda ()
             (message "Parsing buffer...")
+            (ycmd--reset-parse-status)
             (ycmd--conditional-parse)))
         (deferred:nextc it
           (lambda () (message "Parsing buffer done")))))))
@@ -1876,7 +1886,7 @@ Consider reporting this.")
           (setq location "/load_extra_conf_file")
         (setq location "/ignore_extra_conf_file"))
       (ycmd--request location `((filepath . ,conf-file)) :sync t)
-      (ycmd--report-status 'unparsed)
+      (ycmd--reset-parse-status)
       (ycmd-notify-file-ready-to-parse))))
 
 (defun ycmd--handle-error-exception (msg)
@@ -1915,6 +1925,7 @@ HANDLER is the callback function for the response."
       (deferred:$
         (ycmd--request "/event_notification" content)
         (deferred:nextc it handler))
+      ;; catch
       (deferred:error it
         (lambda (err)
           (message "Error sending %s request: %s" event-name err)
@@ -2110,7 +2121,7 @@ the name of the newly created file."
     (setq ycmd--server-actual-port
           (string-to-number (match-string 1 string)))
     (ycmd--with-all-ycmd-buffers
-      (ycmd--report-status 'unparsed))
+      (ycmd--reset-parse-status))
     (ycmd--perform-deferred-parse)))
 
 (defun ycmd--start-server ()
@@ -2158,7 +2169,7 @@ The timeout can be set with the variable
         (if (ycmd--server-ready? :include-subserver)
             (progn
               (ycmd--with-all-ycmd-buffers
-                (ycmd--report-status 'unparsed))
+                (ycmd--reset-parse-status))
               (throw 'ready t))
           ;; timeout after specified period
           (when (< ycmd-startup-timeout
