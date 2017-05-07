@@ -1,4 +1,5 @@
 language: emacs-lisp
+sudo: false
 cache:
   directories:
     - .cask/
