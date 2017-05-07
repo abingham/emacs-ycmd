@@ -173,16 +173,15 @@ foo(bar, |baz); -> foo|(bar, baz);"
 
 (defun ycmd-eldoc--get-type ()
   "Get type at current position."
-  (let ((data (ycmd--get-request-data)))
-    (deferred:$
-      (ycmd--send-subcommand-request "GetType" data)
-      (deferred:nextc it
-        (lambda (response)
-          (cond ((ycmd--unsupported-subcommand? response)
-                 (setq ycmd-eldoc--get-type-supported-p nil))
-                ((not (ycmd--exception? response))
-                 (--when-let (ycmd--get-message response)
-                   (when (cdr it) (car it))))))))))
+  (deferred:$
+    (ycmd--command-request "GetType")
+    (deferred:nextc it
+      (lambda (response)
+        (cond ((ycmd--unsupported-subcommand? response)
+               (setq ycmd-eldoc--get-type-supported-p nil))
+              ((not (ycmd--exception? response))
+               (--when-let (ycmd--get-message response)
+                 (when (cdr it) (car it)))))))))
 
 ;;;###autoload
 (defun ycmd-eldoc-setup ()

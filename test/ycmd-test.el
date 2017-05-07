@@ -79,10 +79,9 @@
     (ycmd-open)
     (ycmd-wait-until-server-is-ready)
     (ycmd-mode)
+    (ycmd-load-conf-file ycmd-test-extra-conf)
     (deferred:sync!
-      (ycmd-load-conf-file ycmd-test-extra-conf))
-    (deferred:sync!
-      (ycmd--notify-server "BufferVisit"))
+      (ycmd--event-notification "BufferVisit"))
     (deferred:sync!
       (ycmd-notify-file-ready-to-parse))))
 
