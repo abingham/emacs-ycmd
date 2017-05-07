@@ -9,6 +9,7 @@
 * `*ymcd-fixits` buffer can now also show responses from `RefactorRename`
   requests
 * Add `ycmd-completer` command and new variable `ycmd-completing-read-function`
+* Require Emacs 24.4 as minimum version
 
 # 1.1 (Mar 29, 2017)
 
