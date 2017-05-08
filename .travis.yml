@@ -23,7 +23,7 @@ addons:
 env:
   matrix:
     # Run unit tests against oldest supported stable, latest stable, and trunk
-    - EMACS_VERSION=24.3
+    - EMACS_VERSION=24.4
     - EMACS_VERSION=25.1
     - EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
 before_install:
