@@ -961,7 +961,7 @@ process with `delete-process'."
   (when (ycmd-is-server-alive?)
     (let ((start-time (float-time)))
       (ycmd--request (make-ycmd-request-data
-                      :location "/shutdown" :content nil)
+                      :handler "shutdown" :content nil)
                      :sync t :timeout 0.1)
       (while (and (ycmd-running?)
                   (> ycmd-delete-process-delay
@@ -992,7 +992,7 @@ process with `delete-process'."
 This is simply for keepalive functionality."
   (ycmd--ignore-errors
    (ycmd--request (make-ycmd-request-data
-                   :location "/healthy" :content nil)
+                   :handler "healthy" :content nil)
                   :type "GET")))
 
 (defun ycmd--server-ready? (&optional include-subserver)
@@ -1007,7 +1007,7 @@ semantic subserver."
                            major-mode)))))
       (ycmd--ignore-errors
        (eq (ycmd--request
-            (make-ycmd-request-data :location "/ready" :content nil)
+            (make-ycmd-request-data :handler "ready" :content nil)
             :params (and file-type
                          (list (cons "subserver" file-type)))
             :type "GET" :sync t)
@@ -1018,9 +1018,9 @@ semantic subserver."
 FILENAME is the path to a ycm_extra_conf file. If optional
 IGNORE-P is non-nil ignore the ycm_extra_conf."
   (ycmd--request (make-ycmd-request-data
-                  :location (if ignore-p
-                                "/ignore_extra_conf_file"
-                              "/load_extra_conf_file")
+                  :handler (if ignore-p
+                                "ignore_extra_conf_file"
+                              "load_extra_conf_file")
                   :content (list (cons "filepath" filename)))
                  :sync t))
 
@@ -1154,7 +1154,7 @@ and blocks until the request has finished."
   (let ((extra-data (and ycmd-force-semantic-completion
                          (list (cons "force_semantic" t)))))
     (ycmd--request (make-ycmd-request-data
-                    :location "/completions"
+                    :handler "completions"
                     :content (append (ycmd--get-basic-request-data)
                                      extra-data))
                    :sync sync)))
@@ -1185,7 +1185,7 @@ This function handles `UnknownExtraConf', `ValueError' and
                                 subcommand)
                         (ycmd--get-basic-request-data))))
     (ycmd--request (make-ycmd-request-data
-                    :location "/run_completer_command"
+                    :handler "run_completer_command"
                     :content content))))
 
 (defun ycmd--run-completer-command (subcommand success-handler)
@@ -1226,7 +1226,7 @@ SUCCESS-HANDLER is called when for a successful response."
   "Get available subcommands for current completer.
 This is a blocking request."
   (let* ((data (make-ycmd-request-data
-                :location "/defined_subcommands"))
+                :handler "defined_subcommands"))
          (response (ycmd--request data :sync t)))
     (if (ycmd--exception? response)
         (progn (ycmd--handle-exception response) nil)
@@ -1941,7 +1941,7 @@ response."
       ;; try
       (deferred:$
         (ycmd--request (make-ycmd-request-data
-                        :location "/event_notification"
+                        :handler "event_notification"
                         :content content))
         (deferred:nextc it handler))
       ;; catch
@@ -2239,7 +2239,7 @@ This is useful for debugging.")
 (defun ycmd-show-debug-info ()
   "Show debug information."
   (interactive)
-  (let ((data (make-ycmd-request-data :location "/debug_info"))
+  (let ((data (make-ycmd-request-data :handler "debug_info"))
         (buffer (current-buffer)))
     (with-help-window (get-buffer-create " *ycmd-debug-info*")
       (with-current-buffer standard-output
@@ -2302,7 +2302,7 @@ If candidates is a list with identifiers, sort_property should be
 and empty string, however when candidates is a more complex
 structure it is used to specify the sort key."
   (let ((data (make-ycmd-request-data
-               :location "/filter_and_sort_candidates"
+               :handler "filter_and_sort_candidates"
                :content request-data)))
     (ycmd--request data :sync t)))
 
@@ -2311,7 +2311,7 @@ structure it is used to specify the sort key."
 Response is non-nil if semantic complettion is available. If
 optional SYNC is non-nil, send a synchronous request."
   (let ((data (make-ycmd-request-data
-               :location "/semantic_completion_available")))
+               :handler "semantic_completion_available")))
     (when mode
       (let* ((buffer (current-buffer))
              (full-path (ycmd--encode-string (or (buffer-file-name buffer) "")))
@@ -2344,15 +2344,15 @@ optional SYNC is non-nil, send a synchronous request."
 
 Slots:
 
-`location'
-     Specifies the location portion of the URL. For example, if
-     LOCATION is '/feed_llama', the request URL is
+`handler'
+     Specifies the the path portion of the URL. For example, if
+     HANDLER is 'feed_llama', the request URL is
      'http://host:port/feed_llama'.
 
 `content'
      An alist that will be JSON-encoded and sent over at the
      content of the HTTP message."
-  location
+  handler
   (content (ycmd--get-basic-request-data)))
 
 (cl-defun ycmd--request (request-data
@@ -2377,18 +2377,18 @@ unmodified contents of the response (i.e. not JSON-decoded or
 anything like that)."
   (unless (ycmd-is-server-alive?)
     (message "Ycmd server is not running. Can't send `%s' request!"
-             (ycmd-request-data-location request-data))
+             (ycmd-request-data-handler request-data))
     (cl-return-from ycmd--request (unless sync (deferred:next))))
 
   (let* ((url-show-status (not ycmd-hide-url-status))
          (url-proxy-services (unless ycmd-bypass-url-proxy-services
                                url-proxy-services))
-         (location (ycmd-request-data-location request-data))
+         (path (concat "/" (ycmd-request-data-handler request-data)))
          (content (json-encode (ycmd-request-data-content request-data)))
-         (hmac (ycmd--get-request-hmac type location content))
+         (hmac (ycmd--get-request-hmac type path content))
          (encoded-hmac (base64-encode-string hmac 't))
          (url (format "http://%s:%s%s"
-                      ycmd-host ycmd--server-actual-port location))
+                      ycmd-host ycmd--server-actual-port path))
          (headers `(("Content-Type" . "application/json")
                     ("X-Ycm-Hmac" . ,encoded-hmac)))
          (response-fn (lambda (response)
