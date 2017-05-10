@@ -1,12 +1,12 @@
 ;;; company-ycmd.el --- company-mode backend for ycmd -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2014-2016 Austin Bingham, Peter Vasil
+;; Copyright (c) 2014-2017 Austin Bingham, Peter Vasil
 ;;
 ;; Authors: Austin Bingham <austin.bingham@gmail.com>
 ;;          Peter Vasil <mail@petervasil.net>
-;; version: 0.1
+;; version: 0.2
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "0.1") (company "0.9.0") (deferred "0.2.0") (s "1.9.0") (dash "2.12.1") (let-alist "1.0.4") (f "0.18.2"))
+;; Package-Requires: ((ycmd "1.1") (company "0.9.0") (deferred "0.2.0") (s "1.9.0") (dash "2.12.1") (let-alist "1.0.4") (f "0.18.2"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -446,11 +446,6 @@ If CB is non-nil, call it with candidates."
         .completions prefix .completion_start_column
         (company-ycmd--get-construct-candidate-fn))))))
 
-(defun company-ycmd--get-candidates-synchronously (prefix)
-  "Get completion candidates with PREFIX synchronously."
-  (--when-let (ycmd-get-completions :sync)
-    (company-ycmd--get-candidates it prefix)))
-
 (defun company-ycmd--get-candidates-deferred (prefix cb)
   "Get completion candidates with PREFIX and call CB deferred."
   (let ((request-buffer (current-buffer))
@@ -519,16 +514,15 @@ If CB is non-nil, call it with candidates."
 
 (defun company-ycmd--candidates (prefix)
   "Candidates-command handler for the company backend for PREFIX."
-  (let ((async-fetcher
-         (cons :async
-               (lambda (cb)
-                 (company-ycmd--get-candidates-deferred prefix cb)))))
+  (let ((fetcher (cons :async
+                       (lambda (cb)
+                         (company-ycmd--get-candidates-deferred prefix cb)))))
     (if (> company-ycmd-request-sync-timeout 0)
-        (with-timeout
-            (company-ycmd-request-sync-timeout
-             async-fetcher)
-          (company-ycmd--get-candidates-synchronously prefix))
-      async-fetcher)))
+        (let ((result (ycmd-deferred:sync!
+                       (ycmd-deferred:timeout company-ycmd-request-sync-timeout
+                         (funcall (cdr fetcher) nil)))))
+          (if (eq result 'timeout) fetcher result))
+      fetcher)))
 
 (defun company-ycmd--post-completion (candidate)
   "Insert function arguments after completion for CANDIDATE."

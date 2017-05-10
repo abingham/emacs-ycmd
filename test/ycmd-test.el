@@ -78,12 +78,14 @@
   (let ((ycmd-parse-conditions nil))
     (ycmd-open)
     (ycmd-wait-until-server-is-ready)
+    (when (eq (ycmd--send-completer-available-request) t) ; retruns :json-false
+      (ycmd-wait-until-server-is-ready 'include-subserver))
     (ycmd-mode)
     (ycmd-load-conf-file ycmd-test-extra-conf)
-    (deferred:sync!
-      (ycmd--event-notification "BufferVisit"))
-    (deferred:sync!
-      (ycmd-notify-file-ready-to-parse))))
+    (ycmd-deferred:sync!
+     (ycmd--event-notification "BufferVisit")))
+    (ycmd-deferred:sync!
+     (ycmd-notify-file-ready-to-parse)))
 
 (defmacro ycmd-ert-with-temp-buffer (mode &rest body)
   "Set MODE and eval BODY within a temporary buffer.
@@ -137,7 +139,7 @@ response."
 (defmacro ycmd-test-with-completer-command (subcommand &rest body)
   "Run a request with SUBCOMMAND and eval BODY with response."
   (declare (indent 1))
-  `(deferred:sync!
+  `(ycmd-deferred:sync!
      (ycmd--run-completer-command ,subcommand
        (lambda (response)
          ,@body))))
@@ -179,9 +181,14 @@ response."
         (result (ycmd--get-defined-subcommands)))
     (should (equal result commands))))
 
+(defun ycmd-get-completions-sync ()
+  (ycmd-deferred:sync!
+   (ycmd-deferred:timeout 10
+     (ycmd-get-completions))))
+
 (ycmd-ert-deftest get-completions-cpp "test.cpp" 'c++-mode
   :line 8 :column 7
-  (let ((response (ycmd-get-completions :sync)))
+  (let ((response (ycmd-get-completions-sync)))
     (let-alist response
       (should (cl-some (lambda (c)
                          (string-equal
@@ -191,7 +198,7 @@ response."
 
 (ycmd-ert-deftest get-completions-cpp-unicode "test-unicode.cpp" 'c++-mode
   :line 8 :column 7
-  (let ((response (ycmd-get-completions :sync)))
+  (let ((response (ycmd-get-completions-sync)))
     (let-alist response
       (should (cl-some (lambda (c)
                          (string-equal
@@ -206,7 +213,7 @@ response."
              (ycmd--col-line-to-position
               7 8 (current-buffer))))
         (goto-char current-position)
-        (let ((response (ycmd-get-completions :sync)))
+        (let ((response (ycmd-get-completions-sync)))
           (let-alist response
             (should-not .completions)))))))
 
@@ -246,7 +253,7 @@ response."
   (cl-letf (((symbol-function 'message)
              (lambda (format-string &rest args)
               (apply 'format format-string args))))
-    (let ((result (deferred:sync!
+    (let ((result (ycmd-deferred:sync!
                     (ycmd--run-completer-command "GoToReferences" nil))))
       (should (string= "GoToReferences is not supported by current Completer"
                        result)))))
@@ -254,7 +261,7 @@ response."
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   :line 7 :column 3
   ;; (skip-unless nil)
-  (let ((response (ycmd-get-completions :sync)))
+  (let ((response (ycmd-get-completions-sync)))
     (let-alist response
       (should (cl-some (lambda (c)
                          (string-equal
@@ -268,7 +275,7 @@ response."
 
 (ycmd-ert-deftest get-completions-go "test.go" 'go-mode
   :line 9 :column 10
-  (let ((response (ycmd-get-completions :sync)))
+  (let ((response (ycmd-get-completions-sync)))
     (let-alist response
       (let ((c (nth 0 .completions)))
         (should (string= "Logger" (cdr (assq 'insertion_text c))))
@@ -276,7 +283,7 @@ response."
 
 (ycmd-ert-deftest get-completions-javascript "simple_test.js" 'js-mode
   :line 13 :column 43
-  (let ((response (ycmd-get-completions :sync)))
+  (let ((response (ycmd-get-completions-sync)))
     (let-alist response
       (should (cl-some (lambda (c)
                          (string-equal
@@ -285,7 +292,7 @@ response."
 
 (ycmd-ert-deftest get-completions-typescript "test.ts" 'typescript-mode
   :line 16 :column 6
-  (let ((response (ycmd-get-completions :sync)))
+  (let ((response (ycmd-get-completions-sync)))
     (let-alist response
       (should (cl-some (lambda (c)
                          (string-equal
@@ -795,7 +802,7 @@ response."
 
 (defun ycmd-test-eldoc-func ()
   (ycmd-eldoc--cache-store nil nil)
-  (deferred:sync!
+  (ycmd-deferred:sync!
     (deferred:next
       (lambda () (or (ycmd-eldoc--info-at-point) "")))))
 
