@@ -928,6 +928,43 @@ diagnostics) for MODE."
              ycmd-file-type-map)
    (--map (car it))))
 
+(defun ycmd-deferred:sync! (d)
+  "Wait for the given deferred task.
+Error is raised if it is not processed within deferred chain D.
+This is a slightly modified version of the original
+`deferred:sync!' function, with using `accept-process-output'
+wrapped with `with-current-buffer' for waiting instead of a
+combination of `sit-for' and `sleep-for' and with a shorter wait
+time."
+  (progn
+    (let ((last-value 'deferred:undefined*)
+          uncaught-error)
+      (deferred:try
+        (deferred:nextc d
+          (lambda (x) (setq last-value x)))
+        :catch
+        (lambda (err) (setq uncaught-error err)))
+      (with-local-quit
+        (while (and (eq 'deferred:undefined* last-value)
+                    (not uncaught-error))
+          (accept-process-output nil 0.01))
+        (when uncaught-error
+          (deferred:resignal uncaught-error))
+        last-value))))
+
+(defmacro ycmd-deferred:timeout (timeout-sec d)
+  "Time out macro on a deferred task.
+If the deferred task does not complete within TIMEOUT-SEC, this
+macro cancels the deferred task D and returns nil. This is a
+slightly modified version of the original `deferred:timeout'
+macro, which takes the timeout var in seconds and the timeout
+form returns the symbol `timeout'."
+  (declare (indent 1) (debug t))
+  `(deferred:earlier
+     (deferred:nextc (deferred:wait (* ,timeout-sec 1000))
+       (lambda () 'timeout))
+     ,d))
+
 (defun ycmd-open ()
   "Start a new ycmd server.
 
@@ -960,9 +997,10 @@ timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
   (when (ycmd-is-server-alive?)
     (let ((start-time (float-time)))
-      (ycmd--request (make-ycmd-request-data
-                      :handler "shutdown" :content nil)
-                     :sync t :timeout 0.1)
+      (ycmd-deferred:sync!
+       (ycmd-deferred:timeout 0.1
+         (ycmd--request (make-ycmd-request-data
+                         :handler "shutdown" :content nil))))
       (while (and (ycmd-running?)
                   (> ycmd-delete-process-delay
                      (- (float-time) start-time)))
@@ -1006,23 +1044,24 @@ semantic subserver."
                 (car-safe (ycmd-major-mode-to-file-types
                            major-mode)))))
       (ycmd--ignore-errors
-       (eq (ycmd--request
-            (make-ycmd-request-data :handler "ready" :content nil)
-            :params (and file-type
-                         (list (cons "subserver" file-type)))
-            :type "GET" :sync t)
+       (eq (ycmd-deferred:sync!
+            (ycmd--request
+             (make-ycmd-request-data :handler "ready" :content nil)
+             :params (and file-type
+                          (list (cons "subserver" file-type)))
+             :type "GET"))
            t)))))
 
 (defun ycmd--extra-conf-request (filename &optional ignore-p)
   "Send extra conf request.
 FILENAME is the path to a ycm_extra_conf file. If optional
 IGNORE-P is non-nil ignore the ycm_extra_conf."
-  (ycmd--request (make-ycmd-request-data
-                  :handler (if ignore-p
+  (ycmd-deferred:sync!
+   (ycmd--request (make-ycmd-request-data
+                   :handler (if ignore-p
                                 "ignore_extra_conf_file"
                               "load_extra_conf_file")
-                  :content (list (cons "filepath" filename)))
-                 :sync t))
+                   :content (list (cons "filepath" filename))))))
 
 (defun ycmd-load-conf-file (filename)
   "Tell the ycmd server to load the configuration file FILENAME."
@@ -1050,7 +1089,9 @@ it might be interesting for some users."
 
 (defun ycmd-complete (&optional _ignored)
   "Completion candidates at point."
-  (-when-let* ((completions (ycmd-get-completions :sync))
+  (-when-let* ((completions (ycmd-deferred:sync!
+                             (ycmd-deferred:timeout 0.5
+                               (ycmd-get-completions))))
                (candidates (cdr (assq 'completions completions))))
     (--map (let* ((text (cdr (assq 'insertion_text it)))
                   (anno (cdr (assq 'menu_text it))))
@@ -1122,7 +1163,7 @@ Returns the new value of `ycmd-force-semantic-completion'."
         symbols
       (cdr (assq symbols ycmd-keywords-alist)))))
 
-(defun ycmd-get-completions (&optional sync)
+(defun ycmd-get-completions ()
   "Get completions in current buffer from the ycmd server.
 
 Returns a deferred object which yields the HTTP message
@@ -1147,17 +1188,13 @@ structure looks like this:
     (TYPE . \"RuntimeError\")))
 
 To see what the returned structure looks like, you can use
-`ycmd-display-completions'.
-
-If SYNC is non-nil the function does not return a deferred object
-and blocks until the request has finished."
+`ycmd-display-completions'."
   (let ((extra-data (and ycmd-force-semantic-completion
                          (list (cons "force_semantic" t)))))
     (ycmd--request (make-ycmd-request-data
                     :handler "completions"
                     :content (append (ycmd--get-basic-request-data)
-                                     extra-data))
-                   :sync sync)))
+                                     extra-data)))))
 
 (defun ycmd--handle-exception (response)
   "Handle exception in completion RESPONSE.
@@ -1227,7 +1264,8 @@ SUCCESS-HANDLER is called when for a successful response."
 This is a blocking request."
   (let* ((data (make-ycmd-request-data
                 :handler "defined_subcommands"))
-         (response (ycmd--request data :sync t)))
+         (response (ycmd-deferred:sync!
+                    (ycmd--request data))))
     (if (ycmd--exception? response)
         (progn (ycmd--handle-exception response) nil)
       response)))
@@ -2165,9 +2203,9 @@ See the docstring of the variable for an example"))
       (set-process-filter proc #'ycmd--server-process-filter)
       proc)))
 
-(defun ycmd-wait-until-server-is-ready ()
+(defun ycmd-wait-until-server-is-ready (&optional include-subserver)
   "Wait until server is ready.
-
+If INCLUDE-SUBSERVER is non-nil wait until subserver is ready.
 Return t when server is ready.  Signal error in case of timeout.
 The timeout can be set with the variable
 `ycmd-startup-timeout'."
@@ -2176,7 +2214,7 @@ The timeout can be set with the variable
       (ycmd--kill-timer ycmd--server-timeout-timer)
       (while (ycmd-running?)
         (sit-for 0.1)
-        (if (ycmd--server-ready? :include-subserver)
+        (if (ycmd--server-ready? include-subserver)
             (progn
               (ycmd--with-all-ycmd-buffers
                 (ycmd--reset-parse-status))
@@ -2252,7 +2290,7 @@ This is useful for debugging.")
                          'help-args (list mode)))
         (princ ":\n\n")
         (--if-let (and (ycmd-is-server-alive?)
-                       (deferred:sync!
+                       (ycmd-deferred:sync!
                          (deferred:$
                            (ycmd--request data)
                            (deferred:nextc it
@@ -2304,12 +2342,11 @@ structure it is used to specify the sort key."
   (let ((data (make-ycmd-request-data
                :handler "filter_and_sort_candidates"
                :content request-data)))
-    (ycmd--request data :sync t)))
+    (ycmd-deferred:sync! (ycmd--request data))))
 
-(defun ycmd--send-completer-available-request (&optional mode sync)
+(defun ycmd--send-completer-available-request (&optional mode)
   "Send request to check if a semantic completer exists for MODE.
-Response is non-nil if semantic complettion is available. If
-optional SYNC is non-nil, send a synchronous request."
+Response is non-nil if semantic complettion is available."
   (let ((data (make-ycmd-request-data
                :handler "semantic_completion_available")))
     (when mode
@@ -2321,13 +2358,13 @@ optional SYNC is non-nil, send a synchronous request."
                                        (assoc "file_data" content)))))
         (when (consp file-types)
           (setcdr file-types (ycmd-major-mode-to-file-types mode)))))
-    (ycmd--request data :sync sync)))
+    (ycmd-deferred:sync! (ycmd--request data))))
 
 (defun ycmd-semantic-completer-available? ()
   "Return t if a semantic completer is available for current `major-mode'."
   (let ((mode major-mode))
     (or (gethash mode ycmd--available-completers)
-        (--when-let (ycmd--send-completer-available-request mode 'sync)
+        (--when-let (ycmd--send-completer-available-request mode)
           (puthash mode (or (eq it t) 'none) ycmd--available-completers)))))
 
 (defun ycmd--get-request-hmac (method path body)
@@ -2358,9 +2395,7 @@ Slots:
 (cl-defun ycmd--request (request-data
                          &key
                          (type "POST")
-                         (params nil)
-                         (sync nil)
-                         (timeout request-timeout))
+                         (params nil))
   "Send an asynchronous HTTP request to the ycmd server.
 
 This starts the server if necessary.
@@ -2378,7 +2413,7 @@ anything like that)."
   (unless (ycmd-is-server-alive?)
     (message "Ycmd server is not running. Can't send `%s' request!"
              (ycmd-request-data-handler request-data))
-    (cl-return-from ycmd--request (unless sync (deferred:next))))
+    (cl-return-from ycmd--request (deferred:next)))
 
   (let* ((url-show-status (not ycmd-hide-url-status))
          (url-proxy-services (unless ycmd-bypass-url-proxy-services
@@ -2391,29 +2426,19 @@ anything like that)."
                       ycmd-host ycmd--server-actual-port path))
          (headers `(("Content-Type" . "application/json")
                     ("X-Ycm-Hmac" . ,encoded-hmac)))
-         (response-fn (lambda (response)
-                        (let ((data (request-response-data response)))
-                          (ycmd--log-content "HTTP RESPONSE CONTENT" data)
-                          data)))
          (parser (lambda ()
                    (let ((json-array-type 'list))
-                     (json-read))))
-         (request-args (list :type type :params params :data content
-                             :parser parser :headers headers
-                             :timeout timeout)))
+                     (json-read)))))
     (ycmd--log-content "HTTP REQUEST CONTENT" content)
 
-    (if sync
-        (let* (result
-               (cb (cl-function
-                    (lambda (&key response &allow-other-keys)
-                      (setq result (funcall response-fn response))))))
-          (with-local-quit
-            (apply #'request url :sync t :complete cb request-args))
-          result)
-      (deferred:$
-        (apply #'request-deferred url request-args)
-        (deferred:nextc it response-fn)))))
+    (deferred:$
+      (request-deferred url :type type :params params :data content
+                        :parser parser :headers headers)
+      (deferred:nextc it
+        (lambda (response)
+          (let ((data (request-response-data response)))
+            (ycmd--log-content "HTTP RESPONSE CONTENT" data)
+            data))))))
 
 (provide 'ycmd)
 
