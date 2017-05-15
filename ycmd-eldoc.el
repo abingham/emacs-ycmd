@@ -199,18 +199,24 @@ foo(bar, |baz); -> foo|(bar, baz);"
 (define-minor-mode ycmd-eldoc-mode
   "Toggle ycmd eldoc mode."
   :lighter ""
-  (if ycmd-eldoc-mode
-      (progn
-        (set (make-local-variable 'eldoc-documentation-function)
-             'ycmd-eldoc--documentation-function)
-        (eldoc-mode +1)
-        (add-hook 'ycmd-after-teardown-hook
-                  #'ycmd-eldoc--teardown nil 'local))
+  (cond
+   (ycmd-eldoc-mode
+    ;; For emacs < 25.1 where `eldoc-documentation-function' defaults to
+    ;; nil. See also https://github.com/abingham/emacs-ycmd/issues/409
+    (or eldoc-documentation-function
+        (setq-local eldoc-documentation-function #'ignore))
+    (add-function :before-until (local 'eldoc-documentation-function)
+                  #'ycmd-eldoc--documentation-function)
+    (eldoc-mode +1)
+    (add-hook 'ycmd-after-teardown-hook
+              #'ycmd-eldoc--teardown nil 'local))
+   (t
     (eldoc-mode -1)
-    (kill-local-variable 'eldoc-documentation-function)
+    (remove-function (local 'eldoc-documentation-function)
+                     #'ycmd-eldoc--documentation-function)
     (remove-hook 'ycmd-after-teardown-hook
                  #'ycmd-eldoc--teardown 'local)
-    (ycmd-eldoc--teardown)))
+    (ycmd-eldoc--teardown))))
 
 (provide 'ycmd-eldoc)
 
