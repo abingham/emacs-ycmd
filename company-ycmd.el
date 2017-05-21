@@ -406,12 +406,12 @@ candidates list."
   (let* ((prefix-start-col (- (+ 1 (ycmd--column-in-bytes)) (length prefix)))
          (prefix-size (- start-col prefix-start-col))
          (prefix-diff (substring-no-properties prefix 0 prefix-size))
+         (prefix-diff-p (s-present? prefix-diff))
          candidates)
     (dolist (candidate completions (nreverse candidates))
-      (when (s-present? prefix-diff)
-        (let ((it (assq 'insertion_text candidate)))
-          (setcdr it (concat prefix-diff
-                             (substring-no-properties (cdr it))))))
+      (when prefix-diff-p
+        (let ((it (cdr (assq 'insertion_text candidate))))
+          (setf it (s-prepend prefix-diff it))))
       (when (or company-ycmd-enable-fuzzy-matching
                 (company-ycmd--prefix-candidate-p candidate prefix))
         (let ((result (funcall construct-candidate-fn candidate)))
