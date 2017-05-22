@@ -39,6 +39,7 @@ Use the variable `ycmd-server-command` to specify how to run the server. It will
 ```emacs
 (set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
 ```
+If you install YouCompleteMe by following the official manual, the `ycmd-server-command` will be "/home/username/.vim/bundle/YouCompleteMe/third_party/ycmd/ycmd"
 
 NB: We do not do filename expansion on the elements of `ycmd-server-command`. As
 a result, paths using "~" to represent the home directory will not work
