@@ -282,7 +282,7 @@ with spaces."
   "Construct completion string from a CANDIDATE for python file-types."
   (company-ycmd--with-destructured-candidate candidate
     (let* ((kind (s-replace "\n" " " .extra_menu_info))
-           (params (and (s-prefix-p "function" kind)
+           (params (and (s-prefix-p "def" kind)
                         (company-ycmd--extract-params-python
                          .detailed_info .insertion_text)))
            (meta (company-ycmd--extract-meta-python .detailed_info))
