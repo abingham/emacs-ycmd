@@ -562,7 +562,7 @@ response."
                      (line_num . 6)
                      (column_num . 7)
                      (filepath . "/foo/bar.py")))
-                   (extra_menu_info . "function: bar.Foo.foo")))
+                   (extra_menu_info . "def bar.Foo.foo")))
            (candidate (company-ycmd--construct-candidate-python data)))
       (let-alist data
         (should (string= .insertion_text (substring-no-properties candidate)))
