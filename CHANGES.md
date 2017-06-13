@@ -10,6 +10,8 @@
   requests
 * Add `ycmd-completer` command and new variable `ycmd-completing-read-function`
 * Require Emacs 24.4 as minimum version
+* Use `GetTypeImprecise` as fallback in `ycmd-eldoc` instead of `GetType` if
+  supported by filetype completer
 
 # 1.1 (Mar 29, 2017)
 

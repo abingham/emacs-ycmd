@@ -56,7 +56,7 @@ is only semantic after a semantic trigger."
 
 (defvar-local ycmd-eldoc--cache (make-vector 2 nil))
 
-(defvar-local ycmd-eldoc--get-type-supported-p t)
+(defvar-local ycmd-eldoc--cached-get-type-command 'none)
 
 (defun ycmd-eldoc--documentation-function ()
   "Eldoc function for `ycmd-mode'."
@@ -123,8 +123,7 @@ is only semantic after a semantic trigger."
                (symbol-name symbol) candidates))))
         (deferred:nextc it
           (lambda (text)
-            (or text (and ycmd-eldoc--get-type-supported-p
-                          (ycmd-eldoc--get-type)))))
+            (or text (ycmd-eldoc--get-type))))
         (deferred:nextc it
           (lambda (text)
             (when text
@@ -173,15 +172,34 @@ foo(bar, |baz); -> foo|(bar, baz);"
 
 (defun ycmd-eldoc--get-type ()
   "Get type at current position."
-  (deferred:$
-    (ycmd--command-request "GetType")
-    (deferred:nextc it
-      (lambda (response)
-        (cond ((ycmd--unsupported-subcommand? response)
-               (setq ycmd-eldoc--get-type-supported-p nil))
-              ((not (ycmd--exception? response))
-               (--when-let (ycmd--get-message response)
-                 (when (cdr it) (car it)))))))))
+  (when ycmd-eldoc--cached-get-type-command
+    (deferred:$
+      (ycmd-eldoc--get-type-command-deferred)
+      (deferred:nextc it
+        (lambda (cmd)
+          (when cmd
+            (ycmd--command-request cmd))))
+      (deferred:nextc it
+        (lambda (response)
+          (unless (ycmd--exception? response)
+            (--when-let (ycmd--get-message response)
+              (when (cdr it) (car it)))))))))
+
+(defun ycmd-eldoc--get-type-command-deferred ()
+  "Return a deferred object with the chached GetType command.
+REQUEST-DATA is plist returned from `ycmd--get-request-data'."
+  (if (eq ycmd-eldoc--cached-get-type-command 'none)
+      (deferred:$
+        (ycmd--request (make-ycmd-request-data
+                        :handler "defined_subcommands"))
+        (deferred:nextc it
+          (lambda (response)
+            (setq ycmd-eldoc--cached-get-type-command
+                  ;; If GetTypeImprecise exists, use it in favor of GetType
+                  ;; because it doesn't reparse the file
+                  (car (-intersection '("GetTypeImprecise" "GetType")
+                                      response))))))
+    (deferred:next nil ycmd-eldoc--cached-get-type-command)))
 
 ;;;###autoload
 (defun ycmd-eldoc-setup ()
@@ -193,7 +211,7 @@ foo(bar, |baz); -> foo|(bar, baz);"
 (defun ycmd-eldoc--teardown ()
   "Reset `ycmd-eldoc--cache'."
   (ycmd-eldoc--cache-store nil nil)
-  (setq ycmd-eldoc--get-type-supported-p t))
+  (setq ycmd-eldoc--cached-get-type-command 'none))
 
 ;;;###autoload
 (define-minor-mode ycmd-eldoc-mode
