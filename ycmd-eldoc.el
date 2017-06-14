@@ -5,7 +5,7 @@
 ;; Author: Peter Vasil <mail@petervasil.net>
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Version: 0.2
-;; Package-Requires: ((ycmd "1.2") (deferred "0.5.1") (s "1.11.0") (dash "2.13.0") (let-alist "1.0.5"))
+;; Package-Requires: ((ycmd "1.3") (deferred "0.5.1") (s "1.11.0") (dash "2.13.0") (let-alist "1.0.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -115,7 +115,8 @@ is only semantic after a semantic trigger."
                 (let ((ycmd-force-semantic-completion
                        (or ycmd-force-semantic-completion
                            (ycmd-eldoc-always-semantic-server-query-p))))
-                  (ycmd-get-completions))))))
+                  (ycmd-with-handled-server-exceptions
+                      (ycmd-get-completions)))))))
         (deferred:nextc it
           (lambda (completions)
             (-when-let (candidates (cdr (assq 'completions completions)))
@@ -178,27 +179,22 @@ foo(bar, |baz); -> foo|(bar, baz);"
       (deferred:nextc it
         (lambda (cmd)
           (when cmd
-            (ycmd--command-request cmd))))
-      (deferred:nextc it
-        (lambda (response)
-          (unless (ycmd--exception? response)
-            (--when-let (ycmd--get-message response)
-              (when (cdr it) (car it)))))))))
+            (ycmd-with-handled-server-exceptions (ycmd--command-request cmd)
+              (--when-let (ycmd--get-message response)
+                (when (cdr it) (car it))))))))))
 
 (defun ycmd-eldoc--get-type-command-deferred ()
   "Return a deferred object with the chached GetType command.
 REQUEST-DATA is plist returned from `ycmd--get-request-data'."
   (if (eq ycmd-eldoc--cached-get-type-command 'none)
-      (deferred:$
-        (ycmd--request (make-ycmd-request-data
-                        :handler "defined_subcommands"))
-        (deferred:nextc it
-          (lambda (response)
-            (setq ycmd-eldoc--cached-get-type-command
-                  ;; If GetTypeImprecise exists, use it in favor of GetType
-                  ;; because it doesn't reparse the file
-                  (car (-intersection '("GetTypeImprecise" "GetType")
-                                      response))))))
+      (ycmd-with-handled-server-exceptions
+          (ycmd--request (make-ycmd-request-data
+                          :handler "defined_subcommands"))
+        (setq ycmd-eldoc--cached-get-type-command
+              ;; If GetTypeImprecise exists, use it in favor of GetType
+              ;; because it doesn't reparse the file
+              (car (-intersection '("GetTypeImprecise" "GetType")
+                                  response))))
     (deferred:next nil ycmd-eldoc--cached-get-type-command)))
 
 ;;;###autoload
