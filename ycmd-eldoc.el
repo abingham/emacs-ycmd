@@ -5,7 +5,7 @@
 ;; Author: Peter Vasil <mail@petervasil.net>
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Version: 0.2
-;; Package-Requires: ((ycmd "0.1") (deferred "0.2.0") (s "1.9.0") (dash "2.12.1") (let-alist "1.0.4"))
+;; Package-Requires: ((ycmd "1.2") (deferred "0.5.1") (s "1.11.0") (dash "2.13.0") (let-alist "1.0.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

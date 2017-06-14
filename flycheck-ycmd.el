@@ -4,7 +4,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.1
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((emacs "24") (dash "2.12.1") (flycheck "0.22") (ycmd "0.9") (let-alist "1.0.4"))
+;; Package-Requires: ((emacs "24") (dash "2.13.0") (flycheck "0.22") (ycmd "1.2") (let-alist "1.0.5"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;

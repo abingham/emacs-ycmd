@@ -1,4 +1,4 @@
-# 1.2 (unreleased)
+# 1.2 (Jun 14, 2017)
 
 * New `ycmd-eldoc-mode`.
 * `ycmd-eldoc` mode retrieves eldoc message asynchronously.
@@ -6,7 +6,7 @@
   request has not returned anything.
 * `ycmd-eldoc` gets automatically disabled if there is not semantic completer
   support for major mode. This prevents error messages in minibuffer.
-* `*ymcd-fixits` buffer can now also show responses from `RefactorRename`
+* `*ymcd-fixits*` buffer can now also show responses from `RefactorRename`
   requests
 * Add `ycmd-completer` command and new variable `ycmd-completing-read-function`
 * Require Emacs 24.4 as minimum version

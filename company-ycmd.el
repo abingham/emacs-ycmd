@@ -6,7 +6,7 @@
 ;;          Peter Vasil <mail@petervasil.net>
 ;; version: 0.2
 ;; URL: https://github.com/abingham/emacs-ycmd
-;; Package-Requires: ((ycmd "1.1") (company "0.9.0") (deferred "0.2.0") (s "1.9.0") (dash "2.12.1") (let-alist "1.0.4") (f "0.18.2"))
+;; Package-Requires: ((ycmd "1.2") (company "0.9.3") (deferred "0.5.1") (s "1.11.0") (dash "2.13.0") (let-alist "1.0.5") (f "0.19.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
