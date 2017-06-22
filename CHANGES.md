@@ -1,3 +1,7 @@
+# 1.3 (unreleased)
+
+
+
 # 1.2 (Jun 14, 2017)
 
 * New `ycmd-eldoc-mode`.

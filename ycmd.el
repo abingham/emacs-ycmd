@@ -4,7 +4,7 @@
 ;;
 ;; Authors: Austin Bingham <austin.bingham@gmail.com>
 ;;          Peter Vasil <mail@petervasil.net>
-;; Version: 1.2
+;; Version: 1.3-cvs
 ;; URL: https://github.com/abingham/emacs-ycmd
 ;; Package-Requires: ((emacs "24.4") (dash "2.13.0") (s "1.11.0") (deferred "0.5.1") (cl-lib "0.6.1") (let-alist "1.0.5") (request "0.3.0") (request-deferred "0.3.0") (pkg-info "0.6"))
 ;;
