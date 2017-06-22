@@ -536,6 +536,20 @@ response."
                           (ycmd-test-has-property-with-value 'kind "class" candidate))
                         candidates)))))
 
+(ert-deftest company-ycmd-test-construct-candidate-clang-function-2 ()
+  (ycmd-ert-with-temp-buffer 'c++-mode
+    (let* ((data '((menu_text . "A<1>::foo( size_t )")
+                   (insertion_text . "foo")
+                   (detailed_info . "Bar & A<1>::foo( size_t )\nBar A<1>::foo( size_t ) const\n")
+                   (extra_menu_info . "Bar &")
+                   (kind . "FUNCTION")))
+           (return-type-expected '("Bar &" "Bar"))
+           (candidates (company-ycmd--construct-candidate-clang data)))
+      (should (= 2 (length candidates)))
+      (should (cl-every (lambda (expected candidate)
+                          (ycmd-test-has-property-with-value 'return_type expected candidate))
+                        return-type-expected (reverse candidates))))))
+
 (ert-deftest company-ycmd-test-construct-candidate-go ()
   (ycmd-ert-with-temp-buffer 'go-mode
     (let* ((data '((menu_text . "Print")

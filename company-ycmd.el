@@ -195,11 +195,11 @@ overloaded functions."
                             (company-ycmd--extract-params-clang it)))
                (return-type (or (and overloads
                                      (let ((case-fold-search nil))
-                                       (string-match
-                                        (concat "\\(.*\\) "
-                                                (regexp-quote .insertion_text))
-                                        it)
-                                       (match-string 1 it)))
+                                       (and (string-match
+                                             (concat "\\(.*\\) [^ ]*"
+                                                     (regexp-quote .insertion_text))
+                                             it)
+                                            (match-string 1 it))))
                                 .extra_menu_info))
                (doc .extra_data.doc_string))
           (setq candidates
