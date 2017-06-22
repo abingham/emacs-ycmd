@@ -1,6 +1,7 @@
 # 1.3 (unreleased)
 
-
+* Improve regexp for extracting the return type of c-family functions from
+  function signature
 
 # 1.2 (Jun 14, 2017)
 
