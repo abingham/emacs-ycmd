@@ -259,7 +259,9 @@ Semantic completion is still available if
   "Bypass proxies for local traffic with the ycmd server.
 
 If non-nil, bypass the variable `url-proxy-services' in
-`ycmd--request' by setting it to nil."
+`ycmd--request' by setting it to nil and add `no_proxy' to
+`process-environment' to bypass proxies when using `curl' as
+`request-backend' and for the ycmd process."
   :type 'boolean)
 
 (defcustom ycmd-tag-files nil
@@ -562,6 +564,8 @@ and `delete-process'.")
 (defvar-local ycmd--buffer-visit-flag nil)
 
 (defvar ycmd--available-completers (make-hash-table :test 'eq))
+
+(defvar ycmd--process-environment nil)
 
 (defvar ycmd--mode-keywords-loaded nil
   "List of modes for which keywords have been loaded.")
@@ -2172,6 +2176,19 @@ the name of the newly created file."
       (ycmd--reset-parse-status))
     (ycmd--perform-deferred-parse)))
 
+(defun ycmd--get-process-environment ()
+  "Return `process-evironment'.
+If `ycmd-bypass-url-proxy-services' is non-nil, prepend
+`no_proxy' variable to environment."
+  (or ycmd--process-environment
+      (setq ycmd--process-environment
+            (append (and ycmd-bypass-url-proxy-services
+                         (not (or (getenv "NO_PROXY")
+                                  (getenv "no_PROXY")
+                                  (getenv "no_proxy")))
+                         (list (concat "NO_PROXY=" ycmd-host)))
+                    process-environment))))
+
 (defun ycmd--start-server ()
   "Start a new server and return the process."
   (unless ycmd-server-command
@@ -2183,6 +2200,7 @@ See the docstring of the variable for an example"))
       (let ((inhibit-read-only t))
         (buffer-disable-undo)
         (erase-buffer)))
+    (setq ycmd--process-environment nil)
     (let* ((port (and (numberp ycmd-server-port)
                       (> ycmd-server-port 0)
                       ycmd-server-port))
@@ -2192,6 +2210,7 @@ See the docstring of the variable for an example"))
                          (list (concat "--options_file=" options-file))
                          ycmd-server-args))
            (server-program+args (append ycmd-server-command args))
+           (process-environment (ycmd--get-process-environment))
            (proc (apply #'start-process ycmd--server-process-name proc-buff
                         server-program+args)))
       (ycmd--with-all-ycmd-buffers
@@ -2418,6 +2437,7 @@ anything like that)."
   (let* ((url-show-status (not ycmd-hide-url-status))
          (url-proxy-services (unless ycmd-bypass-url-proxy-services
                                url-proxy-services))
+         (process-environment (ycmd--get-process-environment))
          (path (concat "/" (ycmd-request-data-handler request-data)))
          (content (json-encode (ycmd-request-data-content request-data)))
          (hmac (ycmd--get-request-hmac type path content))
