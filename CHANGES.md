@@ -2,6 +2,8 @@
 
 * Improve regexp for extracting the return type of c-family functions from
   function signature
+* If `ycmd-bypass-url-proxy-services` is non-nil, bypass also proxies when
+  using `curl` as `request-backend`
 
 # 1.2 (Jun 14, 2017)
 
