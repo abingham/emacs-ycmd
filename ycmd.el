@@ -1922,14 +1922,18 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
       (message "Native filetype completion not supported for current file, \
 cannot send parse request")
     (when (ycmd-is-server-alive?)
-      (deferred:$
-        (deferred:next
-          (lambda ()
-            (message "Parsing buffer...")
-            (ycmd--reset-parse-status)
-            (ycmd--conditional-parse)))
-        (deferred:nextc it
-          (lambda () (message "Parsing buffer done")))))))
+      (let ((buffer (current-buffer)))
+        (deferred:$
+          (deferred:next
+            (lambda ()
+              (message "Parsing buffer...")
+              (ycmd--reset-parse-status)
+              (ycmd--conditional-parse)))
+          (deferred:nextc it
+            (lambda ()
+              (with-current-buffer buffer
+                (when (eq ycmd--last-status-change 'parsed)
+                  (message "Parsing buffer done"))))))))))
 
 (defun ycmd--handle-extra-conf-exception (conf-file)
   "Handle an exception of type `UnknownExtraConf'.
