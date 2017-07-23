@@ -125,15 +125,19 @@ response."
   (let* ((full-name (intern (format "ycmd-test-%s" name)))
          (keys-and-body (ert--parse-keys-and-body keys-and-body))
          (body (cadr keys-and-body))
-         (keys (car keys-and-body)))
+         (keys (car keys-and-body))
+         (tmpvar1 (make-symbol "column"))
+         (tmpvar2 (make-symbol "line")))
     `(ert-deftest ,full-name ()
        (ycmd-ert-with-resource-buffer ,filename ,mode
-         (let ((current-position
-                (ycmd--col-line-to-position
-                 ,(plist-get keys :column)
-                 ,(plist-get keys :line)
-                 (current-buffer))))
-           (goto-char current-position)
+         (let* ((,tmpvar1 ,(plist-get keys :column))
+                (,tmpvar2 ,(plist-get keys :line))
+                (current-position
+                 (and ,tmpvar1 ,tmpvar2
+                      (ycmd--col-line-to-position
+                       ,tmpvar1 ,tmpvar2 (current-buffer)))))
+           (when current-position
+             (goto-char current-position))
            ,@body)))))
 
 (defmacro ycmd-test-with-completer-command (subcommand &rest body)
@@ -145,7 +149,6 @@ response."
          ,@body))))
 
 (ycmd-ert-deftest get-defined-subcommands-cpp "test.cpp" 'c++-mode
-  :line 1 :column 1
   (let ((commands '("ClearCompilationFlagCache" "FixIt" "GetDoc"
                     "GetDocImprecise" "GetParent" "GetType"
                     "GetTypeImprecise" "GoTo" "GoToDeclaration"
@@ -154,28 +157,24 @@ response."
     (should (equal result commands))))
 
 (ycmd-ert-deftest get-defined-subcommands-python "test.py" 'python-mode
-  :line 1 :column 1
   (let ((commands '("GetDoc" "GoTo" "GoToDeclaration" "GoToDefinition"
                     "GoToReferences" "RestartServer"))
         (result (ycmd--get-defined-subcommands)))
     (should (equal result commands))))
 
 (ycmd-ert-deftest get-defined-subcommands-go "test.go" 'go-mode
-  :line 1 :column 1
   (let ((commands '("GoTo" "GoToDeclaration" "GoToDefinition"
                     "RestartServer"))
         (result (ycmd--get-defined-subcommands)))
     (should (equal result commands))))
 
 (ycmd-ert-deftest get-defined-subcommands-typescript "test.ts" 'typescript-mode
-  :line 1 :column 1
   (let ((commands '("GetDoc" "GetType" "GoToDefinition" "GoToReferences"
                     "GoToType" "RefactorRename" "RestartServer"))
         (result (ycmd--get-defined-subcommands)))
     (should (equal result commands))))
 
 (ycmd-ert-deftest get-defined-subcommands-javascript "simple_test.js" 'js-mode
-  :line 1 :column 1
   (let ((commands '("GetDoc" "GetType" "GoTo" "GoToDefinition"
                     "GoToReferences" "RefactorRename" "RestartServer"))
         (result (ycmd--get-defined-subcommands)))
