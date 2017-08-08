@@ -37,12 +37,16 @@ Or add `ycmd-mode` to a specific supported mode:
 Use the variable `ycmd-server-command` to specify how to run the server. It will typically be something like:
 
 ```emacs
-(set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package"))
+(set-variable 'ycmd-server-command '("python" "/path/to/ycmd/package/"))
 ```
 
 NB: We do not do filename expansion on the elements of `ycmd-server-command`. As
 a result, paths using "~" to represent the home directory will not work
-properly; you need to expand them yourself.
+properly; you need to expand them yourself. For example:
+
+```emacs
+(set-variable 'ycmd-server-command `("python" ,(file-truename "~/.emacs.d/ycmd/ycmd/")))
+```
 
 If you've got a *global ycmd configuration*, specify that in your
 emacs configuration by setting `ycmd-global-config`:
