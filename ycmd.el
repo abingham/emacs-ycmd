@@ -300,6 +300,7 @@ list
     (go-mode . ("go"))
     (js-mode . ("javascript"))
     (js2-mode . ("javascript"))
+    (latex-mode . ("tex"))
     (lua-mode . ("lua"))
     (objc-mode . ("objc"))
     (perl-mode . ("perl"))
