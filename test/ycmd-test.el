@@ -249,13 +249,14 @@ response."
   :line 9 :column 7
   ;; we need to temporarly overwrite `message' in order to
   ;; check the return string
-  (cl-letf (((symbol-function 'message)
-             (lambda (format-string &rest args)
-              (apply 'format format-string args))))
-    (let ((result (ycmd-deferred:sync!
-                    (ycmd--run-completer-command "GoToReferences" nil))))
-      (should (string= "GoToReferences is not supported by current Completer"
-                       result)))))
+  (let (result)
+    (cl-letf (((symbol-function 'message)
+               (lambda (format-string &rest args)
+                 (setq result (apply 'format format-string args)))))
+      (let ((ycmd-after-exception-hook nil))
+        (ycmd-deferred:sync!
+         (ycmd--run-completer-command "GoToReferences" nil))
+        (should (string-prefix-p "ValueError: Supported commands are:" result))))))
 
 (ycmd-ert-deftest get-completions-python "test.py" 'python-mode
   :line 7 :column 3

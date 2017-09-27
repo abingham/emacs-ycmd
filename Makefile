@@ -8,8 +8,10 @@ CONVERT = convert
 VERSION := $(shell EMACS=$(EMACS) $(CASK) version)
 PKGDIR := $(shell EMACS=$(EMACS) $(CASK) package-directory)
 
-# Export the used EMACS to recipe environments
+# Export Emacs to goals, mainly for CASK
+CASK_EMACS = $(EMACS)
 export EMACS
+export CASK_EMACS
 
 SRCS = ycmd.el contrib/ycmd-next-error.el
 

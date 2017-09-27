@@ -2,7 +2,7 @@ language: emacs-lisp
 sudo: false
 cache:
   directories:
-    - .cask/
+    # - .cask/
     - $HOME/emacs
     - $HOME/.ccache
     - $HOME/ycmd
@@ -31,7 +31,7 @@ env:
     - EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
 before_install:
   # gcc-4.9
-  - mkdir "${HOME}/bin"
+  - mkdir -p "${HOME}/bin"
   - ln -s "/usr/bin/g++-4.9" "${HOME}/bin/c++"
   - ln -s "/usr/bin/gcc-4.9" "${HOME}/bin/cc"
   - ln -s "/usr/bin/gcov-4.9" "${HOME}/bin/gcov"
@@ -46,6 +46,7 @@ before_install:
   - travis/install_ycmd.sh
 
 install:
+  - echo $PATH
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
