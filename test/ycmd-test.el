@@ -195,16 +195,6 @@ response."
                        .completions))
       (should (= .completion_start_column 7)))))
 
-(ycmd-ert-deftest get-completions-cpp-unicode "test-unicode.cpp" 'c++-mode
-  :line 8 :column 7
-  (let ((response (ycmd-get-completions-sync)))
-    (let-alist response
-      (should (cl-some (lambda (c)
-                         (string-equal
-                          "bär" (cdr (assq 'insertion_text c))))
-                       .completions))
-      (should (= .completion_start_column 7)))))
-
 (ert-deftest ycmd-test-no-semantic-completion-cpp ()
   (let ((ycmd-auto-trigger-semantic-completion))
     (ycmd-ert-with-resource-buffer "test.cpp" 'c++-mode
