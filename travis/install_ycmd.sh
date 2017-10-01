@@ -14,6 +14,12 @@ git submodule update --init --recursive
 export EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/lib/ccache/c++ -DCMAKE_C_COMPILER=/usr/lib/ccache/cc"
 python build.py --clang-completer --gocode-completer --tern-completer
 
+valNumResult=$?
+if [[ $valNumResult -eq 1 ]]
+then
+  return 1
+fi
+
 npm install -g typescript
 
 popd
