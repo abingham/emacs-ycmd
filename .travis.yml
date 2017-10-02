@@ -1,8 +1,8 @@
-language: emacs-lisp
+language: python
 sudo: false
 cache:
   directories:
-    # - .cask/
+    - .cask/
     - $HOME/emacs
     - $HOME/.ccache
     - $HOME/ycmd
@@ -46,7 +46,6 @@ before_install:
   - travis/install_ycmd.sh
 
 install:
-  - echo $PATH
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
