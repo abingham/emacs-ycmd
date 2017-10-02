@@ -2312,9 +2312,7 @@ This is useful for debugging.")
                        (ycmd-deferred:sync!
                         (ycmd-with-handled-server-exceptions
                             (ycmd--request data))))
-            (princ (with-temp-buffer
-                     (cl-prettyprint it)
-                     (buffer-string)))
+            (pp it)
           (princ "No debug info available from server"))
         (princ "\n\n")
         (princ "Server is ")
