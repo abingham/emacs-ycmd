@@ -22,6 +22,9 @@ addons:
       - g++-4.9
 
 env:
+  global:
+    # Travis can run out of RAM, so we need to be careful here.
+    - YCM_CORES=3
   matrix:
     # Run unit tests against oldest supported stable, latest stable, and trunk
     - EMACS_VERSION=24.4
