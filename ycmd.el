@@ -1229,14 +1229,15 @@ Returns a deferred object which yields the HTTP message
 content.  If completions are available, the structure looks like
 this:
 
-   ((completion_start_column . 6)
-    (completions .
-                 [((kind . \"FUNCTION\")
-                   (extra_menu_info . \"long double\")
-                   (detailed_info . \"long double acoshl( long double )\n\")
-                   (insertion_text . \"acoshl\")
-                   (menu_text . \"acoshl( long double )\"))
-                   . . .]))
+   ((error)
+    (completion_start_column . 6)
+    (completions
+     ((kind . \"FUNCTION\")
+      (extra_menu_info . \"long double\")
+      (detailed_info . \"long double acoshl( long double )\\n\")
+      (insertion_text . \"acoshl\")
+      (menu_text . \"acoshl( long double )\"))
+      . . .))
 
 If ycmd can't do completion because it's busy parsing, the
 structure looks like this:
