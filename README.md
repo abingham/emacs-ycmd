@@ -99,7 +99,7 @@ It is recommended to use `company-mode` for completion, however there is basic s
   (add-hook 'completion-at-point-functions
             #'ycmd-complete-at-point nil :local))
 
-(add-hook 'ycmd-mode #'ycmd-setup-completion-at-point-function)
+(add-hook 'ycmd-mode-hook #'ycmd-setup-completion-at-point-function)
 ```
 
 ## company-ycmd
