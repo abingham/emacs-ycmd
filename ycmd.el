@@ -1815,31 +1815,25 @@ MODE is a major mode for fontifaction."
   "Insert LOCATION-GROUP into `current-buffer' and fontify according MODE.
 LOCATION-GROUP is a cons cell whose car is the filepath and the whose
 cdr is a list of location objects."
-  (let* ((max-line-num (cdr (assq 'line_num
-                                  (-max-by
-                                   (lambda (a b)
-                                     (let ((a (cdr (assq 'line_num a)))
-                                           (b (cdr (assq 'line_num b))))
-                                       (when (and (numberp a) (numberp b))
-                                         (> a b))))
-                                   (cdr location-group)))))
-         (max-line-num-width (and max-line-num
-                                  (length (format "%d" max-line-num))))
+  (let* ((max-line-num-width
+          (cl-loop for location in (cdr location-group)
+                   maximize (let ((line-num (cdr (assq 'line_num location))))
+                              (and line-num (length (format "%d" line-num))))))
          (line-num-format (and max-line-num-width
                                (format "%%%dd:" max-line-num-width))))
     (insert (propertize (concat (car location-group) "\n") 'face 'bold))
-    (--map
-     (let-alist it
-       (when line-num-format
-         (insert (format line-num-format .line_num)))
-       (insert "    ")
-       (let ((description (or (and (not (s-blank? .description))
-                                   (s-trim-left .description))
-                              (ycmd--get-line-from-location it))))
-         (ycmd--view-insert-button
-          (ycmd--fontify-code (or description "") mode) it))
-       (insert "\n"))
-     (cdr location-group))))
+    (mapc (lambda (it)
+            (let-alist it
+              (when line-num-format
+                (insert (format line-num-format .line_num)))
+              (insert "    ")
+              (let ((description (or (and (not (s-blank? .description))
+                                          (s-trim-left .description))
+                                     (ycmd--get-line-from-location it))))
+                (ycmd--view-insert-button
+                 (ycmd--fontify-code (or description "") mode) it))
+              (insert "\n")))
+          (cdr location-group))))
 
 (defvar ycmd-view-mode-map
   (let ((map (make-sparse-keymap)))
