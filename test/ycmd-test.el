@@ -836,14 +836,14 @@ response."
 
 (ycmd-ert-deftest semantic-completer-available "test-eldoc.cpp" 'c++-mode
   :line 8 :column 5
-  (should (eq (ycmd-semantic-completer-available?) t)))
+  (should (eq (ycmd-semantic-completer-available-p) t)))
 
 (ycmd-ert-deftest semantic-completer-not-available "test-eldoc.el" 'emacs-lisp-mode
   :line 1 :column 3
-  (should (eq (ycmd-semantic-completer-available?) 'none)))
+  (should (eq (ycmd-semantic-completer-available-p) 'none)))
 
 (ert-deftest ycmd-test-not-running ()
-  (should-not (ycmd-running?)))
+  (should-not (ycmd-running-p)))
 
 (ert-deftest ycmd-test-json-encode ()
   (let ((data '((foo))))
@@ -852,8 +852,8 @@ response."
 
 (ert-deftest ycmd-test-location-data-predicate ()
   (let ((data '((filepath . ,file-path) (column_num . 34) (line_num . 15))))
-    (should (ycmd--location-data? data))
-    (should-not (ycmd--location-data? (list data)))))
+    (should (ycmd--location-data-p data))
+    (should-not (ycmd--location-data-p (list data)))))
 
 (ert-deftest ycmd-test-filter-and-sort-candidates1 ()
   (skip-unless (not (version-list-< (version-to-list emacs-version) '(24 4))))
