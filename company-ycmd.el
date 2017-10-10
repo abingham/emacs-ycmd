@@ -122,13 +122,13 @@ When 0, do not use synchronous completion request at all."
   "Check if candidate's EXTRA-INFO indicates a identifier completion."
   (s-equals? "[ID]" extra-info))
 
-(defmacro company-ycmd--with-destructured-candidate (candidate body)
+(defmacro company-ycmd--with-destructured-candidate (candidate &rest body)
   (declare (indent 1) (debug t))
   `(let-alist ,candidate
      (if (or (company-ycmd--identifier-completer-p .extra_menu_info)
              (company-ycmd--filename-completer-p .extra_menu_info))
          (propertize .insertion_text 'return_type .extra_menu_info)
-       ,body)))
+       ,@body)))
 
 (defun company-ycmd--extract-params-clang (function-signature)
   "Extract parameters from FUNCTION-SIGNATURE if possible."

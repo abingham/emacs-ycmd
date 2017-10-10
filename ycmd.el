@@ -1595,7 +1595,7 @@ Optional TITLE is shown on first line."
 
 (defun ycmd--apply-fixit (button)
   "Apply BUTTON's FixIt chunk."
-  (-when-let* ((chunks (button-get button 'fixit)))
+  (-when-let (chunks (button-get button 'fixit))
     (ycmd--loop-chunks-by-filename (chunks)
       (ycmd--replace-chunk-list (cdr it)))
     (quit-window t (get-buffer-window "*ycmd-fixits*"))))
@@ -1803,9 +1803,8 @@ MODE is a major mode for fontifaction."
 (defun ycmd--get-line-from-location (location)
   "Return line from LOCATION."
   (let-alist location
-    (-when-let (buf (and .filepath
-                         (find-file-noselect .filepath)))
-      (with-current-buffer buf
+    (--when-let (and .filepath (find-file-noselect .filepath))
+      (with-current-buffer it
         (goto-char (ycmd--col-line-to-position
                     .column_num .line_num))
         (back-to-indentation)
