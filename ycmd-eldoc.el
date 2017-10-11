@@ -78,7 +78,7 @@ is only semantic after a semantic trigger."
   (deferred:$
     (deferred:next
       (lambda ()
-        (ycmd-semantic-completer-available?)))
+        (ycmd-semantic-completer-available-p)))
     (deferred:nextc it
       (lambda (response)
         (when (and response (eq response 'none))

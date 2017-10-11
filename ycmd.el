@@ -715,7 +715,7 @@ Otherwise behave as if called interactively.
   :group 'ycmd
   :require 'ycmd
   :after-hook
-  (progn (unless (ycmd-running?) (ycmd-open))
+  (progn (unless (ycmd-running-p) (ycmd-open))
          (ycmd--conditional-parse 'mode-enabled 'deferred))
   (cond
    (ycmd-mode
@@ -782,12 +782,12 @@ just return nil."
   "Determine whether parsing the file has to be deferred.
 
 Return t if parsing is to be deferred, or nil otherwise."
-  (or (not (ycmd-is-server-alive?))
+  (or (not (ycmd--server-alive-p))
       (not (get-buffer-window))
       (ycmd-parsing-in-progress-p)
       revert-buffer-in-progress-p))
 
-(defun ycmd--deferred-parse? ()
+(defun ycmd--deferred-parse-p ()
   "Return non-nil if current buffer has a deferred parse."
   ycmd--deferred-parse)
 
@@ -797,7 +797,7 @@ Return t if parsing is to be deferred, or nil otherwise."
 
 (defun ycmd--perform-deferred-parse ()
   "Perform the deferred parse."
-  (when (ycmd--deferred-parse?)
+  (when (ycmd--deferred-parse-p)
     (setq ycmd--deferred-parse nil)
     (ycmd--conditional-parse)))
 
@@ -856,7 +856,7 @@ _LEN is ununsed."
 
 (defun ycmd--on-window-configuration-change ()
   "Function to run by `window-configuration-change-hook'."
-  (if (ycmd--deferred-parse?)
+  (if (ycmd--deferred-parse-p)
       (ycmd--perform-deferred-parse)
     (when (and ycmd-mode
                (pcase ycmd--last-status-change
@@ -930,7 +930,7 @@ BIND-CURRENT-BUFFER &rest BODY)"
 (defun ycmd--on-visit-buffer ()
   "If `ycmd--buffer-visit-flag' is nil send BufferVisit event."
   (when (and (not ycmd--buffer-visit-flag)
-             (ycmd-is-server-alive?))
+             (ycmd--server-alive-p))
     (ycmd-with-handled-server-exceptions
         (ycmd--event-notification "BufferVisit")
       :bind-current-buffer t
@@ -939,7 +939,7 @@ BIND-CURRENT-BUFFER &rest BODY)"
 (defun ycmd--on-close-buffer ()
   "Notify server that the current buffer is no longer open.
 Cleanup emacs-ycmd variables."
-  (when (ycmd-is-server-alive?)
+  (when (ycmd--server-alive-p)
     (ycmd-with-handled-server-exceptions
         (ycmd--event-notification "BufferUnload")))
   (ycmd--teardown))
@@ -1048,7 +1048,7 @@ Send a `shutdown' request to the ycmd server and wait for the
 ycmd server to stop.  If the ycmd server is still running after a
 timeout specified by `ycmd-delete-process-delay', then kill the
 process with `delete-process'."
-  (when (ycmd-is-server-alive?)
+  (when (ycmd--server-alive-p)
     (let ((start-time (float-time)))
       (ycmd-deferred:sync!
        (ycmd-deferred:timeout 0.1
@@ -1056,21 +1056,21 @@ process with `delete-process'."
              (ycmd--request (make-ycmd-request-data
                              :handler "shutdown" :content nil))
            :dont-show-exception-msg t)))
-      (while (and (ycmd-running?)
+      (while (and (ycmd-running-p)
                   (> ycmd-delete-process-delay
                      (- (float-time) start-time)))
         (sit-for 0.05))))
   (ignore-errors
     (delete-process ycmd--server-process-name)))
 
-(defun ycmd-running? ()
+(defun ycmd-running-p ()
   "Return t if a ycmd server is already running."
   (--when-let (get-process ycmd--server-process-name)
     (and (processp it) (process-live-p it) t)))
 
-(defun ycmd-is-server-alive? ()
+(defun ycmd--server-alive-p ()
   "Return t if server is running and ready for requests."
-  (and (ycmd-running?) ycmd--server-actual-port))
+  (and (ycmd-running-p) ycmd--server-actual-port))
 
 (defmacro ycmd--ignore-errors (&rest body)
   "Execute BODY and ignore errors and request errors."
@@ -1090,12 +1090,12 @@ This is simply for keepalive functionality."
                       :type "GET")
      :dont-show-exception-msg t)))
 
-(defun ycmd--server-ready? (&optional include-subserver)
+(defun ycmd--server-ready-p (&optional include-subserver)
   "Send request for server ready state.
 
 If INCLUDE-SUBSERVER is non-nil, also request ready state for
 semantic subserver."
-  (when (ycmd-is-server-alive?)
+  (when (ycmd--server-alive-p)
     (let* ((file-type
             (and include-subserver
                  (car-safe (ycmd-major-mode-to-file-types
@@ -1285,7 +1285,7 @@ SUCCESS-HANDLER is called when for a successful response."
             (when (and response success-handler)
               (funcall success-handler response))))))))
 
-(defun ycmd--unsupported-subcommand? (response)
+(defun ycmd--unsupported-subcommand-p (response)
   "Return t if RESPONSE is an unsupported subcommand exception."
   (let-alist response
     (and (string= "ValueError" .exception.TYPE)
@@ -1390,7 +1390,7 @@ Useful in case compile-time is considerable."
     (with-no-warnings
       (ring-insert find-tag-marker-ring (point-marker)))))
 
-(defun ycmd--location-data? (response)
+(defun ycmd--location-data-p (response)
   "Return t if RESPONSE is a GoTo location."
   (and (assq 'filepath response)
        (assq 'line_num response)
@@ -1399,7 +1399,7 @@ Useful in case compile-time is considerable."
 (defun ycmd--handle-goto-response (response)
   "Handle a successfull GoTo RESPONSE."
   (ycmd--save-marker)
-  (if (ycmd--location-data? response)
+  (if (ycmd--location-data-p response)
       (ycmd--goto-location response 'find-file)
     (ycmd--view response major-mode)))
 
@@ -1938,10 +1938,10 @@ This is suitable as an entry in `ycmd-file-parse-result-hook'."
 (defun ycmd-parse-buffer ()
   "Parse buffer."
   (interactive)
-  (if (not (ycmd-semantic-completer-available?))
+  (if (not (ycmd-semantic-completer-available-p))
       (message "Native filetype completion not supported for current file, \
 cannot send parse request")
-    (when (ycmd-is-server-alive?)
+    (when (ycmd--server-alive-p)
       (let ((buffer (current-buffer)))
         (deferred:$
           (deferred:next
@@ -2225,9 +2225,9 @@ The timeout can be set with the variable
   (catch 'ready
     (let ((server-start-time (float-time)))
       (ycmd--kill-timer ycmd--server-timeout-timer)
-      (while (ycmd-running?)
+      (while (ycmd-running-p)
         (sit-for 0.1)
-        (if (ycmd--server-ready? include-subserver)
+        (if (ycmd--server-ready-p include-subserver)
             (progn
               (ycmd--with-all-ycmd-buffers
                 (ycmd--reset-parse-status))
@@ -2302,7 +2302,7 @@ This is useful for debugging.")
                          'type 'help-function
                          'help-args (list mode)))
         (princ ":\n\n")
-        (--if-let (and (ycmd-is-server-alive?)
+        (--if-let (and (ycmd--server-alive-p)
                        (ycmd-deferred:sync!
                         (ycmd-with-handled-server-exceptions
                             (ycmd--request data))))
@@ -2310,7 +2310,7 @@ This is useful for debugging.")
           (princ "No debug info available from server"))
         (princ "\n\n")
         (princ "Server is ")
-        (let ((running (ycmd-is-server-alive?)))
+        (let ((running (ycmd--server-alive-p)))
           (insert (propertize (if running "running" "not running")
                               'face (if running 'success '(warning bold))))
           (when running
@@ -2370,7 +2370,7 @@ Response is non-nil if semantic complettion is available."
     (ycmd-deferred:sync!
      (ycmd-with-handled-server-exceptions (ycmd--request data)))))
 
-(defun ycmd-semantic-completer-available? ()
+(defun ycmd-semantic-completer-available-p ()
   "Return t if a semantic completer is available for current `major-mode'."
   (let ((mode major-mode))
     (or (gethash mode ycmd--available-completers)
@@ -2420,7 +2420,7 @@ response to the message. Typical values are buffer-string and
 json-read. This function will be passed an the completely
 unmodified contents of the response (i.e. not JSON-decoded or
 anything like that)."
-  (unless (ycmd-is-server-alive?)
+  (unless (ycmd--server-alive-p)
     (message "Ycmd server is not running. Can't send `%s' request!"
              (ycmd-request-data-handler request-data))
     (cl-return-from ycmd--request (deferred:next)))

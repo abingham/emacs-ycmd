@@ -496,7 +496,7 @@ If CB is non-nil, call it with candidates."
   "Prefix-command handler for the company backend."
   (and ycmd-mode
        buffer-file-name
-       (ycmd-running?)
+       (ycmd-running-p)
        (or (not (company-in-string-or-comment))
            (company-ycmd--in-include))
        (or (company-grab-symbol-cons "\\.\\|->\\|::\\|/" 2)
