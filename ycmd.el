@@ -1536,16 +1536,14 @@ Optional TITLE is shown on first line."
       (dolist (fixit fixits)
         (let-alist fixit
           (let (button-diff)
-            (-when-let (diffs (ycmd--get-fixit-diff .chunks))
+            (-when-let (diffs (ycmd--get-fixit-diffs .chunks))
               (dolist (diff diffs)
-                (let ((diff-text (ycmd--fontify-code (nth 0 diff) 'diff-mode))
-                      (diff-path (nth 1 diff))
-                      (show-path (nth 2 diff)))
+                (cl-destructuring-bind (diff-text diff-path show-path-p) diff
                   (setq button-diff
                         (concat button-diff (when (or (s-blank-str? .text)
-                                                      show-path)
+                                                      show-path-p)
                                               (format "%s\n" diff-path))
-                                diff-text "\n")))))
+                                (ycmd--fontify-code diff-text 'diff-mode) "\n")))))
             (ycmd--insert-fixit-button
              (concat (format "%d: %s\n" fixit-num .text) button-diff)
              .chunks .location.filepath)
@@ -1556,12 +1554,17 @@ Optional TITLE is shown on first line."
     (pop-to-buffer fixits-buffer)
     (setq next-error-last-buffer fixits-buffer)))
 
-(defun ycmd--get-fixit-diff (chunks)
-  "Return diff string for CHUNKS."
+(defun ycmd--get-fixit-diffs (chunks)
+  "Return a list of diffs for CHUNKS.
+Each diff is a list of the actual diff, the path of the file for
+the diff and a flag whether to show the filepath as part of the
+button text. The flag is set to t when there are multiple diff
+chunks for the file."
   (let (diffs)
     (ycmd--loop-chunks-by-filename (chunks (nreverse diffs))
       (cl-destructuring-bind (filepath . chunk) it
-        (let* ((buffer (find-file-noselect filepath))
+        (let* ((multiple-files-p (> (length chunks-by-filepath) 1))
+               (buffer (find-file-noselect filepath))
                (buffertext (with-current-buffer buffer (buffer-string))))
           (with-temp-buffer
             (insert buffertext)
@@ -1577,8 +1580,7 @@ Optional TITLE is shown on first line."
                     (let* ((beg (point))
                            (end (diff-end-of-hunk))
                            (diff (buffer-substring-no-properties beg end)))
-                      (setq diffs (cons (list diff filepath
-                                              (> (length chunks-by-filepath) 1))
+                      (setq diffs (cons (list diff filepath multiple-files-p)
                                         diffs)))))))))))))
 
 (define-button-type 'ycmd--fixit-button
