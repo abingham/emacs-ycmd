@@ -1536,12 +1536,13 @@ Optional TITLE is shown on first line."
       (dolist (fixit fixits)
         (let-alist fixit
           (let (button-diff)
-            (-when-let (diffs (ycmd--get-fixit-diffs .chunks))
+            (let* ((diffs (ycmd--get-fixit-diffs .chunks))
+                   (multiple-fixits-p (> (length diffs) 1)))
               (dolist (diff diffs)
-                (pcase-let ((`(,diff-text ,diff-path ,show-path-p) diff))
+                (pcase-let ((`(,diff-text . ,diff-path) diff))
                   (setq button-diff
                         (concat button-diff (when (or (s-blank-str? .text)
-                                                      show-path-p)
+                                                      multiple-fixits-p)
                                               (format "%s\n" diff-path))
                                 (ycmd--fontify-code diff-text 'diff-mode) "\n")))))
             (ycmd--insert-fixit-button
@@ -1563,7 +1564,6 @@ chunks for the file."
   (let (diffs)
     (ycmd--loop-chunks-by-filename (chunks (nreverse diffs))
       (pcase-let* ((`(,filepath . ,chunk) it)
-                   (multiple-files-p (> (length chunks-by-filepath) 1))
                    (buffer (find-file-noselect filepath))
                    (buffertext (with-current-buffer buffer (buffer-string))))
         (with-temp-buffer
@@ -1580,8 +1580,7 @@ chunks for the file."
                   (let* ((beg (point))
                          (end (diff-end-of-hunk))
                          (diff (buffer-substring-no-properties beg end)))
-                    (setq diffs (cons (list diff filepath multiple-files-p)
-                                      diffs))))))))))))
+                    (push (cons diff filepath) diffs)))))))))))
 
 (define-button-type 'ycmd--fixit-button
   'action #'ycmd--apply-fixit
@@ -1608,26 +1607,27 @@ chunks for the file."
 \\{ycmd-view-mode-map}"
   (local-set-key (kbd "q") (lambda () (interactive) (quit-window t))))
 
-(defun ycmd--replace-chunk (start end replacement-text line-delta char-delta buffer)
-  "Replace text between START and END with REPLACEMENT-TEXT.
+(defun ycmd--replace-chunk (bounds replacement-text deltas buffer)
+  "Replace text between BOUNDS with REPLACEMENT-TEXT.
 
-START and END are cons cells representing a line and column
-pair (car and cdr).  LINE-DELTA and CHAR-DELTA are offset from
-former replacements on the current line.  BUFFER is the current
-working buffer."
-  (let* ((start-line (+ (car start) line-delta))
-         (end-line (+ (car end) line-delta))
-         (source-line-count (1+ (- end-line start-line)))
-         (start-column (+ (cdr start) char-delta))
-         (end-column (cdr end))
-         (replacement-lines (s-split "\n" replacement-text))
-         (replacement-lines-count (length replacement-lines))
-         (new-line-delta (- replacement-lines-count source-line-count))
-         new-char-delta)
-    (when (= source-line-count 1)
-      (setq end-column (+ end-column char-delta)))
-    (setq new-char-delta (- (length (car (last replacement-lines)))
-                            (- end-column start-column)))
+BOUNDS is a list of two cons cells representing the start and end
+of a chunk with a line and column pair (car and cdr). DELTAS is a
+cons cell with line and char offsets from former replacements on
+the current line. BUFFER is the current working buffer."
+  (pcase-let* ((`((,start-line . ,start-column) (,end-line . ,end-column)) bounds)
+               (`(,line-delta . ,char-delta) deltas)
+               (start-line (+ start-line line-delta))
+               (end-line (+ end-line line-delta))
+               (source-line-count (1+ (- end-line start-line)))
+               (start-column (+ start-column char-delta))
+               (end-column (if (= source-line-count 1)
+                               (+ end-column char-delta)
+                             end-column))
+               (replacement-lines (s-split "\n" replacement-text))
+               (replacement-lines-count (length replacement-lines))
+               (new-line-delta (- replacement-lines-count source-line-count))
+               (new-char-delta (- (length (car (last replacement-lines)))
+                                  (- end-column start-column))))
     (when (> replacement-lines-count 1)
       (setq new-char-delta (- new-char-delta start-column)))
     (save-excursion
@@ -1638,24 +1638,16 @@ working buffer."
         (insert replacement-text)
         (cons new-line-delta new-char-delta)))))
 
-(defun ycmd--get-chunk-start-line-and-column (chunk)
-  "Get a cons cell with the start line and start column of CHUNK."
+(defun ycmd--get-chunk-bounds (chunk)
+  "Get an list with bounds of CHUNK."
   (let-alist chunk
-    (cons .range.start.line_num .range.start.column_num)))
-
-(defun ycmd--get-chunk-end-line-and-column (chunk)
-  "Get a cons cell with the end line and end column of CHUNK."
-  (let-alist chunk
-    (cons .range.end.line_num .range.end.column_num)))
+    (list (cons .range.start.line_num .range.start.column_num)
+          (cons .range.end.line_num .range.end.column_num))))
 
 (defun ycmd--chunk-< (c1 c2)
   "Return t if C1 should go before C2."
-  (let* ((start-c1 (ycmd--get-chunk-start-line-and-column c1))
-         (line-num-1 (car start-c1))
-         (column-num-1 (cdr start-c1))
-         (start-c2 (ycmd--get-chunk-start-line-and-column c2))
-         (line-num-2 (car start-c2))
-         (column-num-2 (cdr start-c2)))
+  (pcase-let ((`((,line-num-1 . ,column-num-1) ,_) (ycmd--get-chunk-bounds c1))
+              (`((,line-num-2 . ,column-num-2) ,_) (ycmd--get-chunk-bounds c2)))
     (or (< line-num-1 line-num-2)
         (and (= line-num-1 line-num-2)
              (< column-num-1 column-num-2)))))
@@ -1671,19 +1663,18 @@ specified in fixit chunk."
         (char-delta 0))
     (dolist (c chunks-sorted)
       (let-alist c
-        (-when-let* ((chunk-start (ycmd--get-chunk-start-line-and-column c))
-                     (chunk-end (ycmd--get-chunk-end-line-and-column c))
-                     (replacement-text .replacement_text)
+        (pcase-let* ((chunk-bounds (ycmd--get-chunk-bounds c))
+                     (`((,start-line . ,_) (,end-line . ,_)) chunk-bounds)
                      (buffer (or buffer (find-file-noselect
                                          .range.start.filepath))))
-          (unless (= (car chunk-start) last-line)
-            (setq last-line (car chunk-end))
+          (unless (= start-line last-line)
+            (setq last-line end-line)
             (setq char-delta 0))
-          (let ((new-deltas (ycmd--replace-chunk
-                             chunk-start chunk-end replacement-text
-                             line-delta char-delta buffer)))
-            (setq line-delta (+ line-delta (car new-deltas)))
-            (setq char-delta (+ char-delta (cdr new-deltas)))))))))
+          (pcase-let ((`(,new-line-delta . ,new-char-delta)
+                       (ycmd--replace-chunk chunk-bounds .replacement_text
+                                            (cons line-delta char-delta) buffer)))
+            (setq line-delta (+ line-delta new-line-delta))
+            (setq char-delta (+ char-delta new-char-delta))))))))
 
 (defun ycmd--fixits-have-same-location-p (fixits)
   "Check if mutiple FIXITS have the same location."
@@ -1696,12 +1687,13 @@ specified in fixit chunk."
 
 (defun ycmd--handle-fixit-response (response)
   "Handle a fixit RESPONSE."
-  (-if-let (fixits (cdr (assq 'fixits response)))
+  (let ((fixits (cdr (assq 'fixits response))))
+    (if (not fixits)
+        (message "No fixits found for current line")
       (let ((multiple-fixits-p
              (and (> (length fixits) 1)
                   (ycmd--fixits-have-same-location-p fixits))))
-        (if (and (not ycmd-confirm-fixit)
-                 (not multiple-fixits-p))
+        (if (and (not ycmd-confirm-fixit) (not multiple-fixits-p))
             (let ((num-changes-applied 0)
                   files-changed)
               (dolist (fixit fixits)
@@ -1725,8 +1717,7 @@ specified in fixit chunk."
              fixits (and multiple-fixits-p
                          (concat
                           "Multiple FixIt suggestions are available at this location."
-                          "Which one would you like to apply?\n"))))))
-    (message "No fixits found for current line")))
+                          "Which one would you like to apply?\n")))))))))
 
 (defun ycmd-fixit()
   "Get FixIts for current line."
