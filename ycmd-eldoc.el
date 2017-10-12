@@ -180,9 +180,8 @@ foo(bar, |baz); -> foo|(bar, baz);"
         (lambda (cmd)
           (when cmd
             (ycmd-with-handled-server-exceptions (ycmd--command-request cmd)
-              (--when-let (ycmd--get-message response)
-                (cl-destructuring-bind (msg . is-type-p) it
-                  (when is-type-p msg))))))))))
+              (pcase-let ((`(,msg . ,is-type-p) (ycmd--get-message response)))
+                (when is-type-p msg)))))))))
 
 (defun ycmd-eldoc--get-type-command-deferred ()
   "Return a deferred object with the chached GetType command.

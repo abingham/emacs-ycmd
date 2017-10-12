@@ -1491,7 +1491,7 @@ non-nil, the result is a valid type or parent."
 (defun ycmd--handle-message-response (response)
   "Handle a successful GetParent or GetType RESPONSE."
   (--when-let (ycmd--get-message response)
-    (cl-destructuring-bind (msg . is-type-p) it
+    (pcase-let ((`(,msg . ,is-type-p) it))
       (message "%s" (if is-type-p
                         (ycmd--fontify-code msg)
                       msg)))))
@@ -1538,7 +1538,7 @@ Optional TITLE is shown on first line."
           (let (button-diff)
             (-when-let (diffs (ycmd--get-fixit-diffs .chunks))
               (dolist (diff diffs)
-                (cl-destructuring-bind (diff-text diff-path show-path-p) diff
+                (pcase-let ((`(,diff-text ,diff-path ,show-path-p) diff))
                   (setq button-diff
                         (concat button-diff (when (or (s-blank-str? .text)
                                                       show-path-p)
@@ -1562,26 +1562,26 @@ button text. The flag is set to t when there are multiple diff
 chunks for the file."
   (let (diffs)
     (ycmd--loop-chunks-by-filename (chunks (nreverse diffs))
-      (cl-destructuring-bind (filepath . chunk) it
-        (let* ((multiple-files-p (> (length chunks-by-filepath) 1))
-               (buffer (find-file-noselect filepath))
-               (buffertext (with-current-buffer buffer (buffer-string))))
-          (with-temp-buffer
-            (insert buffertext)
-            (ycmd--replace-chunk-list chunk (current-buffer))
-            (let ((diff-buffer (diff-no-select filepath (current-buffer)
-                                               "-U0 --strip-trailing-cr" t)))
-              (with-current-buffer diff-buffer
-                (goto-char (point-min))
-                (unless (eobp)
-                  (ignore-errors
-                    (diff-beginning-of-hunk t))
-                  (while (looking-at diff-hunk-header-re-unified)
-                    (let* ((beg (point))
-                           (end (diff-end-of-hunk))
-                           (diff (buffer-substring-no-properties beg end)))
-                      (setq diffs (cons (list diff filepath multiple-files-p)
-                                        diffs)))))))))))))
+      (pcase-let* ((`(,filepath . ,chunk) it)
+                   (multiple-files-p (> (length chunks-by-filepath) 1))
+                   (buffer (find-file-noselect filepath))
+                   (buffertext (with-current-buffer buffer (buffer-string))))
+        (with-temp-buffer
+          (insert buffertext)
+          (ycmd--replace-chunk-list chunk (current-buffer))
+          (let ((diff-buffer (diff-no-select filepath (current-buffer)
+                                             "-U0 --strip-trailing-cr" t)))
+            (with-current-buffer diff-buffer
+              (goto-char (point-min))
+              (unless (eobp)
+                (ignore-errors
+                  (diff-beginning-of-hunk t))
+                (while (looking-at diff-hunk-header-re-unified)
+                  (let* ((beg (point))
+                         (end (diff-end-of-hunk))
+                         (diff (buffer-substring-no-properties beg end)))
+                    (setq diffs (cons (list diff filepath multiple-files-p)
+                                      diffs))))))))))))
 
 (define-button-type 'ycmd--fixit-button
   'action #'ycmd--apply-fixit
@@ -1707,7 +1707,7 @@ specified in fixit chunk."
               (dolist (fixit fixits)
                 (-when-let (chunks (cdr (assq 'chunks fixit)))
                   (ycmd--loop-chunks-by-filename (chunks)
-                    (cl-destructuring-bind (chunk-path . chunk) it
+                    (pcase-let ((`(,chunk-path . ,chunk) it))
                       (ycmd--replace-chunk-list chunk)
                       (cl-incf num-changes-applied (length chunk))
                       (unless (member chunk-path files-changed)
@@ -1815,26 +1815,26 @@ MODE is a major mode for fontifaction."
   "Insert LOCATION-GROUP into `current-buffer' and fontify according MODE.
 LOCATION-GROUP is a cons cell whose car is the filepath and the whose
 cdr is a list of location objects."
-  (cl-destructuring-bind (filepath . locations) location-group
-    (let* ((max-line-num-width
-            (cl-loop for location in locations
-                     maximize (let ((line-num (cdr (assq 'line_num location))))
-                                (and line-num (length (format "%d" line-num))))))
-           (line-num-format (and max-line-num-width
-                                 (format "%%%dd:" max-line-num-width))))
-      (insert (propertize (concat filepath "\n") 'face 'bold))
-      (mapc (lambda (it)
-              (let-alist it
-                (when line-num-format
-                  (insert (format line-num-format .line_num)))
-                (insert "    ")
-                (let ((description (or (and (not (s-blank? .description))
-                                            (s-trim-left .description))
-                                       (ycmd--get-line-from-location it))))
-                  (ycmd--view-insert-button
-                   (ycmd--fontify-code (or description "") mode) it))
-                (insert "\n")))
-            locations))))
+  (pcase-let* ((`(,filepath . ,locations) location-group)
+               (max-line-num-width
+                (cl-loop for location in locations
+                         maximize (let ((line-num (cdr (assq 'line_num location))))
+                                    (and line-num (length (format "%d" line-num))))))
+               (line-num-format (and max-line-num-width
+                                     (format "%%%dd:" max-line-num-width))))
+    (insert (propertize (concat filepath "\n") 'face 'bold))
+    (mapc (lambda (it)
+            (let-alist it
+              (when line-num-format
+                (insert (format line-num-format .line_num)))
+              (insert "    ")
+              (let ((description (or (and (not (s-blank? .description))
+                                          (s-trim-left .description))
+                                     (ycmd--get-line-from-location it))))
+                (ycmd--view-insert-button
+                 (ycmd--fontify-code (or description "") mode) it))
+              (insert "\n")))
+          locations)))
 
 (defvar ycmd-view-mode-map
   (let ((map (make-sparse-keymap)))
