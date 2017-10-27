@@ -1546,8 +1546,7 @@ Optional TITLE is shown on first line."
                                               (format "%s\n" diff-path))
                                 (ycmd--fontify-code diff-text 'diff-mode) "\n")))))
             (ycmd--insert-fixit-button
-             (concat (format "%d: %s\n" fixit-num .text) button-diff)
-             .chunks .location.filepath)
+             (concat (format "%d: %s\n" fixit-num .text) button-diff) .chunks)
             (cl-incf fixit-num))))
       (goto-char (point-min))
       (when title (forward-line 1))
@@ -1586,13 +1585,12 @@ chunks for the file."
   'action #'ycmd--apply-fixit
   'face nil)
 
-(defun ycmd--insert-fixit-button (name fixit location)
-  "Insert a button with NAME and FIXIT for LOCATION."
+(defun ycmd--insert-fixit-button (name fixit)
+  "Insert a button with NAME and FIXIT."
   (insert-text-button
    name
    'type 'ycmd--fixit-button
-   'fixit fixit
-   'location location))
+   'fixit fixit))
 
 (defun ycmd--apply-fixit (button)
   "Apply BUTTON's FixIt chunk."
