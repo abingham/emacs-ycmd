@@ -1416,8 +1416,8 @@ Useful in case compile-time is considerable."
 LOCATION is a structure as returned from e.g. the various GoTo
 commands."
   (let-alist location
-    (--when-let .filepath
-      (funcall find-function it)
+    (when .filepath
+      (funcall find-function .filepath)
       (goto-char (ycmd--col-line-to-position
                   .column_num .line_num)))))
 
@@ -1535,16 +1535,16 @@ Optional TITLE is shown on first line."
       (when title (insert (propertize title 'face 'bold)))
       (dolist (fixit fixits)
         (let-alist fixit
-          (let (button-diff)
-            (let* ((diffs (ycmd--get-fixit-diffs .chunks))
-                   (multiple-fixits-p (> (length diffs) 1)))
-              (dolist (diff diffs)
-                (pcase-let ((`(,diff-text . ,diff-path) diff))
-                  (setq button-diff
-                        (concat button-diff (when (or (s-blank-str? .text)
-                                                      multiple-fixits-p)
-                                              (format "%s\n" diff-path))
-                                (ycmd--fontify-code diff-text 'diff-mode) "\n")))))
+          (let* ((diffs (ycmd--get-fixit-diffs .chunks))
+                 (multiple-fixits-p (> (length diffs) 1))
+                 button-diff)
+            (dolist (diff diffs)
+              (pcase-let ((`(,diff-text . ,diff-path) diff))
+                (setq button-diff
+                      (concat button-diff (when (or (s-blank-str? .text)
+                                                    multiple-fixits-p)
+                                            (format "%s\n" diff-path))
+                              (ycmd--fontify-code diff-text 'diff-mode) "\n"))))
             (ycmd--insert-fixit-button
              (concat (format "%d: %s\n" fixit-num .text) button-diff) .chunks)
             (cl-incf fixit-num))))
@@ -1564,22 +1564,22 @@ chunks for the file."
     (ycmd--loop-chunks-by-filename (chunks (nreverse diffs))
       (pcase-let* ((`(,filepath . ,chunk) it)
                    (buffer (find-file-noselect filepath))
-                   (buffertext (with-current-buffer buffer (buffer-string))))
-        (with-temp-buffer
-          (insert buffertext)
-          (ycmd--replace-chunk-list chunk (current-buffer))
-          (let ((diff-buffer (diff-no-select filepath (current-buffer)
-                                             "-U0 --strip-trailing-cr" t)))
-            (with-current-buffer diff-buffer
-              (goto-char (point-min))
-              (unless (eobp)
-                (ignore-errors
-                  (diff-beginning-of-hunk t))
-                (while (looking-at diff-hunk-header-re-unified)
-                  (let* ((beg (point))
-                         (end (diff-end-of-hunk))
-                         (diff (buffer-substring-no-properties beg end)))
-                    (push (cons diff filepath) diffs)))))))))))
+                   (buffertext (with-current-buffer buffer (buffer-string)))
+                   (diff-buffer (with-temp-buffer
+                                  (insert buffertext)
+                                  (ycmd--replace-chunk-list chunk (current-buffer))
+                                  (diff-no-select filepath (current-buffer)
+                                                  "-U0 --strip-trailing-cr" t))))
+        (with-current-buffer diff-buffer
+          (goto-char (point-min))
+          (unless (eobp)
+            (ignore-errors
+              (diff-beginning-of-hunk t))
+            (while (looking-at diff-hunk-header-re-unified)
+              (let* ((beg (point))
+                     (end (diff-end-of-hunk))
+                     (diff (buffer-substring-no-properties beg end)))
+                (push (cons diff filepath) diffs)))))))))
 
 (define-button-type 'ycmd--fixit-button
   'action #'ycmd--apply-fixit
