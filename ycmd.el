@@ -1607,15 +1607,14 @@ chunks for the file."
 \\{ycmd-view-mode-map}"
   (local-set-key (kbd "q") (lambda () (interactive) (quit-window t))))
 
-(defun ycmd--replace-chunk (bounds replacement-text deltas buffer)
+(defun ycmd--replace-chunk (bounds replacement-text line-delta char-delta buffer)
   "Replace text between BOUNDS with REPLACEMENT-TEXT.
 
 BOUNDS is a list of two cons cells representing the start and end
-of a chunk with a line and column pair (car and cdr). DELTAS is a
-cons cell with line and char offsets from former replacements on
-the current line. BUFFER is the current working buffer."
+of a chunk with a line and column pair (car and cdr). LINE-DELTA
+and CHAR-DELTA are offset from -former replacements on the
+current line. BUFFER is the current working buffer."
   (pcase-let* ((`((,start-line . ,start-column) (,end-line . ,end-column)) bounds)
-               (`(,line-delta . ,char-delta) deltas)
                (start-line (+ start-line line-delta))
                (end-line (+ end-line line-delta))
                (source-line-count (1+ (- end-line start-line)))
@@ -1672,7 +1671,7 @@ specified in fixit chunk."
             (setq char-delta 0))
           (pcase-let ((`(,new-line-delta . ,new-char-delta)
                        (ycmd--replace-chunk chunk-bounds .replacement_text
-                                            (cons line-delta char-delta) buffer)))
+                                            line-delta char-delta buffer)))
             (setq line-delta (+ line-delta new-line-delta))
             (setq char-delta (+ char-delta new-char-delta))))))))
 
