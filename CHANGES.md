@@ -4,6 +4,8 @@
   function signature
 * If `ycmd-bypass-url-proxy-services` is non-nil, bypass also proxies when
   using `curl` as `request-backend`
+* Add defcustom `ycmd-mode-line-prefix` for customizing the mode line appearance
+  of ycmd
 
 # 1.2 (Jun 14, 2017)
 
