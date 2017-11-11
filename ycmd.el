@@ -409,6 +409,11 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
   :type 'hook
   :risky t)
 
+(defcustom ycmd-mode-line-prefix "ycmd"
+  "Base mode line lighter for ycmd."
+  :type 'string
+  :package-version '(ycmd . "1.3"))
+
 (defcustom ycmd-completing-read-function #'completing-read
   "Function to read from minibuffer with completion.
 
@@ -695,7 +700,7 @@ explicitly re-define the prefix key:
                 (`stopped "-")
                 (`starting ">")
                 (`errored "!"))))
-    (concat " ycmd" force-semantic text)))
+    (concat " " ycmd-mode-line-prefix force-semantic text)))
 
 ;;;###autoload
 (define-minor-mode ycmd-mode
