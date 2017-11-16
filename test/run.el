@@ -72,5 +72,4 @@
 (when (and noninteractive (ycmd-runs-this-script-p))
   (ycmd-run-tests-main))
 
-(provide 'run)
 ;;; run.el ends here
