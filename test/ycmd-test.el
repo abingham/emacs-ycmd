@@ -78,14 +78,13 @@
   (let ((ycmd-parse-conditions nil))
     (ycmd-open)
     (ycmd-wait-until-server-is-ready)
-    (when (eq (ycmd--send-completer-available-request) t) ; retruns :json-false
-      (ycmd-wait-until-server-is-ready 'include-subserver))
+    (ycmd-deferred:sync!
+     (ycmd--event-notification "BufferVisit"))
     (ycmd-mode)
-    (ycmd-load-conf-file ycmd-test-extra-conf)
-    (ycmd-deferred:sync!
-     (ycmd--event-notification "BufferVisit")))
-    (ycmd-deferred:sync!
-     (ycmd-notify-file-ready-to-parse)))
+    (ycmd-load-conf-file ycmd-test-extra-conf))
+  (ycmd-deferred:sync!
+   (ycmd-notify-file-ready-to-parse))
+  (ycmd-wait-until-server-is-ready 'include-subserver))
 
 (defmacro ycmd-ert-with-temp-buffer (mode &rest body)
   "Set MODE and eval BODY within a temporary buffer.
