@@ -65,7 +65,7 @@
 (defun flycheck-ycmd--result-to-error (result checker)
   "Convert ycmd parse RESULT for CHECKER into a flycheck error object."
   (let-alist result
-    (when (string-equal .location.filepath (buffer-file-name))
+    (when (string-equal (convert-standard-filename .location.filepath) (convert-standard-filename (buffer-file-name)))
       (flycheck-error-new
        :line .location.line_num
        :column .location.column_num
