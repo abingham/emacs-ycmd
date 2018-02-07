@@ -839,7 +839,7 @@ response."
 
 (ycmd-ert-deftest semantic-completer-not-available "test-eldoc.el" 'emacs-lisp-mode
   :line 1 :column 3
-  (should (eq (ycmd-semantic-completer-available-p) 'none)))
+  (should (eq (ycmd-semantic-completer-available-p) nil)))
 
 (ert-deftest ycmd-test-not-running ()
   (should-not (ycmd-running-p)))
