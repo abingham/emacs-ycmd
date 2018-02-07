@@ -15,5 +15,6 @@ export EXTRA_CMAKE_ARGS="-DCMAKE_CXX_COMPILER=/usr/lib/ccache/c++ -DCMAKE_C_COMP
 python build.py --clang-completer --gocode-completer --tern-completer
 
 npm install -g typescript
+npm install -g tern
 
 popd
