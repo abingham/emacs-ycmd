@@ -40,12 +40,6 @@ env:
     - EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
 
 before_install:
-  # gcc-4.9
-  # - mkdir -p "${HOME}/bin"
-  # - ln -s "/usr/bin/g++-4.9" "${HOME}/bin/c++"
-  # - ln -s "/usr/bin/gcc-4.9" "${HOME}/bin/cc"
-  # - ln -s "/usr/bin/gcov-4.9" "${HOME}/bin/gcov"
-
   - export PATH="$HOME/bin:$PATH"
   - wget 'https://raw.githubusercontent.com/flycheck/emacs-travis/master/emacs-travis.mk'
   - if [[ -n $EMACS_VERSION ]]; then make -f emacs-travis.mk install_emacs; fi
