@@ -1,5 +1,10 @@
 language: python
-sudo: false
+python:
+  - "3.5"
+
+sudo: required
+dist: trusty
+
 cache:
   directories:
     - .cask/
@@ -33,12 +38,13 @@ env:
     - EMACS_VERSION=25.2
     - EMACS_VERSION=25.3
     - EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
+
 before_install:
   # gcc-4.9
-  - mkdir -p "${HOME}/bin"
-  - ln -s "/usr/bin/g++-4.9" "${HOME}/bin/c++"
-  - ln -s "/usr/bin/gcc-4.9" "${HOME}/bin/cc"
-  - ln -s "/usr/bin/gcov-4.9" "${HOME}/bin/gcov"
+  # - mkdir -p "${HOME}/bin"
+  # - ln -s "/usr/bin/g++-4.9" "${HOME}/bin/c++"
+  # - ln -s "/usr/bin/gcc-4.9" "${HOME}/bin/cc"
+  # - ln -s "/usr/bin/gcov-4.9" "${HOME}/bin/gcov"
 
   - export PATH="$HOME/bin:$PATH"
   - wget 'https://raw.githubusercontent.com/flycheck/emacs-travis/master/emacs-travis.mk'
@@ -51,10 +57,12 @@ before_install:
 
 install:
   - if [[ -n $EMACS_VERSION ]]; then make deps; fi
+
 script:
   - if [[ -n $EMACS_VERSION ]]; then make all; fi
   - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="$HOME/ycmd/ycmd" REQUEST_BACKEND=url-retrieve test; fi
   - if [[ -n $EMACS_VERSION ]]; then make YCMDPATH="$HOME/ycmd/ycmd" REQUEST_BACKEND=curl test; fi
+
 matrix:
   # Finish the build even if any build with allowed failures are still running
   fast_finish: true
