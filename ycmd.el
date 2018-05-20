@@ -308,6 +308,7 @@ list
     (python-mode . ("python"))
     (ruby-mode . ("ruby"))
     (rust-mode . ("rust"))
+    (swift-mode . ("swift"))
     (scala-mode . ("scala"))
     (tuareg-mode . ("ocaml"))
     (typescript-mode . ("typescript")))
@@ -352,6 +353,10 @@ engine."
 
 (defcustom ycmd-rust-src-path nil
   "Rust source path."
+  :type 'string)
+
+(defcustom ycmd-swift-src-path nil
+  "Swift source path."
   :type 'string)
 
 (defcustom ycmd-racerd-binary-path nil
@@ -524,7 +529,22 @@ function."
      "as" "box" "break" "const" "continue" "crate" "else" "enum" "extern"
      "false" "fn" "for" "if" "impl" "in" "let" "loop" "macro" "match" "mod"
      "move" "mut" "pub" "ref" "return" "self" "static" "struct" "super"
-     "trait" "true" "type" "unsafe" "use" "where" "while"))
+     "trait" "true" "type" "unsafe" "use" "where" "while")
+    (swift-mode
+     "true" "false" "nil" "#available" "#colorLiteral" "#column" "#else"
+     "#elseif" "#endif" "#fileLiteral" "#file" "#function" "#if" "#imageLiteral"
+     "#keypath" "#line" "#selector" "#sourceLocation" "associatedtype" "class"
+     "deinit" "enum" "extension" "fileprivate" "func" "import" "init" "inout"
+     "internal" "let" "open" "operator" "private" "protocol" "public" "static"
+     "struct" "subscript" "typealias" "var" "break" "case" "continue" "default"
+     "defer" "do" "else" "fallthrough" "for" "guard" "if" "in" "repeat" "return"
+     "switch" "where" "while" "as" "catch" "dynamicType" "is" "rethrows" "super"
+     "self" "Self" "throws" "throw" "try" "Protocol" "Type" "and" "assignment"
+     "associativity" "convenience" "didSet" "dynamic" "final" "get" "higherThan"
+     "indirect" "infix" "lazy" "left" "lowerThan" "mutating" "none"
+     "nonmutating" "optional" "override" "postfix" "precedence"
+     "precedencegroup" "prefix" "required" "right" "set" "unowned" "weak"
+     "willSet"))
   "Alist mapping major-modes to keywords for.
 
 Keywords source: https://github.com/auto-complete/auto-complete/tree/master/dict
@@ -2074,6 +2094,7 @@ file."
         (gocode-binary-path (or ycmd-gocode-binary-path ""))
         (godef-binary-path (or ycmd-godef-binary-path ""))
         (rust-src-path (or ycmd-rust-src-path ""))
+        (swift-src-path (or ycmd-swift-src-path ""))
         (racerd-binary-path (or ycmd-racerd-binary-path ""))
         (python-binary-path (or ycmd-python-binary-path ""))
         (auto-trigger (if ycmd-auto-trigger-semantic-completion 1 0)))
@@ -2098,6 +2119,7 @@ file."
       (gocode_binary_path . ,gocode-binary-path)
       (godef_binary_path . ,godef-binary-path)
       (rust_src_path . ,rust-src-path)
+      (swift_src_path . ,swift-src-path)
       (racerd_binary_path . ,racerd-binary-path)
       (python_binary_path . ,python-binary-path))))
 
