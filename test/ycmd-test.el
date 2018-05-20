@@ -168,8 +168,9 @@ response."
     (should (equal result commands))))
 
 (ycmd-ert-deftest get-defined-subcommands-typescript "test.ts" 'typescript-mode
-  (let ((commands '("GetDoc" "GetType" "GoToDefinition" "GoToReferences"
-                    "GoToType" "RefactorRename" "RestartServer"))
+  (let ((commands '("FixIt" "Format" "GetDoc" "GetType" "GoTo" "GoToDeclaration"
+                    "GoToDefinition" "GoToReferences" "GoToType" "OrganizeImports"
+                    "RefactorRename" "RestartServer"))
         (result (ycmd--get-defined-subcommands)))
     (should (equal result commands))))
 
