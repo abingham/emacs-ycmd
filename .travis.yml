@@ -37,6 +37,7 @@ env:
     - EMACS_VERSION=25.1
     - EMACS_VERSION=25.2
     - EMACS_VERSION=25.3
+    - EMACS_VERSION=26.1
     - EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
 
 before_install:
@@ -61,6 +62,9 @@ matrix:
   # Finish the build even if any build with allowed failures are still running
   fast_finish: true
   allow_failures:
+    # 26.1 support is still not guaranteed
+    - env: EMACS_VERSION=26.1
+
     # Allow the snapshot build to fail, because Emacs snapshot sometimes fails
     # to build
     - env: EMACS_VERSION=snapshot COMPILEFLAGS='error-on-warn'
