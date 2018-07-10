@@ -157,7 +157,7 @@ response."
 
 (ycmd-ert-deftest get-defined-subcommands-python "test.py" 'python-mode
   (let ((commands '("GetDoc" "GoTo" "GoToDeclaration" "GoToDefinition"
-                    "GoToReferences" "RestartServer"))
+                    "GoToReferences"))
         (result (ycmd--get-defined-subcommands)))
     (should (equal result commands))))
 
