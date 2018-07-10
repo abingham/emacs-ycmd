@@ -1593,7 +1593,7 @@ chunks for the file."
                    (diff-buffer (with-temp-buffer
                                   (insert buffertext)
                                   (ycmd--replace-chunk-list chunk (current-buffer))
-                                  (diff-no-select filepath (current-buffer)
+                                  (diff-no-select buffer (current-buffer)
                                                   "-U0 --strip-trailing-cr" t))))
         (with-current-buffer diff-buffer
           (goto-char (point-min))
