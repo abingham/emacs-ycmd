@@ -73,7 +73,7 @@
        :filename .location.filepath
        :message (concat .text (when (eq .fixit_available t) " (FixIt available)"))
        :checker checker
-       :level (assoc-default .kind flycheck-ycmd--level-map 'string-equal 'error)))))
+       :level (or (cdr (assoc-string .kind flycheck-ycmd--level-map)) 'error)))))
 
 (defun flycheck-ycmd--start (checker callback)
   "Start ycmd flycheck CHECKER using CALLBACK to communicate with flycheck."
