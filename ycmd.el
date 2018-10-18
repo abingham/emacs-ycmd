@@ -107,6 +107,7 @@
   (require 'cl-lib)
   (require 'let-alist))
 (require 'dash)
+(require 'f)
 (require 's)
 (require 'deferred)
 (require 'hmac-def)
@@ -130,7 +131,7 @@
   "Path to global extra conf file."
   :type '(string))
 
-(defcustom ycmd-settings-json-filepath (concat (file-name-directory load-file-name) "ycmd_default_settings.json")
+(defcustom ycmd-settings-json-filepath (f-join (f-dirname (f-this-file)) "ycmd_default_settings.json")
   "Path to YCMD settings JSON file."
   :type '(string))
 
