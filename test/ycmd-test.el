@@ -196,7 +196,14 @@ response."
       (should (= .completion_start_column 7)))))
 
 (ert-deftest ycmd-test-no-semantic-completion-cpp ()
-  (let ((ycmd-auto-trigger-semantic-completion))
+  (let* ((settings-file (make-temp-file "ycmd-options"))
+         (original-file  ycmd-settings-json-filepath)
+         (ycmd-settings-json-filepath settings-file)
+         (json (json-read-file original-file)))
+    (assq-delete-all 'auto_trigger json)
+    (setq json (json-add-to-object json "auto_trigger" 0))
+    (with-temp-file settings-file
+      (insert (ycmd--json-encode json)))
     (ycmd-ert-with-resource-buffer "test.cpp" 'c++-mode
       (let ((current-position
              (ycmd--col-line-to-position
