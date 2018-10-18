@@ -59,6 +59,7 @@
                           ycmd-path-raw
                         (expand-file-name ycmd-path-raw source-directory)))
            (ycmd-server-command (list python-path ycmd-path))
+           (ycmd-settings-json-filepath (concat ycmd-path "/default_settings.json"))
            (ert-selector (pop argv))
            (ycmd-request-backend (intern (pop argv)))
            (request-backend (if (memq ycmd-request-backend '(curl url-retrieve))
