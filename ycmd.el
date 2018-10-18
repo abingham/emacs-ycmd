@@ -130,6 +130,10 @@
   "Path to global extra conf file."
   :type '(string))
 
+(defcustom ycmd-settings-json-filepath nil
+  "Path to YCMD settings JSON file."
+  :type '(string))
+
 (defcustom ycmd-extra-conf-whitelist nil
   "List of glob expressions which match extra configs.
 Whitelisted configs are loaded without confirmation."
@@ -2077,61 +2081,18 @@ This produces output for empty alists that ycmd expects."
 (define-hmac-function ycmd--hmac-function
   ycmd--secure-hash 64 64)
 
-(defun ycmd--options-contents (hmac-secret)
-  "Return a struct with ycmd options and the HMAC-SECRET applied.
-The struct can be json encoded into a file to create a ycmd
-options file.
-
-When we start a new ycmd server, it needs an options file.  It
-reads this file and then deletes it since it contains a secret
-key.  So we need to generate a new options file for each ycmd
-instance.  This function effectively produces the contents of that
-file."
-  (let ((hmac-secret (base64-encode-string hmac-secret))
-        (global-config (or ycmd-global-config ""))
-        (extra-conf-whitelist (or ycmd-extra-conf-whitelist []))
-        (confirm-extra-conf (if (eq ycmd-extra-conf-handler 'load) 0 1))
-        (gocode-binary-path (or ycmd-gocode-binary-path ""))
-        (godef-binary-path (or ycmd-godef-binary-path ""))
-        (rust-src-path (or ycmd-rust-src-path ""))
-        (swift-src-path (or ycmd-swift-src-path ""))
-        (racerd-binary-path (or ycmd-racerd-binary-path ""))
-        (python-binary-path (or ycmd-python-binary-path ""))
-        (auto-trigger (if ycmd-auto-trigger-semantic-completion 1 0)))
-    `((filepath_completion_use_working_dir . 0)
-      (auto_trigger . ,auto-trigger)
-      (min_num_of_chars_for_completion . ,ycmd-min-num-chars-for-completion)
-      (min_num_identifier_candidate_chars . 0)
-      (semantic_triggers . ())
-      (filetype_specific_completion_to_disable (gitcommit . 1))
-      (collect_identifiers_from_comments_and_strings . 0)
-      (max_num_identifier_candidates . ,ycmd-max-num-identifier-candidates)
-      (extra_conf_globlist . ,extra-conf-whitelist)
-      (global_ycm_extra_conf . ,global-config)
-      (confirm_extra_conf . ,confirm-extra-conf)
-      (max_diagnostics_to_display . 30)
-      (auto_start_csharp_server . 1)
-      (auto_stop_csharp_server . 1)
-      (use_ultisnips_completer . 1)
-      (csharp_server_port . 0)
-      (hmac_secret . ,hmac-secret)
-      (server_keep_logfiles . 1)
-      (gocode_binary_path . ,gocode-binary-path)
-      (godef_binary_path . ,godef-binary-path)
-      (rust_src_path . ,rust-src-path)
-      (swift_src_path . ,swift-src-path)
-      (racerd_binary_path . ,racerd-binary-path)
-      (python_binary_path . ,python-binary-path))))
-
 (defun ycmd--create-options-file (hmac-secret)
   "Create a new options file for a ycmd server with HMAC-SECRET.
 
 This creates a new tempfile and fills it with options.  Returns
 the name of the newly created file."
   (let ((options-file (make-temp-file "ycmd-options"))
-        (options (ycmd--options-contents hmac-secret)))
-    (with-temp-file options-file
-      (insert (ycmd--json-encode options)))
+        (json (json-read-file ycmd-settings-json-filepath))
+        (hmac (base64-encode-string hmac-secret)))
+       (assq-delete-all 'hmac_secret json)
+       (setq json (json-add-to-object json "hmac_secret" hmac))
+       (with-temp-file options-file
+         (insert (ycmd--json-encode json)))
     options-file))
 
 (defun ycmd--exit-code-as-string (code)
