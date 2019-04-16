@@ -298,6 +298,7 @@ list
     (erlang-mode . ("erlang"))
     (emacs-lisp-mode . ("elisp"))
     (go-mode . ("go"))
+    (java-mode . ("java"))
     (js-mode . ("javascript"))
     (js2-mode . ("javascript"))
     (lua-mode . ("lua"))
