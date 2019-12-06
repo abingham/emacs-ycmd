@@ -1,3 +1,6 @@
+
+# **This package is currently unmaintained! If you want to take over maintenance, let me know in an issue.**
+
 # emacs-ycmd
 
 [![MELPA](http://melpa.org/packages/ycmd-badge.svg)](http://melpa.org/#/ycmd)
