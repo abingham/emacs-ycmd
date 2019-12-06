@@ -368,6 +368,22 @@ engine."
   "Python binary path."
   :type 'string)
 
+(defcustom ycmd-use-clangd nil
+  "Use clangd for completion."
+  :type 'integer)
+
+(defcustom ycmd-clangd-binary-path nil
+  "Path to clangd binary."
+  :type 'string)
+
+(defcustom ycmd-clangd-args nil
+  "Extra arguments to pass to clangd when launching."
+  :type '(repeat string))
+
+(defcustom ycmd-clangd-uses-ycmd-caching nil
+  "Have clangd use ycmd caching."
+  :type 'integer)
+
 (defcustom ycmd-global-modes t
   "Modes for which `ycmd-mode' is turned on by `global-ycmd-mode'.
 
@@ -2098,7 +2114,11 @@ file."
         (swift-src-path (or ycmd-swift-src-path ""))
         (racerd-binary-path (or ycmd-racerd-binary-path ""))
         (python-binary-path (or ycmd-python-binary-path ""))
-        (auto-trigger (if ycmd-auto-trigger-semantic-completion 1 0)))
+        (auto-trigger (if ycmd-auto-trigger-semantic-completion 1 0))
+        (use-clangd (or ycmd-use-clangd 0))
+        (clangd-binary-path (or ycmd-clangd-binary-path ""))
+        (clangd-args (or ycmd-clangd-args []))
+        (clangd-uses-ycmd-caching (or ycmd-clangd-uses-ycmd-caching 1)))
     `((filepath_completion_use_working_dir . 0)
       (auto_trigger . ,auto-trigger)
       (min_num_of_chars_for_completion . ,ycmd-min-num-chars-for-completion)
@@ -2122,7 +2142,11 @@ file."
       (rust_src_path . ,rust-src-path)
       (swift_src_path . ,swift-src-path)
       (racerd_binary_path . ,racerd-binary-path)
-      (python_binary_path . ,python-binary-path))))
+      (python_binary_path . ,python-binary-path)
+      (use_clangd . ,use-clangd)
+      (clangd_binary_path . ,clangd-binary-path)
+      (clangd_args . ,clangd-args)
+      (clangd_uses_ycmd_caching . ,clangd-uses-ycmd-caching))))
 
 (defun ycmd--create-options-file (hmac-secret)
   "Create a new options file for a ycmd server with HMAC-SECRET.
