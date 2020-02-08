@@ -2089,7 +2089,8 @@ key.  So we need to generate a new options file for each ycmd
 instance.  This function effectively produces the contents of that
 file."
   (let ((hmac-secret (base64-encode-string hmac-secret))
-        (global-config (or ycmd-global-config ""))
+        (global-config (if ycmd-global-config
+                           (file-truename ycmd-global-config) ""))
         (extra-conf-whitelist (or ycmd-extra-conf-whitelist []))
         (confirm-extra-conf (if (eq ycmd-extra-conf-handler 'load) 0 1))
         (gocode-binary-path (or ycmd-gocode-binary-path ""))
