@@ -4,7 +4,7 @@
 # emacs-ycmd
 
 [![MELPA](http://melpa.org/packages/ycmd-badge.svg)](http://melpa.org/#/ycmd)
-[![MELPA Stable](https://stable.melpa.org/packages/company-ycmd-badge.svg)](https://stable.melpa.org/#/company-ycmd)
+[![MELPA Stable](https://stable.melpa.org/packages/ycmd-badge.svg)](https://stable.melpa.org/#/ycmd)
 [![Build Status](https://travis-ci.org/abingham/emacs-ycmd.png?branch=master)](https://travis-ci.org/abingham/emacs-ycmd)
 
 emacs-ycmd is a client for [ycmd](https://github.com/Valloric/ycmd),
@@ -109,6 +109,7 @@ It is recommended to use `company-mode` for completion, however there is basic s
 ## company-ycmd
 
 [![MELPA](http://melpa.org/packages/company-ycmd-badge.svg)](http://melpa.org/#/company-ycmd)
+[![MELPA Stable](https://stable.melpa.org/packages/company-ycmd-badge.svg)](https://stable.melpa.org/#/company-ycmd)
 
 More likely, you'll want to use a completion framework like
 `company-mode` to manage the completions for you. Here's how to do
@@ -134,6 +135,7 @@ In any event, if you are facing problems with ycmd not starting and/or hanging E
 ## `flycheck` integration
 
 [![MELPA](http://melpa.org/packages/flycheck-ycmd-badge.svg)](http://melpa.org/#/flycheck-ycmd)
+[![MELPA Stable](https://stable.melpa.org/packages/flycheck-ycmd-badge.svg)](https://stable.melpa.org/#/flycheck-ycmd)
 
 `flycheck-ycmd.el` allows you to use `ycmd` as a backend for
 `flycheck`. With this enabled, whenever `ycmd` parses a file the
