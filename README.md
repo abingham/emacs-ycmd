@@ -4,6 +4,7 @@
 # emacs-ycmd
 
 [![MELPA](http://melpa.org/packages/ycmd-badge.svg)](http://melpa.org/#/ycmd)
+[![MELPA Stable](https://stable.melpa.org/packages/company-ycmd-badge.svg)](https://stable.melpa.org/#/company-ycmd)
 [![Build Status](https://travis-ci.org/abingham/emacs-ycmd.png?branch=master)](https://travis-ci.org/abingham/emacs-ycmd)
 
 emacs-ycmd is a client for [ycmd](https://github.com/Valloric/ycmd),
