@@ -123,6 +123,19 @@ that:
 After this you can use your standard `company-mode` keybindings to do
 completion.
 
+## clangd completion
+
+To use clangd completion you must have built ycmd with the clangd completer
+enabled. You must then set `ycmd-use-clangd` to `1`:
+
+```elisp
+(set-variable 'ycmd-use-clangd 1)
+```
+
+You can also pass extra arguments to clangd by specifying `ycmd-clangd-args` as
+a list of string arguments. If you need to explicitly set the path to where
+clangd is located you can specify the variable `ycmd-clangd-binary-path`.
+
 ## IMPORTANT: Unbuffered output
 
 There have been some reports that `ycmd.el` doesn't work when Python's output is buffered. See, for example, [issue #104](https://github.com/abingham/emacs-ycmd/issues/104). This is because we rely on the ycmd server printing out its host and port information in a timely (i.e. unbuffered) manner. We will almost certainly update the defaults for `ycmd.el` to force unbuffered output.
