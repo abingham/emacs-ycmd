@@ -2225,7 +2225,7 @@ The timeout can be set with the variable
 (eval-and-compile
   (if (version-list-< (version-to-list emacs-version) '(25))
       (defun ycmd--encode-string (s) s)
-    (defun ycmd--encode-string (s) (encode-coding-string s 'utf-8 t))))
+    (defun ycmd--encode-string (s) (encode-coding-string s 'utf-8))))
 
 (defun ycmd--get-basic-request-data ()
   "Build the basic request data alist for a server request."
